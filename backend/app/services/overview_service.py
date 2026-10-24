@@ -149,6 +149,7 @@ def build_overview(outlook: dict) -> dict[str, Any]:
     )
 
     highest = ranked[0]["level_24h"] if ranked else "nodata"
+    alerts = build_alerts(municipalities)
 
     return {
         "generated_at": outlook.get("generated_at"),
@@ -164,6 +165,8 @@ def build_overview(outlook: dict) -> dict[str, Any]:
         },
         "level_labels": LEVEL_LABELS,
         "highest_level_24h": highest,
+        "alerts": alerts,
+        "briefing": build_briefing(municipalities, alerts),
         "ranking_24h": [item["name"] for item in ranked],
         "municipalities": municipalities,
         "notes": [
@@ -171,6 +174,118 @@ def build_overview(outlook: dict) -> dict[str, Any]:
             *outlook.get("limitations", []),
         ],
     }
+
+
+# ---------------------------------------------------------------------
+# Alerts and plain-language briefing (template text from real data only)
+# ---------------------------------------------------------------------
+
+WARNING_LEVELS = ("yellow", "orange", "red")
+LEVEL_WORDS = {
+    "en": {"yellow": "Yellow-level", "orange": "Orange-level", "red": "Red-level"},
+    "fil": {"yellow": "Yellow-level", "orange": "Orange-level", "red": "Red-level"},
+}
+WEEKDAYS_FIL = ["Lunes", "Martes", "Miyerkules", "Huwebes", "Biyernes", "Sabado", "Linggo"]
+
+
+def _local(stamp: str | None) -> datetime | None:
+    if not stamp:
+        return None
+    try:
+        parsed = datetime.fromisoformat(stamp)
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=PH_TZ) if parsed.tzinfo is None else parsed.astimezone(PH_TZ)
+
+
+def format_when(stamp: str | None, lang: str = "en") -> str:
+    """'Sun 4 PM' / 'Linggo 4 PM'. Empty string if the time is unknown."""
+    moment = _local(stamp)
+    if moment is None:
+        return ""
+    hour = moment.strftime("%I %p").lstrip("0")
+    day = WEEKDAYS_FIL[moment.weekday()] if lang == "fil" else moment.strftime("%a")
+    return f"{day} {hour}"
+
+
+def build_alerts(municipalities: list[dict], window_hours: int = 24) -> list[dict]:
+    """One alert per town whose forecast reaches yellow intensity or more."""
+    alerts = []
+
+    for muni in municipalities:
+        series = (muni.get("series") or [])[:window_hours]
+        hot = [p for p in series if p.get("level") in WARNING_LEVELS]
+        if not hot:
+            continue
+        peak = max(hot, key=lambda p: p["precipitation_mm"])
+        level = rain_level(peak["precipitation_mm"])
+        alerts.append({
+            "municipality": muni.get("name"),
+            "level": level,
+            "peak_mm_h": round(peak["precipitation_mm"], 1),
+            "peak_time": peak.get("time"),
+            "starts": hot[0].get("time"),
+            "ends": hot[-1].get("time"),
+            "hours_at_or_above_yellow": len(hot),
+            "text": {
+                "en": f"{LEVEL_WORDS['en'][level]} rain intensity possible in {muni.get('name')}, heaviest {peak['precipitation_mm']:.1f} mm/h around {format_when(peak.get('time'), 'en')}.",
+                "fil": f"Posible ang {LEVEL_WORDS['fil'][level].lower()} na lakas ng ulan sa {muni.get('name')}, pinakamalakas na {peak['precipitation_mm']:.1f} mm/h bandang {format_when(peak.get('time'), 'fil')}.",
+            },
+        })
+
+    alerts.sort(key=lambda a: (level_rank(a["level"]), a["peak_mm_h"]), reverse=True)
+    return alerts
+
+
+def _join(names: list[str], word: str) -> str:
+    if len(names) <= 1:
+        return "".join(names)
+    return f"{', '.join(names[:-1])} {word} {names[-1]}"
+
+
+def build_briefing(municipalities: list[dict], alerts: list[dict]) -> dict[str, str]:
+    """Plain-language summary in English and Filipino, from the numbers only."""
+    with_data = [
+        m for m in municipalities
+        if m.get("windows", {}).get("next_24h", {}).get("peak_mm_h") is not None
+    ]
+    tail_en = "Forecast-based (Open-Meteo model), not an official PAGASA warning."
+    tail_fil = "Batay sa forecast (Open-Meteo model), hindi opisyal na babala ng PAGASA."
+
+    if not with_data:
+        return {
+            "en": "Rain forecast data is not available right now.",
+            "fil": "Walang makuhang datos ng forecast ng ulan sa ngayon.",
+        }
+
+    if not alerts:
+        top = max(with_data, key=lambda m: m["windows"]["next_24h"]["peak_mm_h"])
+        w = top["windows"]["next_24h"]
+        if w["peak_mm_h"] < LIGHT_RAIN_MM_H:
+            return {
+                "en": f"Little or no rain is forecast in Bataan in the next 24 hours. {tail_en}",
+                "fil": f"Halos walang ulan na inaasahan sa Bataan sa susunod na 24 oras. {tail_fil}",
+            }
+        return {
+            "en": f"No town reaches yellow-level rain intensity in the next 24 hours. Heaviest forecast hour: {w['peak_mm_h']:.1f} mm/h in {top['name']} around {format_when(w['peak_time'], 'en')}. {tail_en}",
+            "fil": f"Walang bayan na aabot sa yellow-level na lakas ng ulan sa susunod na 24 oras. Pinakamalakas na oras: {w['peak_mm_h']:.1f} mm/h sa {top['name']} bandang {format_when(w['peak_time'], 'fil')}. {tail_fil}",
+        }
+
+    worst = alerts[0]
+    same = [a["municipality"] for a in alerts if a["level"] == worst["level"]]
+    others = len(alerts) - len(same)
+    en = (
+        f"{LEVEL_WORDS['en'][worst['level']]} rain intensity possible in {_join(same, 'and')} in the next 24 hours. "
+        f"Heaviest: {worst['peak_mm_h']:.1f} mm/h in {worst['municipality']} around {format_when(worst['peak_time'], 'en')}."
+    )
+    fil = (
+        f"Posible ang {LEVEL_WORDS['fil'][worst['level']].lower()} na lakas ng ulan sa {_join(same, 'at')} sa susunod na 24 oras. "
+        f"Pinakamalakas: {worst['peak_mm_h']:.1f} mm/h sa {worst['municipality']} bandang {format_when(worst['peak_time'], 'fil')}."
+    )
+    if others:
+        en += f" {others} more town{'s' if others != 1 else ''} at a lower warning color."
+        fil += f" May {others} pang bayan na nasa mas mababang kulay."
+    return {"en": f"{en} {tail_en}", "fil": f"{fil} {tail_fil}"}
 
 
 # ---------------------------------------------------------------------
