@@ -1,0 +1,442 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="AGOS — Bataan flood monitoring, weather forecasts, flood observations, and evacuation resource records.">
+  <title>AGOS — Bataan Flood Monitoring</title>
+
+  <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/analytics.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="eyebrow">AGOS · BATAAN</div>
+      <h1>Flood Monitoring &amp; Forecast</h1>
+      <p>Weather conditions, flood observations, and evacuation resources.</p>
+    </div>
+    <div class="header-status" role="status" aria-live="polite">
+      <span class="status-dot is-loading" id="weatherStatusDot"></span>
+      <span id="weatherStatus">Connecting to weather service…</span>
+    </div>
+  </header>
+
+  <nav class="main-nav" aria-label="Main navigation">
+    <button class="nav-link active" data-view-target="dashboard" type="button">Dashboard</button>
+    <button class="nav-link" data-view-target="map" type="button">Flood Map</button>
+    <button class="nav-link" data-view-target="analytics" type="button">Analytics</button>
+    <button class="nav-link" data-view-target="reports" type="button">Reports</button>
+    <button class="nav-link" data-view-target="evacuation" type="button">Evacuation Centers</button>
+    <button class="nav-link" data-view-target="system" type="button">System</button>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-heading">
+        <div>
+          <span class="section-kicker">PROVINCE OVERVIEW</span>
+          <h2>Bataan conditions</h2>
+          <p>Explore current weather, rainfall forecasts, flood evidence, and evacuation resources.</p>
+        </div>
+        <span class="timestamp" id="dashboardUpdated">Waiting for data…</span>
+      </div>
+
+      <section class="weather-hero panel" aria-labelledby="weatherHeading">
+        <div class="weather-main">
+          <div>
+            <span class="section-kicker">LIVE WEATHER</span>
+            <h3 id="weatherHeading">Current conditions</h3>
+            <label class="field-label" for="municipalitySelect">Municipality</label>
+            <select id="municipalitySelect">
+              <option value="Balanga" selected>Balanga</option>
+              <option value="Abucay">Abucay</option>
+              <option value="Bagac">Bagac</option>
+              <option value="Dinalupihan">Dinalupihan</option>
+              <option value="Hermosa">Hermosa</option>
+              <option value="Limay">Limay</option>
+              <option value="Mariveles">Mariveles</option>
+              <option value="Morong">Morong</option>
+              <option value="Orani">Orani</option>
+              <option value="Orion">Orion</option>
+              <option value="Pilar">Pilar</option>
+              <option value="Samal">Samal</option>
+            </select>
+          </div>
+          <div class="weather-reading">
+            <strong id="temperature">—°</strong>
+            <div>
+              <span id="condition">Loading weather…</span>
+              <small id="conditionSmall">Current conditions</small>
+            </div>
+          </div>
+          <div class="weather-details">
+            <div><span>Precipitation</span><strong id="rainfallToday">— mm</strong></div>
+            <div><span>Humidity</span><strong id="humidity">—%</strong></div>
+            <div><span>Wind</span><strong id="windSpeed">— km/h</strong></div>
+          </div>
+        </div>
+        <div class="weather-side">
+          <div class="weather-icon" id="weatherIcon" aria-hidden="true">☁</div>
+          <span class="status status-warning" id="weatherFreshness">Loading</span>
+          <small id="lastUpdated">Last updated —</small>
+        </div>
+      </section>
+
+      <section class="content-grid dashboard-lower">
+        <article class="panel forecast-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="section-kicker">OPEN-METEO</span>
+              <h3>Weather forecast</h3>
+              <p>Forecast for the selected municipality and configured coordinates.</p>
+            </div>
+            <span class="status status-warning" id="forecastStatus" role="status" aria-live="polite">Ready to load</span>
+          </div>
+          <div class="forecast-controls">
+            <label>
+              <span>Forecast variable</span>
+              <select id="forecastVariable">
+                <option value="precipitation" selected>Precipitation (mm)</option>
+                <option value="rain">Rain (mm)</option>
+                <option value="precipitation_probability">Rain probability (%)</option>
+                <option value="temperature_2m">Temperature (°C)</option>
+                <option value="relative_humidity_2m">Humidity (%)</option>
+                <option value="cloud_cover">Cloud cover (%)</option>
+                <option value="wind_speed_10m">Wind speed (km/h)</option>
+                <option value="wind_gusts_10m">Wind gusts (km/h)</option>
+                <option value="soil_moisture_0_to_7cm">Soil moisture (m³/m³)</option>
+              </select>
+            </label>
+            <label><span>Date</span><input type="date" id="forecastDate"></label>
+            <label><span>Hour (Philippine time)</span><select id="forecastHour"></select></label>
+            <button class="primary-button" id="loadForecastButton" type="button">Load forecast</button>
+          </div>
+          <div class="forecast-summary">
+            <div><span>Selected time</span><strong id="forecastSelectedTime">—</strong></div>
+            <div><span>Locations returned</span><strong id="forecastPointCount">—</strong></div>
+            <div><span>Average returned value</span><strong id="forecastAverage">—</strong></div>
+          </div>
+          <div class="table-wrap forecast-table-wrap">
+            <table>
+              <thead><tr><th>Municipality</th><th>Forecast value</th><th>Forecast time</th></tr></thead>
+              <tbody id="forecastTableBody">
+                <tr><td colspan="3" class="empty-state">Choose a date and load a forecast.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="panel-note">Forecast values are model outputs, not measurements from a local rain gauge.</p>
+        </article>
+
+        <article class="panel map-preview-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="section-kicker">SPATIAL WORKSPACE</span>
+              <h3>Flood evidence map</h3>
+              <p>Explore available evidence, candidate zones, and evacuation centers.</p>
+            </div>
+            <button class="secondary-button" type="button" data-view-target="map">Open full map</button>
+          </div>
+          <div id="dashboardMapPreview" class="dashboard-map-preview" role="application" aria-label="Interactive Bataan map preview">
+            <div class="preview-loading" data-preview-status>Loading map data…</div>
+            <span class="preview-municipality" data-preview-municipality>Balanga</span>
+          </div>
+          <div class="map-preview-footer" aria-label="Map legend">
+            <span><i class="legend-dot dot-blue"></i> Evacuation centers</span>
+            <span><i class="legend-dot dot-red"></i> Flood evidence</span>
+            <span><i class="legend-dot dot-amber"></i> Candidate zones</span>
+          </div>
+          <p class="panel-note">Candidate zones indicate potential susceptibility; they are not confirmed flood extents.</p>
+        </article>
+      </section>
+    </section>
+
+    <!-- FLOOD MAP -->
+    <section class="view" id="view-map">
+      <div class="page-heading">
+        <div>
+          <span class="section-kicker">SPATIAL WORKSPACE</span>
+          <h2>Flood Map</h2>
+          <p>Explore flood evidence, terrain-derived indicators, candidate zones, and evacuation resources.</p>
+        </div>
+        <div class="map-actions">
+          <button class="secondary-button" id="mapFitBataan" type="button">Fit Bataan</button>
+          <button class="secondary-button" id="mapHeatmapToggle" type="button">Toggle evidence</button>
+        </div>
+      </div>
+      <div class="map-toolbar" aria-label="Map layer controls">
+        <button class="map-control active" data-action="evidence" type="button">Evidence</button>
+        <button class="map-control" data-action="risk" type="button">Candidate zones</button>
+        <button class="map-control" data-action="centers" type="button">Evacuation centers</button>
+        <button class="map-control" data-action="reports" type="button">Reports</button>
+      </div>
+      <article class="panel map-panel">
+        <div id="map" class="maplibre-map" role="application" aria-label="Interactive AGOS flood map"></div>
+        <div class="map-interpretation">
+          <strong>Interpretation note</strong>
+          <p>Flood observations, terrain indicators, and candidate susceptibility zones represent different types of evidence. Candidate zones are not confirmed flood extents.</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- ANALYTICS: populated by js/analytics.js -->
+    <section class="view" id="view-analytics">
+      <div class="page-heading">
+        <div>
+          <span class="section-kicker">DATA OVERVIEW</span>
+          <h2>Analytics</h2>
+          <p>Weather analytics across Bataan, using model-based estimates from Open-Meteo.</p>
+        </div>
+        <span class="timestamp" id="analyticsUpdated">Waiting for weather data…</span>
+      </div>
+      <div class="analytics-loading" role="status">Analytics will load when this view is initialized.</div>
+    </section>
+
+    <!-- COMMUNITY FLOOD REPORTS -->
+    <section class="view" id="view-reports">
+      <div class="page-heading">
+        <div>
+          <span class="section-kicker">COMMUNITY INFORMATION</span>
+          <h2>Report Flooding</h2>
+          <p>Report current flooding in your area to help document flood conditions across Bataan.</p>
+        </div>
+      </div>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div>
+            <h3>Submit a flood report</h3>
+            <p>Provide accurate, current observations. Required fields are marked with an asterisk (*).</p>
+          </div>
+        </div>
+        <form id="reportForm" class="form-grid community-report-form">
+          <div class="report-section-heading"><span class="report-section-number">1</span><div><h3>Flood location</h3><p>Identify where the flooding is occurring.</p></div></div>
+          <label class="report-field-full">
+            <span>Specific location or address *</span>
+            <input type="text" id="reportAddress" name="address" placeholder="Street, landmark, or affected area" maxlength="300" required>
+          </label>
+          <label>
+            <span>Municipality / city *</span>
+            <select id="reportMunicipality" name="municipality" required>
+              <option value="">Select municipality</option>
+              <option value="Abucay">Abucay</option><option value="Bagac">Bagac</option>
+              <option value="Balanga">Balanga</option><option value="Dinalupihan">Dinalupihan</option>
+              <option value="Hermosa">Hermosa</option><option value="Limay">Limay</option>
+              <option value="Mariveles">Mariveles</option><option value="Morong">Morong</option>
+              <option value="Orani">Orani</option><option value="Orion">Orion</option>
+              <option value="Pilar">Pilar</option><option value="Samal">Samal</option>
+            </select>
+          </label>
+          <label><span>Barangay</span><input type="text" id="reportBarangay" name="barangay" placeholder="Enter barangay" maxlength="150"></label>
+          <div class="report-field-full report-location-actions">
+            <button class="secondary-button" type="button" id="reportGetLocation">Get my location</button>
+            <span id="reportLocationStatus" role="status" aria-live="polite">GPS is optional. You can enter the location manually.</span>
+          </div>
+          <input type="hidden" id="reportLatitude" name="latitude">
+          <input type="hidden" id="reportLongitude" name="longitude">
+
+          <div class="report-section-heading"><span class="report-section-number">2</span><div><h3>Flood conditions</h3><p>Choose the observed severity and provide an estimated water depth.</p></div></div>
+          <fieldset class="report-field-full report-severity-fieldset">
+            <legend>Flood severity *</legend>
+            <div class="severity-options">
+              <label class="severity-option severity-low"><input type="radio" name="severity" value="Low" required><span class="severity-card"><strong>Low</strong><small>Ankle-deep</small><small>0–15 cm</small></span></label>
+              <label class="severity-option severity-moderate"><input type="radio" name="severity" value="Moderate" required><span class="severity-card"><strong>Moderate</strong><small>Knee-deep</small><small>15–50 cm</small></span></label>
+              <label class="severity-option severity-high"><input type="radio" name="severity" value="High" required><span class="severity-card"><strong>High</strong><small>Waist-deep</small><small>50–100 cm</small></span></label>
+              <label class="severity-option severity-critical"><input type="radio" name="severity" value="Critical" required><span class="severity-card"><strong>Critical</strong><small>Above waist</small><small>Over 100 cm</small></span></label>
+            </div>
+          </fieldset>
+          <label><span>Estimated water depth (cm) *</span><input type="number" id="reportWaterDepth" name="water_depth_cm" min="0" max="1000" step="1" placeholder="e.g. 30" required></label>
+          <label><span>Date and time observed *</span><input type="datetime-local" id="reportDate" name="observed_at" required></label>
+
+          <div class="report-section-heading"><span class="report-section-number">3</span><div><h3>Report details</h3><p>Describe what you observed at the location.</p></div></div>
+          <label class="report-field-full">
+            <span>Description of flooding *</span>
+            <textarea id="reportDescription" name="description" rows="5" minlength="10" maxlength="3000" placeholder="Describe the water level, affected roads or homes, current conditions, and any visible hazards." required></textarea>
+          </label>
+          <label class="report-field-full">
+            <span>Photo evidence (optional)</span>
+            <input type="file" id="reportPhoto" name="photo" accept="image/jpeg,image/png,image/webp">
+            <small>Upload a clear photo of the reported flooding, if available. Do not put yourself at risk to take a photo.</small>
+          </label>
+          <label class="report-field-full">
+            <span>Contact number (optional)</span>
+            <input type="tel" id="reportContact" name="contact" maxlength="30" autocomplete="tel" placeholder="Optional contact number">
+          </label>
+          <label class="report-confirmation report-field-full">
+            <input type="checkbox" id="reportAccuracy" name="accuracy_confirmed" required>
+            <span>I confirm that this report reflects the conditions I observed and that the information provided is accurate to the best of my knowledge. *</span>
+          </label>
+          <div class="form-action report-field-full">
+            <button class="primary-button" type="submit" id="submitFloodReport">Submit Flood Report</button>
+          </div>
+        </form>
+        <div id="reportProcessingStatus" class="processing-status" role="status" aria-live="polite" hidden></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><h3>Latest community report</h3><p>Submission details will appear here when connected to the community reporting API.</p></div></div>
+        <div id="latestReportSummary" class="report-summary">No community report has been submitted in this session.</div>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><h3>Community reports</h3><p>Reports should be reviewed before being treated as verified flood observations.</p></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Observed</th><th>Location</th><th>Severity</th><th>Water depth</th><th>Review status</th></tr></thead>
+            <tbody id="reportsTable"><tr><td colspan="5" class="empty-state">Community report submissions are not connected yet.</td></tr></tbody>
+          </table>
+        </div>
+      </article>
+      <div id="reportFigures" class="figure-grid"></div>
+    </section>
+
+    <!-- EVACUATION CENTER DIRECTORY -->
+    <section class="view" id="view-evacuation">
+      <div class="page-heading">
+        <div><span class="section-kicker">EMERGENCY RESOURCES</span><h2>Evacuation Centers</h2><p>Search the available evacuation center records for Bataan. Coordinate verification and operational status are shown separately.</p></div>
+        <button class="secondary-button" id="evacuationRefreshButton" type="button">Refresh records</button>
+      </div>
+
+      <div class="metric-grid compact">
+        <article class="metric-card"><span>Total records</span><strong id="evacuationTotal">—</strong></article>
+        <article class="metric-card"><span>Verified mapped</span><strong id="evacuationMapped">—</strong></article>
+        <article class="metric-card"><span>Not verified mapped</span><strong id="evacuationUnmapped">—</strong></article>
+      </div>
+
+      <article class="panel evacuation-notice">
+        <div class="panel-heading"><div><span class="section-kicker">DATA QUALITY</span><h3>Read before using these records</h3></div></div>
+        <p>A listed facility is not automatically confirmed to be open or available during an emergency. Source descriptions, coordinate verification, and live operating status are different things.</p>
+        <p>Records without verified coordinates will remain in the directory but will not be represented as confirmed map locations. Capacity and contact details will only appear when supplied by a source.</p>
+        <div id="evacuationMapNotice" class="panel-note" role="status" aria-live="polite">Loading evacuation center records…</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><span class="section-kicker">DIRECTORY</span><h3>Find a center</h3><p>Search by center name, municipality, barangay, or source status.</p></div></div>
+        <div class="evacuation-filters">
+          <label><span>Search records</span><input type="search" id="evacuationSearch" placeholder="Search name, municipality, barangay…" autocomplete="off"></label>
+          <label><span>Municipality</span>
+            <select id="evacuationMunicipalityFilter">
+              <option value="">All municipalities</option>
+              <option value="Abucay">Abucay</option><option value="Bagac">Bagac</option>
+              <option value="Balanga City">Balanga City</option><option value="Dinalupihan">Dinalupihan</option>
+              <option value="Hermosa">Hermosa</option><option value="Limay">Limay</option>
+              <option value="Mariveles">Mariveles</option><option value="Morong">Morong</option>
+              <option value="Orani">Orani</option><option value="Orion">Orion</option>
+              <option value="Pilar">Pilar</option><option value="Samal">Samal</option>
+            </select>
+          </label>
+          <label><span>Record status</span>
+            <select id="evacuationStatusFilter">
+              <option value="">All source statuses</option>
+              <option value="operational">Operational (source-listed)</option>
+              <option value="recently_used">Recently used (source-listed)</option>
+              <option value="documented_facility">Documented facility</option>
+              <option value="mapped_facility">Mapped facility</option>
+            </select>
+          </label>
+          <button class="secondary-button" id="evacuationResetFilters" type="button">Reset filters</button>
+        </div>
+        <div class="evacuation-results-heading"><span id="evacuationResultCount" role="status" aria-live="polite">Waiting for records…</span></div>
+        <div id="evacuation-directory" class="evacuation-directory"><p class="empty-state">Loading evacuation center records…</p></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div><span class="section-kicker">SPATIAL WORKSPACE</span><h3>View mapped resources</h3><p>Open the main map to view supported geographic layers. Only records with verified coordinates can be treated as verified mapped locations.</p></div>
+          <button class="primary-button" type="button" data-view-target="map">Open flood map</button>
+        </div>
+      </article>
+    </section>
+
+    <!-- SYSTEM INFORMATION -->
+    <section class="view" id="view-system">
+      <div class="page-heading"><div><span class="section-kicker">PROJECT INFORMATION</span><h2>About AGOS</h2><p>Analytics-driven geospatial observation and flood support for Bataan.</p></div></div>
+      <div class="content-grid two-column">
+        <article class="panel"><h3>System scope</h3><p>AGOS brings together weather forecasts, flood-related observations, terrain-derived indicators, candidate zones, and evacuation resources in one interface.</p></article>
+        <article class="panel"><h3>Data interpretation</h3><p>Weather forecasts are model outputs for configured coordinates. Terrain-derived indicators describe landscape characteristics. Flood observations and candidate zones are separate datasets and must be interpreted according to their sources and validation status.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>AGOS</span>
+    <span>Bataan Flood Monitoring &amp; Support System · Prototype</span>
+  </footer>
+</div>
+
+<!-- MapLibre must load before map modules -->
+<script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+
+<script src="js/map.js"></script>
+<script src="js/dashboard-map-preview.js"></script>
+<script src="js/evacuation.js"></script>
+<script src="js/weather-animation.js"></script>
+
+<!-- Chart.js must load before analytics.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/analytics.js"></script>
+
+<script src="js/reports.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/app.js"></script>
+
+<!-- VIEW NAVIGATION -->
+<script>
+(function () {
+  "use strict";
+
+  const navLinks = document.querySelectorAll("[data-view-target]");
+
+  function showView(name) {
+    const target = document.getElementById("view-" + name);
+
+    if (!target) {
+      console.warn("AGOS: requested view does not exist:", name);
+      return;
+    }
+
+    document.querySelectorAll(".view").forEach(view => {
+      view.classList.toggle("active", view.id === "view-" + name);
+    });
+
+    document.querySelectorAll(".nav-link").forEach(link => {
+      link.classList.toggle("active", link.dataset.viewTarget === name);
+    });
+
+    if (name === "map" && window.AGOSMap &&
+        typeof window.AGOSMap.invalidateSize === "function") {
+      requestAnimationFrame(() => window.AGOSMap.invalidateSize());
+    }
+
+    if (name === "dashboard" && window.AGOSDashboardMapPreview &&
+        typeof window.AGOSDashboardMapPreview.resize === "function") {
+      requestAnimationFrame(() => window.AGOSDashboardMapPreview.resize());
+    }
+
+    document.dispatchEvent(new CustomEvent("agos:viewchange", {
+      detail: { view: name }
+    }));
+  }
+
+  navLinks.forEach(element => {
+    element.addEventListener("click", () => {
+      showView(element.dataset.viewTarget);
+    });
+  });
+
+  document.addEventListener("agos:navigate", event => {
+    if (event.detail && event.detail.view) {
+      showView(event.detail.view);
+    }
+  });
+
+  window.AGOSNavigation = { showView };
+})();
+</script>
+</body>
+</html>
