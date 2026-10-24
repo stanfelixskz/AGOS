@@ -77,24 +77,28 @@ test("legend colors match the colors painted by map.js", () => {
   );
 });
 
-test("forecast-rain bands match stormRainfallLabel in map.js", () => {
-  const body = mapSource.slice(mapSource.indexOf("function stormRainfallLabel"));
+test("forecast-rain bands match stormRainfallLevel in map.js", () => {
+  const body = mapSource.slice(mapSource.indexOf("function stormRainfallLevel"));
   const code = body.slice(0, body.indexOf("\n  }\n"));
-  assert.match(code, /mm < 1\)/);
-  assert.match(code, /mm < 10\)/);
-  assert.match(code, /mm < 30\)/);
+  assert.match(code, /peakMm > 30\)/);
+  assert.match(code, /peakMm >= 15\)/);
+  assert.match(code, /peakMm >= 7\.5\)/);
+  assert.match(code, /peakMm >= 1\)/);
   const rain = LAYERS.find((layer) => layer.id === "forecast-rain");
   assert.deepEqual(
     rain.swatches.map((swatch) => swatch.color),
-    ["#93c5fd", "#38bdf8", "#fbbf24", "#fb7185"]
+    ["#93c5fd", "#38bdf8", "#facc15", "#fb923c", "#ef4444"]
   );
+  for (const color of ["#93c5fd", "#38bdf8", "#facc15", "#fb923c", "#ef4444"]) {
+    assert.ok(code.includes(color), `map.js uses ${color}`);
+  }
 });
 
 test("forecast rain is always on and says it is not a PAGASA level", () => {
   const rain = LAYERS.find((layer) => layer.id === "forecast-rain");
   assert.equal(rain.alwaysOn, true);
   assert.equal(rain.api, null);
-  assert.match(rain.why, /not PAGASA/i);
+  assert.match(rain.why, /not an official PAGASA warning/i);
 });
 
 test("status: map not ready -> loading; missing layer -> not loaded", () => {

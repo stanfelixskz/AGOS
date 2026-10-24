@@ -1305,13 +1305,27 @@
     return null;
   }
 
-  function stormRainfallLabel(mm) {
-    if (mm === null) return { label: "No data", color: "#94a3b8" };
-    // These are display bands for forecast accumulation, not official flood thresholds.
-    if (mm < 1) return { label: "Little forecast rain", color: "#93c5fd" };
-    if (mm < 10) return { label: "Rain forecast", color: "#38bdf8" };
-    if (mm < 30) return { label: "Elevated rainfall", color: "#fbbf24" };
-    return { label: "Heavy rainfall outlook", color: "#fb7185" };
+  // Highest forecast hourly precipitation (mm/h) in the returned forecast window.
+  function stormPeakHourlyMm(record) {
+    const points = Array.isArray(record?.points) ? record.points : [];
+    const values = points
+      .map(point => point?.precipitation_mm ?? point?.rain_mm)
+      .filter(value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)))
+      .map(Number);
+    return values.length ? Math.max(...values) : null;
+  }
+
+  // Levels follow the PAGASA Heavy Rainfall Warning intensity criteria
+  // (Yellow 7.5-15, Orange 15-30, Red over 30 mm/h). AGOS applies them to the
+  // forecast peak hour from Open-Meteo, so this is a PAGASA-equivalent forecast
+  // level, NOT an official PAGASA warning. Blue bands are AGOS display bands.
+  function stormRainfallLevel(peakMm) {
+    if (peakMm === null || peakMm === undefined) return { label: "No data", color: "#94a3b8", peakMm: null };
+    if (peakMm > 30) return { label: "Red level intensity (PAGASA-equivalent)", color: "#ef4444", peakMm };
+    if (peakMm >= 15) return { label: "Orange level intensity (PAGASA-equivalent)", color: "#fb923c", peakMm };
+    if (peakMm >= 7.5) return { label: "Yellow level intensity (PAGASA-equivalent)", color: "#facc15", peakMm };
+    if (peakMm >= 1) return { label: "Rain forecast, below PAGASA yellow", color: "#38bdf8", peakMm };
+    return { label: "Little forecast rain", color: "#93c5fd", peakMm };
   }
 
   function normalizeMunicipalityKey(value) {
@@ -1328,7 +1342,7 @@
     const rainfall = rainfallRow?.mm;
     const periodHours = Number(rainfallRow?.record?.accumulation_period_hours) || 6;
     const rainfallAvailable = rainfall != null && Number.isFinite(Number(rainfall));
-    const category = rainfallAvailable ? stormRainfallLabel(Number(rainfall)) : null;
+    const category = rainfallAvailable ? stormRainfallLevel(stormPeakHourlyMm(rainfallRow?.record)) : null;
     return {
       available: false,
       baselineLabel: "MGB raster shown on map",
@@ -1352,13 +1366,14 @@
     const features = rows.map(row => {
       const municipality = known.get(String(row.name || "").toLowerCase());
       if (!municipality) return null;
-      const category = stormRainfallLabel(row.mm);
+      const category = stormRainfallLevel(stormPeakHourlyMm(row.record));
       return {
         type: "Feature",
         geometry: { type: "Point", coordinates: municipality.coordinates },
         properties: {
           name: municipality.name,
           rainfall_mm: row.mm,
+          peak_hourly_mm: category.peakMm,
           rainfall_label: category.label,
           rainfall_color: category.color
         }
@@ -1372,13 +1387,11 @@
         id: "agos-storm-rainfall-warning-circles",
         type: "circle", source: sourceId,
         paint: {
-          "circle-radius": ["case", [">=", ["to-number", ["get", "rainfall_mm"], -1], 30], 12,
-            [">=", ["to-number", ["get", "rainfall_mm"], -1], 10], 10,
-            [">=", ["to-number", ["get", "rainfall_mm"], -1], 1], 8, 6],
-          "circle-color": ["case",
-            [">=", ["to-number", ["get", "rainfall_mm"], -1], 30], "#fb7185",
-            [">=", ["to-number", ["get", "rainfall_mm"], -1], 10], "#fbbf24",
-            [">=", ["to-number", ["get", "rainfall_mm"], -1], 1], "#38bdf8", "#93c5fd"],
+          "circle-radius": ["case", [">", ["to-number", ["get", "peak_hourly_mm"], -1], 30], 12,
+            [">=", ["to-number", ["get", "peak_hourly_mm"], -1], 15], 11,
+            [">=", ["to-number", ["get", "peak_hourly_mm"], -1], 7.5], 10,
+            [">=", ["to-number", ["get", "peak_hourly_mm"], -1], 1], 8, 6],
+          "circle-color": ["get", "rainfall_color"],
           "circle-opacity": 0.9,
           "circle-stroke-color": "#ffffff",
           "circle-stroke-width": 2
@@ -2495,7 +2508,7 @@
       normalizeMunicipalityKey(row.name) === normalizeMunicipalityKey(municipality.name) ||
       (normalizeMunicipalityKey(municipality.name) === "balanga" && normalizeMunicipalityKey(row.name) === "balangacity")
     );
-    const rainfallCategory = rainfallRow ? stormRainfallLabel(rainfallRow.mm) : null;
+    const rainfallCategory = rainfallRow ? stormRainfallLevel(stormPeakHourlyMm(rainfallRow.record)) : null;
     const rainfallAmount = rainfallRow?.mm == null ? "Not available" : `${Number(rainfallRow.mm).toFixed(1)} mm`;
     const rainfallRecord = rainfallRow?.record;
     const rainfallPoints = Array.isArray(rainfallRecord?.points) ? rainfallRecord.points : [];
@@ -2515,7 +2528,7 @@
         <div style="height:1px;background:rgba(148,163,184,.25);margin:9px 0"></div>
         <div style="font-size:10px;color:#cbd5e1">Forecast-based outlook · ${escapeHTML(String(floodAssessment.periodHours))}-hour forecast</div>
         <div style="font-size:14px;font-weight:800;color:${assessmentColor};margin-top:3px">${escapeHTML(floodAssessment.outlookLabel)}</div>
-        ${floodAssessment.rainfallMm != null ? `<div style="font-size:10px;color:#cbd5e1;margin-top:4px">Forecast rainfall: ${floodAssessment.rainfallMm.toFixed(1)} mm</div>` : `<div style="font-size:10px;color:#cbd5e1;margin-top:4px">Forecast rainfall is unavailable for this municipality.</div>`}
+        ${floodAssessment.rainfallMm != null ? `<div style="font-size:10px;color:#cbd5e1;margin-top:4px">Forecast rainfall: ${floodAssessment.rainfallMm.toFixed(1)} mm total${rainfallCategory?.peakMm != null ? ` · peak hour ${rainfallCategory.peakMm.toFixed(1)} mm/h` : ""}</div>` : `<div style="font-size:10px;color:#cbd5e1;margin-top:4px">Forecast rainfall is unavailable for this municipality.</div>`}
         <div style="font-size:10px;line-height:1.4;color:#e2e8f0;margin-top:7px">${escapeHTML(floodAssessment.explanation)}</div>
       </div>`;
     const outlookRows = `
