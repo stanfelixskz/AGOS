@@ -169,6 +169,52 @@ class SchedulerThreadTests(unittest.TestCase):
         self.assertTrue(summary["crashed"])
         self.assertEqual(summary["error"], "boom")
 
+    def test_forecast_snapshot_runs_after_cycle_and_is_recorded(self):
+        called = threading.Event()
+
+        def snapshot():
+            called.set()
+            return {"stored": 12, "errors": []}
+
+        scheduler = IngestionScheduler(
+            enabled=True,
+            cycle=lambda lookback_days, should_stop: {"succeeded": 1},
+            snapshot=snapshot,
+        )
+        scheduler.start()
+        self.assertTrue(called.wait(timeout=5))
+        scheduler.stop()
+
+        status = scheduler.status()
+        self.assertTrue(status["forecast_snapshot_enabled"])
+        self.assertEqual(status["last_forecast_snapshot"]["stored"], 12)
+
+    def test_crashing_snapshot_does_not_kill_the_loop(self):
+        done = threading.Event()
+
+        def snapshot():
+            done.set()
+            raise RuntimeError("snap boom")
+
+        scheduler = IngestionScheduler(
+            enabled=True,
+            cycle=lambda lookback_days, should_stop: {"succeeded": 1},
+            snapshot=snapshot,
+        )
+        scheduler.start()
+        self.assertTrue(done.wait(timeout=5))
+        scheduler.stop()
+
+        result = scheduler.status()["last_forecast_snapshot"]
+        self.assertTrue(result["crashed"])
+        self.assertEqual(result["error"], "snap boom")
+
+    def test_snapshot_setting_defaults_on_and_can_be_turned_off(self):
+        self.assertTrue(load_settings({})["forecast_snapshot"])
+        self.assertFalse(
+            load_settings({"AGOS_FORECAST_SNAPSHOT": "false"})["forecast_snapshot"]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,9 +24,17 @@ def system_status():
     except Exception as error:  # noqa: BLE001
         database = {"status": "error", "detail": str(error)}
 
+    try:
+        from app.services.forecast_store import forecast_store_summary
+
+        forecasts = forecast_store_summary()
+    except Exception as error:  # noqa: BLE001
+        forecasts = {"status": "error", "detail": str(error)}
+
     return {
         "api": {"status": "running"},
         "scheduler": scheduler.status(),
         "database": database,
+        "stored_forecasts": forecasts,
         "weatherapi_key_configured": bool(WEATHERAPI_API_KEY),
     }
