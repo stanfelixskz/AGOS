@@ -24,7 +24,10 @@
 (() => {
   "use strict";
 
-  const API_BASE = "http://127.0.0.1:8000";
+  // Backend address comes from js/config.js.
+  const API_BASE = window.AGOS_CONFIG
+    ? window.AGOS_CONFIG.apiBase
+    : "http://127.0.0.1:8000";
   const TIME_ZONE = "Asia/Manila";
   const WEATHER_REFRESH_MS = 5 * 60 * 1000;
 

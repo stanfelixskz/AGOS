@@ -11,7 +11,8 @@
     "use strict";
 
     const CONFIG = {
-        endpoint: "http://127.0.0.1:8000/weather",
+        // Backend address comes from js/config.js.
+        endpoint: `${window.AGOS_CONFIG ? window.AGOS_CONFIG.apiBase : "http://127.0.0.1:8000"}/weather`,
         refreshInterval: 15 * 60 * 1000,
         requestTimeout: 15000,
         defaultMunicipality: "Balanga",
@@ -246,7 +247,7 @@
         } catch (error) { console.warn("[AGOS Weather] Could not hide old municipality markers:", error); }
     }
 
-    function buildURL(name) { const url = new URL(CONFIG.endpoint); url.searchParams.set("municipality", name); return url.toString(); }
+    function buildURL(name) { const url = new URL(CONFIG.endpoint, window.location.href); url.searchParams.set("municipality", name); return url.toString(); }
 
     async function fetchWeather(name) {
         const previous = state.controllers.get(name);

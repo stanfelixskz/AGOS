@@ -97,12 +97,19 @@
       evacuationCenters: "data/evacuation-centers.json"
     },
 
-    api: {
-      rainfallGrid: "http://127.0.0.1:8000/weather/grid",
-      forecastGrid: "http://127.0.0.1:8000/weather/forecast-grid",
-      rainfallOutlook: "http://127.0.0.1:8000/weather/rainfall-outlook?hours=6",
-      floodOutlook: "http://127.0.0.1:8000/weather/flood-outlook?forecast_days=7",
-    },
+    // Backend address comes from js/config.js.
+    api: (() => {
+      const base = window.AGOS_CONFIG
+        ? window.AGOS_CONFIG.apiBase
+        : "http://127.0.0.1:8000";
+
+      return {
+        rainfallGrid: `${base}/weather/grid`,
+        forecastGrid: `${base}/weather/forecast-grid`,
+        rainfallOutlook: `${base}/weather/rainfall-outlook?hours=6`,
+        floodOutlook: `${base}/weather/flood-outlook?forecast_days=7`,
+      };
+    })(),
 
     weatherMap: {
       precipitationTileTemplate:

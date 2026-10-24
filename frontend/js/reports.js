@@ -23,7 +23,10 @@
   // ------------------------------------------------------------
 
   const CONFIG = {
-    apiBase: "http://127.0.0.1:8000",
+    // Backend address comes from js/config.js.
+    apiBase: window.AGOS_CONFIG
+      ? window.AGOS_CONFIG.apiBase
+      : "http://127.0.0.1:8000",
     endpoints: {
       submit: "/reports/community",
       list: "/reports"
@@ -263,7 +266,7 @@
 
       if (error instanceof TypeError) {
         throw new Error(
-          "Cannot connect to the AGOS backend. Check that FastAPI is running at http://127.0.0.1:8000 and that CORS is configured."
+          `Cannot connect to the AGOS backend. Check that FastAPI is running at ${CONFIG.apiBase || window.location.origin} and that CORS is configured.`
         );
       }
 

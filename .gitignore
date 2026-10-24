@@ -37,3 +37,9 @@ node_modules/
 # Build output
 dist/
 build/
+# AGOS runtime data (never commit: community reports with contact numbers,
+# uploaded photos, generated reports, and the SQLite analytics database)
+backend/data/
+*.sqlite3
+*.sqlite3-journal
+*.db
