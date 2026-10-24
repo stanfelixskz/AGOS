@@ -521,14 +521,14 @@ def get_bataan_rainfall_outlook(hours: int = 6) -> dict:
     if (
         isinstance(hours, bool)
         or not isinstance(hours, int)
-        or not 1 <= hours <= 24
+        or not 1 <= hours <= 48
     ):
-        raise ValueError("hours must be an integer from 1 to 24")
+        raise ValueError("hours must be an integer from 1 to 48")
 
     now = _now_local()
     payloads = _multi_location_forecast_payload(
         RAINFALL_OUTLOOK_VARIABLES,
-        forecast_days=2,
+        forecast_days=3,
     )
 
     municipality_results = []

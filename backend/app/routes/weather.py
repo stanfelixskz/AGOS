@@ -137,8 +137,8 @@ def weather_rainfall_outlook(
     hours: int = Query(
         6,
         ge=1,
-        le=24,
-        description="Number of hourly forecast steps to return, 1-24",
+        le=48,
+        description="Number of hourly forecast steps to return, 1-48",
     ),
 ):
     """Hourly rainfall forecast for all configured municipalities."""

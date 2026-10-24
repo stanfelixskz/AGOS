@@ -1,0 +1,150 @@
+{
+  "source": "Compiled by the AGOS team from public Google Maps listings (moved from frontend/js/evacuation.js).",
+  "compiled_note": "Coordinates come from the linked Google Maps listings. Capacity, availability and operating status are NOT verified; a listed center is not proof that it is open or safe.",
+  "centers": [
+    {
+      "id": "EC-001",
+      "name": "Colo Evacuation Center",
+      "municipality": "Dinalupihan",
+      "latitude": 14.8463056,
+      "longitude": 120.4115833,
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=14.8463056%2C120.4115833",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-002",
+      "name": "Hermosa Multipurpose Covered Court",
+      "municipality": "Hermosa",
+      "latitude": 14.8297701,
+      "longitude": 120.5093926,
+      "google_maps_url": "https://www.google.com/maps/place/Hermosa+Multipurpose+Covered+Court/@14.8297701,120.5068123,17z/data=!3m1!4b1!4m6!3m5!1s0x339668140c7cce91:0xb71010d7ccc3f25a!8m2!3d14.8297701!4d120.5093926!16s%2Fg%2F1tfnqjlv",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-003",
+      "name": "Multi-purpose Hall and Evacuation Center",
+      "municipality": "Orani",
+      "latitude": 14.8060647,
+      "longitude": 120.5337888,
+      "google_maps_url": "https://www.google.com/maps/place/Multi-purpose+Hall+and+Evacuation+Center/@14.8059765,120.5325738,18z/data=!4m6!3m5!1s0x339643da1457becd:0x2ba321281e309e46!8m2!3d14.8060647!4d120.5337888!16s%2Fg%2F11qpzp81s3",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-004",
+      "name": "Command Center (Municipality of Samal)",
+      "municipality": "Samal",
+      "latitude": 14.7688624,
+      "longitude": 120.543458,
+      "google_maps_url": "https://www.google.com/maps/place/Command+Center+(Municipality+of+Samal)/@14.7688624,120.543458,17z/data=!3m1!4b1!4m6!3m5!1s0x339643035aa6075b:0x699b2dc7b3c3d507!8m2!3d14.7688624!4d120.543458!16s%2Fg%2F11r8mdbcv5",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-005",
+      "name": "Abucay Evacuation Center",
+      "municipality": "Abucay",
+      "latitude": 14.714787,
+      "longitude": 120.5256037,
+      "google_maps_url": "https://www.google.com/maps/place/Abucay+Evacuation+Center/@14.714787,120.5256037,17z/data=!3m1!4b1!4m6!3m5!1s0x33966b839fde3997:0x87aab8c9127c0446!8m2!3d14.714787!4d120.5256037!16s%2Fg%2F11l2_0rz_x",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-006",
+      "name": "Bataan People's Center",
+      "municipality": "Balanga",
+      "latitude": 14.6748468,
+      "longitude": 120.5299984,
+      "google_maps_url": "https://www.google.com/maps/place/Bataan+People's+Center/@14.6748196,120.5301815,20z/data=!4m6!3m5!1s0x33963f1ee283aa4d:0xd1f9342bee889409!8m2!3d14.6748468!4d120.5299984!16s%2Fg%2F11pv2rpg9x",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-007",
+      "name": "Pilar Government Center",
+      "municipality": "Pilar",
+      "latitude": 14.6560086,
+      "longitude": 120.5435607,
+      "google_maps_url": "https://www.google.com/maps/place/Pilar+Government+Center/@14.6560086,120.5435607,17z/data=!3m1!4b1!4m6!3m5!1s0x33963fe9a0555555:0x7829c57852cf9a4a!8m2!3d14.6560086!4d120.5435607!16s%2Fg%2F11tgg7nv3m",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-008",
+      "name": "KAMALIG (Orion Sports Complex)",
+      "municipality": "Orion",
+      "latitude": 14.6244387,
+      "longitude": 120.5865591,
+      "google_maps_url": "https://www.google.com/maps/place/KAMALIG+(Orion+Sports+Complex)/@14.6231371,120.5837742,18z/data=!4m6!3m5!1s0x33963f141497cb97:0xcfd789836b3c2784!8m2!3d14.6244387!4d120.5865591!16s%2Fg%2F11q465dggv",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-009",
+      "name": "Limay Sports Complex",
+      "municipality": "Limay",
+      "latitude": 14.563348,
+      "longitude": 120.5933632,
+      "google_maps_url": "https://www.google.com/maps/place/Limay+Sports+Complex/@14.563348,120.5933632,17z/data=!3m1!4b1!4m6!3m5!1s0x33963d2a6ad71e53:0x25733005ff91a3af!8m2!3d14.563348!4d120.5933632!16s%2Fg%2F11rkgnz8qp",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-010",
+      "name": "Mariveles Sports Complex",
+      "municipality": "Mariveles",
+      "latitude": 14.4367421,
+      "longitude": 120.4889534,
+      "google_maps_url": "https://www.google.com/maps/place/Mariveles+Sports+Complex/@14.4367421,120.4863731,17z/data=!3m1!4b1!4m6!3m5!1s0x339618d3956aaaab:0xba269636e2539808!8m2!3d14.4367421!4d120.4889534!16s%2Fg%2F11sskrfl4r",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-011",
+      "name": "Emilio C. Bernabe Bagac National High School",
+      "municipality": "Bagac",
+      "latitude": 14.6055262,
+      "longitude": 120.4019701,
+      "google_maps_url": "https://www.google.com/maps/place/Emilio+C.+Bernabe+Bagac+National+High+School/@14.6055262,120.4019701,17z/data=!3m1!4b1!4m6!3m5!1s0x3396116313606f15:0xb08e84add041e650!8m2!3d14.6055262!4d120.4019701!16s%2Fg%2F1tcy1v6y",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    },
+    {
+      "id": "EC-012",
+      "name": "Morong Bataan Evacuation Center",
+      "municipality": "Morong",
+      "latitude": 14.6870596,
+      "longitude": 120.2635574,
+      "google_maps_url": "https://www.google.com/maps/place/Morong+Bataan+Evacuation+Center/@14.6870596,120.2609771,17z/data=!3m1!4b1!4m6!3m5!1s0x33960d5aed11b319:0x8de9186103924cef!8m2!3d14.6870596!4d120.2635574!16s%2Fg%2F11qnttx3b8",
+      "capacity": null,
+      "availability": null,
+      "operating_status": null,
+      "verification": "unverified"
+    }
+  ]
+}
