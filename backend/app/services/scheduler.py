@@ -95,6 +95,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> dict[str, Any]:
                 MAX_LOOKBACK_DAYS,
             )
         ),
+        "forecast_snapshot": _parse_bool(
+            env.get("AGOS_FORECAST_SNAPSHOT"), default=True
+        ),
     }
 
 
@@ -233,7 +236,9 @@ class IngestionScheduler:
         interval_hours: float = DEFAULT_INTERVAL_HOURS,
         lookback_days: int = DEFAULT_LOOKBACK_DAYS,
         cycle: Callable[..., dict] = run_ingestion_cycle,
+        snapshot: Callable[[], dict] | None = None,
     ) -> None:
+        self._snapshot = snapshot
         self.enabled = enabled
         self.interval_seconds = interval_hours * 3600
         self.lookback_days = lookback_days
@@ -251,6 +256,8 @@ class IngestionScheduler:
             "last_started_at": None,
             "last_finished_at": None,
             "last_summary": None,
+            "forecast_snapshot_enabled": snapshot is not None,
+            "last_forecast_snapshot": None,
             "next_run_at": None,
         }
 
@@ -258,10 +265,18 @@ class IngestionScheduler:
     def from_env(cls, env: Mapping[str, str] | None = None):
         settings = load_settings(env)
 
+        snapshot = None
+
+        if settings["forecast_snapshot"]:
+            from app.services.forecast_store import run_forecast_snapshot
+
+            snapshot = run_forecast_snapshot
+
         return cls(
             enabled=settings["enabled"],
             interval_hours=settings["interval_hours"],
             lookback_days=settings["lookback_days"],
+            snapshot=snapshot,
         )
 
     def status(self) -> dict[str, Any]:
@@ -311,6 +326,17 @@ class IngestionScheduler:
             except Exception as error:  # noqa: BLE001 - never kill the thread
                 logger.exception("Ingestion cycle crashed")
                 summary = {"crashed": True, "error": _error_text(error)}
+
+            if self._snapshot is not None and not self._stop.is_set():
+                try:
+                    snapshot_summary = self._snapshot()
+                except Exception as error:  # noqa: BLE001
+                    logger.exception("Forecast snapshot crashed")
+                    snapshot_summary = {
+                        "crashed": True,
+                        "error": _error_text(error),
+                    }
+                self._set(last_forecast_snapshot=snapshot_summary)
 
             next_run = datetime.now(timezone.utc) + timedelta(
                 seconds=self.interval_seconds
