@@ -44,6 +44,7 @@ function hourLabel(time, index) {
 
 export async function mount(container, route) {
   container.innerHTML = `
+    <h1 class="visually-hidden">${escapeHTML(t("title.map"))}</h1>
     <div class="mapview" id="mapview">
       <div class="map-canvas" id="mapCanvas" role="region" aria-label="${escapeHTML(t("map.aria"))}">
         <div class="map-loading" id="mapLoading">${loadingState(t("map.loading"))}</div>

@@ -48,6 +48,7 @@ function render(data) {
   const munis = [...(data.municipalities || [])].sort((a, b) => (data.ranking_24h || []).indexOf(a.name) - (data.ranking_24h || []).indexOf(b.name));
 
   return `
+    <h1 class="visually-hidden">${escapeHTML(t("title.overview"))}</h1>
     <section class="hero ${heroTone(data.highest_level_24h)}" aria-labelledby="heroTitle">
       <div class="hero-main">
         <div class="row" style="gap:8px">

@@ -29,6 +29,8 @@ test("relative time", () => {
   assert.equal(relativeTime("2026-09-07T01:55:00Z", now), "5 min ago");
   assert.equal(relativeTime("2026-09-07T05:00:00Z", now), "in 3 h");
   assert.equal(relativeTime(null, now), "unknown time");
+  assert.equal(relativeTime("2026-09-07T01:55:00Z", now, "fil"), "5 min na ang nakalipas");
+  assert.equal(relativeTime("2026-09-09T02:00:00Z", now, "fil"), "sa loob ng 2 araw");
 });
 
 test("distance between Balanga and Mariveles is about 27 km", () => {

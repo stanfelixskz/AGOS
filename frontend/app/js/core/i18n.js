@@ -6,7 +6,6 @@
 
 export const STRINGS = {
   en: {
-    "app.name": "AGOS",
     "app.tagline": "Bataan flood monitoring",
     "app.disclaimer": "AGOS is a student research prototype. It is not an official PAGASA or NDRRMC warning service. Follow your LGU and PAGASA during emergencies.",
     "skip": "Skip to content",
@@ -46,7 +45,6 @@ export const STRINGS = {
     "common.loading": "Loading…",
     "common.notAvailable": "Not available",
     "common.retry": "Try again",
-    "common.source": "Source",
     "common.updated": "Updated",
     "common.why": "Why this color?",
     "common.close": "Close",
@@ -54,14 +52,10 @@ export const STRINGS = {
     "common.details": "Details",
     "common.unverified": "Unverified",
     "common.notOfficial": "Not an official warning",
-    "common.seeAll": "See all",
     "common.municipality": "Municipality",
     "common.allMunicipalities": "All municipalities",
-    "common.legacy": "Open the previous version",
     "common.comingSoon": "Coming soon",
 
-    "placeholder.title": "This page is being redesigned",
-    "placeholder.body": "The new version of this page arrives in a later update. The previous version still works.",
 
     "sources.intro": "AGOS combines public data sources. Each one has limits. This page lists them, shows how fresh the data is, and explains what AGOS does and does not claim.",
     "sources.live": "Live system status",
@@ -274,7 +268,6 @@ export const STRINGS = {
   },
 
   fil: {
-    "app.name": "AGOS",
     "app.tagline": "Pagbabantay sa baha sa Bataan",
     "app.disclaimer": "Ang AGOS ay isang student research prototype. Hindi ito opisyal na babala ng PAGASA o NDRRMC. Sundin ang inyong LGU at PAGASA tuwing may emergency.",
     "skip": "Lumaktaw sa nilalaman",
@@ -314,7 +307,6 @@ export const STRINGS = {
     "common.loading": "Naglo-load…",
     "common.notAvailable": "Walang datos",
     "common.retry": "Subukan muli",
-    "common.source": "Pinagmulan",
     "common.updated": "Na-update",
     "common.why": "Bakit ganito ang kulay?",
     "common.close": "Isara",
@@ -322,14 +314,10 @@ export const STRINGS = {
     "common.details": "Detalye",
     "common.unverified": "Hindi pa beripikado",
     "common.notOfficial": "Hindi opisyal na babala",
-    "common.seeAll": "Tingnan lahat",
     "common.municipality": "Bayan",
     "common.allMunicipalities": "Lahat ng bayan",
-    "common.legacy": "Buksan ang lumang bersyon",
     "common.comingSoon": "Malapit na",
 
-    "placeholder.title": "Ginagawa pa ang bagong disenyo ng pahinang ito",
-    "placeholder.body": "Darating ang bagong bersyon sa susunod na update. Gumagana pa rin ang lumang bersyon.",
 
     "sources.intro": "Pinagsasama ng AGOS ang mga pampublikong pinagmulan ng datos. May limitasyon ang bawat isa. Nakalista rito ang mga ito, kung gaano kasariwa ang datos, at kung ano ang sinasabi at hindi sinasabi ng AGOS.",
     "sources.live": "Kalagayan ng sistema",

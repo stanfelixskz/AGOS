@@ -3,6 +3,8 @@
  * All displayed times use Philippine time (Asia/Manila).
  */
 
+import { getLang } from "./i18n.js";
+
 export const PH_TZ = "Asia/Manila";
 
 const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -65,19 +67,23 @@ export function formatDate(value) {
   return date.toLocaleDateString("en-PH", { timeZone: PH_TZ, month: "short", day: "numeric", year: "numeric" });
 }
 
-/** "5 min ago", "3 h ago", "2 days ago"; future times say "in …". */
-export function relativeTime(value, now = new Date()) {
+/** "5 min ago", "3 h ago", "in 2 days" (English or Filipino). */
+export function relativeTime(value, now = new Date(), lang = getLang()) {
   const date = parseTime(value);
-  if (!date) return "unknown time";
+  const fil = lang === "fil";
+  if (!date) return fil ? "hindi alam ang oras" : "unknown time";
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
   const abs = Math.abs(seconds);
-  let text;
-  if (abs < 60) text = "just now";
-  else if (abs < 3600) text = `${Math.round(abs / 60)} min`;
-  else if (abs < 86400) text = `${Math.round(abs / 3600)} h`;
-  else text = `${Math.round(abs / 86400)} day${Math.round(abs / 86400) === 1 ? "" : "s"}`;
-  if (text === "just now") return text;
-  return seconds >= 0 ? `${text} ago` : `in ${text}`;
+  if (abs < 60) return fil ? "ngayon lang" : "just now";
+  let amount;
+  if (abs < 3600) amount = `${Math.round(abs / 60)} min`;
+  else if (abs < 86400) amount = `${Math.round(abs / 3600)} h`;
+  else {
+    const days = Math.round(abs / 86400);
+    amount = fil ? `${days} araw` : `${days} day${days === 1 ? "" : "s"}`;
+  }
+  if (fil) return seconds >= 0 ? `${amount} na ang nakalipas` : `sa loob ng ${amount}`;
+  return seconds >= 0 ? `${amount} ago` : `in ${amount}`;
 }
 
 /** Great-circle distance in km between two [lon, lat] points. */
