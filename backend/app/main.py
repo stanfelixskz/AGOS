@@ -8,6 +8,7 @@ from app.routes.weather import router as weather_router
 from app.routes.reports import router as reports_router
 from app.routes.rainfall import router as rainfall_router
 from app.routes.system import router as system_router
+from app.routes.skill import router as skill_router
 from app.services.scheduler import scheduler
 from agos_data_lifecycle import router as data_lifecycle_router
 
@@ -54,6 +55,7 @@ app.include_router(data_lifecycle_router)
 
 # System status (scheduler, database, configuration checks)
 app.include_router(system_router)
+app.include_router(skill_router)
 
 
 @app.get("/")
