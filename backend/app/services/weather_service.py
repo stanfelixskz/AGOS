@@ -839,12 +839,3 @@ def get_bataan_flood_outlook(forecast_days: int = 7) -> dict:
             "An available status indicates data coverage only; it does not confirm that the selected grid cell represents the municipality's intended river.",
         ],
     }
-"""WritingBlock>
-**After replacing and saving:**
-
-1. Keep your backend server running; `--reload` should restart it automatically.
-2. Open `http://127.0.0.1:8000/docs`.
-3. Run `GET /weather/flood-outlook?forecast_days=7`.
-4. Check `no_data_municipality_count`, `partial_data_municipality_count`, and `available_municipality_count`.
-
-One caveat: the existing six-hour cache may return the previously cached API payload, but the new status calculations will still run against that payload. The four municipalities with all-null discharge should now report `no_data`."""
