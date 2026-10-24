@@ -92,15 +92,16 @@
       alwaysOn: true,
       mapLayers: ["agos-storm-rainfall-warning-circles"],
       swatches: [
-        { color: "#93c5fd", label: "Under 1 mm · little forecast rain" },
-        { color: "#38bdf8", label: "1 to under 10 mm · rain forecast" },
-        { color: "#fbbf24", label: "10 to under 30 mm · elevated rainfall (amber)" },
-        { color: "#fb7185", label: "30 mm or more · heavy rainfall outlook" },
+        { color: "#93c5fd", label: "Peak under 1 mm/h · little forecast rain" },
+        { color: "#38bdf8", label: "Peak 1 to under 7.5 mm/h · rain forecast, below PAGASA yellow" },
+        { color: "#facc15", label: "Peak 7.5 to under 15 mm/h · yellow level intensity" },
+        { color: "#fb923c", label: "Peak 15 to 30 mm/h · orange level intensity" },
+        { color: "#ef4444", label: "Peak over 30 mm/h · red level intensity" },
       ],
       shows:
-        "Forecast rain for the next 6 hours at one reference point per municipality, shown as a circle with the rain total.",
+        "Forecast rain for the next 6 hours at one reference point per municipality. The circle color is the heaviest forecast hour; the label shows the 6-hour total.",
       why:
-        "The color comes from the 6-hour rain total. These bands (1, 10 and 30 mm) are AGOS display bands, not PAGASA rainfall-warning levels.",
+        "Yellow, orange and red use PAGASA's Heavy Rainfall Warning intensity criteria (7.5, 15 and 30 mm per hour, as published by PAGASA and reported by news explainers; AGOS has not confirmed the numbers on a PAGASA page). AGOS applies them to the Open-Meteo forecast peak hour, so this is a PAGASA-equivalent forecast level, not an official PAGASA warning. The two blue bands are AGOS display bands, not PAGASA.",
       source: { name: "Open-Meteo forecast, through the AGOS API (/weather/rainfall-outlook)", url: "https://open-meteo.com/en/docs" },
       updated: "Refreshed about every 10 minutes while the map is open.",
       limits:
