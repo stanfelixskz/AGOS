@@ -25,6 +25,7 @@ frontend/   Static site (HTML, CSS, vanilla JS, MapLibre GL). No build step.
 | Data lifecycle | `/data-lifecycle/*` — ingest history into SQLite, daily analytics, validation |
 | System status | `/system/status` — scheduler state, database stats, config checks |
 | Map | MGB flood susceptibility, rainfall tiles, terrain layers, municipalities, evacuation centers |
+| Map legend | "Layers and legend" panel: every layer with a checkbox, color key and "Why these colors?" (source, freshness, limits) |
 
 ## Run it locally
 
@@ -85,6 +86,15 @@ python -m pytest            # or: python -m unittest discover -s tests -t .
 
 Tests use no network. API smoke tests are skipped automatically if FastAPI or
 httpx is not installed.
+
+Frontend (needs Node 20+; no packages to install):
+
+```bash
+node --test frontend/tests/map-legend.test.js
+```
+
+This checks that the map legend (`frontend/js/map-legend.js`) still matches the
+layer ids and colors used in `frontend/js/map.js`.
 
 ## Data sources and honest limits
 

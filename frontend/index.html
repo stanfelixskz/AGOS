@@ -11,6 +11,7 @@
   <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/analytics.css">
+  <link rel="stylesheet" href="css/map-legend.css">
 </head>
 <body>
 <div class="app-shell">
@@ -176,13 +177,17 @@
         <button class="map-control" data-action="centers" type="button">Evacuation centers</button>
         <button class="map-control" data-action="reports" type="button">Reports</button>
       </div>
-      <article class="panel map-panel">
-        <div id="map" class="maplibre-map" role="application" aria-label="Interactive AGOS flood map"></div>
-        <div class="map-interpretation">
-          <strong>Interpretation note</strong>
-          <p>Flood observations, terrain indicators, and candidate susceptibility zones represent different types of evidence. Candidate zones are not confirmed flood extents.</p>
-        </div>
-      </article>
+      <div class="map-layout">
+        <!-- populated by js/map-legend.js -->
+        <aside class="panel layer-panel" id="agosLayerPanel" aria-label="Map layers and legend"></aside>
+        <article class="panel map-panel">
+          <div id="map" class="maplibre-map" role="application" aria-label="Interactive AGOS flood map"></div>
+          <div class="map-interpretation">
+            <strong>Interpretation note</strong>
+            <p>Flood observations, terrain indicators, and candidate susceptibility zones represent different types of evidence. Candidate zones are not confirmed flood extents.</p>
+          </div>
+        </article>
+      </div>
     </section>
 
     <!-- ANALYTICS: populated by js/analytics.js -->
@@ -376,6 +381,7 @@
 <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
 
 <script src="js/map.js"></script>
+<script src="js/map-legend.js"></script>
 <script src="js/dashboard-map-preview.js"></script>
 <script src="js/evacuation.js"></script>
 <script src="js/weather-animation.js"></script>
