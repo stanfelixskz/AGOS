@@ -1,11 +1,26 @@
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.weather import router as weather_router
 from app.routes.reports import router as reports_router
 from app.routes.rainfall import router as rainfall_router
+from app.routes.system import router as system_router
+from app.services.scheduler import scheduler
 from agos_data_lifecycle import router as data_lifecycle_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Background ingestion is opt-in (AGOS_SCHEDULER_ENABLED=true).
+    scheduler.start()
+
+    try:
+        yield
+    finally:
+        scheduler.stop()
 
 
 app = FastAPI(
@@ -15,6 +30,7 @@ app = FastAPI(
         "Analytics-Driven Geospatial Observation and "
         "Flood Support System"
     ),
+    lifespan=lifespan,
 )
 
 
@@ -35,6 +51,9 @@ app.include_router(rainfall_router)
 
 # SQLite Data Lifecycle routes
 app.include_router(data_lifecycle_router)
+
+# System status (scheduler, database, configuration checks)
+app.include_router(system_router)
 
 
 @app.get("/")
