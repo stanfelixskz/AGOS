@@ -166,14 +166,21 @@ def _find_report(report_id: str) -> dict[str, Any] | None:
     return None
 
 
-def _public_report(report: dict[str, Any]) -> dict[str, Any]:
-    """Remove internal filesystem details before returning a report."""
+# Never returned by the public API: internal file names and the reporter's
+# contact number (personal data, kept only for follow-up by reviewers).
+PRIVATE_REPORT_FIELDS = {"photo_filename", "contact_number"}
 
-    return {
+
+def _public_report(report: dict[str, Any]) -> dict[str, Any]:
+    """Remove internal and personal fields before returning a report."""
+
+    public = {
         key: value
         for key, value in report.items()
-        if key != "photo_filename"
+        if key not in PRIVATE_REPORT_FIELDS
     }
+    public["has_contact"] = bool(report.get("contact_number"))
+    return public
 
 
 def _validate_coordinate(
