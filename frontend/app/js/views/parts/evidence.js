@@ -7,14 +7,22 @@
  */
 
 import { icon } from "../../core/icons.js";
-import { t } from "../../core/i18n.js";
+import { t, getLang } from "../../core/i18n.js";
 import { escapeHTML, num, isNumber, formatDate } from "../../core/format.js";
+
+/** 1st, 2nd, 3rd, 4th ... 11th, 12th, 13th ... 21st, 22nd, 93rd. */
+export function ordinal(n) {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${{ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th"}`;
+}
 
 /** "99th" style rank label from a 0-100 percentile. */
 export function rankLabel(p) {
   if (!isNumber(p)) return "—";
   if (p >= 99.5) return t("evidence.rankTop1");
-  return t("evidence.rank", { p: num(Math.floor(p), 0) });
+  const n = Math.floor(p);
+  return t("evidence.rank", { p: getLang() === "fil" ? String(n) : ordinal(n) });
 }
 
 /**

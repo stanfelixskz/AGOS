@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { verdict, rankLabel, renderEvidence, dateRange } from "../js/views/parts/evidence.js";
+import { verdict, rankLabel, renderEvidence, dateRange, ordinal } from "../js/views/parts/evidence.js";
 
 test("verdict needs enough floods and a margin over chance", () => {
   assert.equal(verdict({ events_with_rain_data: 5, share_top5: 0.9, chance_top5: 0.1 }).key, "evidence.verdictFew");
@@ -35,4 +35,10 @@ test("compact date ranges", () => {
   assert.equal(dateRange("2026-09-07", "2026-09-08"), "Sep 7–8, 2026");
   assert.equal(dateRange("2021-07-30", "2021-08-02"), "Jul 30 – Aug 2, 2021");
   assert.ok(dateRange("2020-01-01", "2020-01-01").includes("2020"));
+});
+
+test("English ordinals", () => {
+  assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 82, 93, 98].map(ordinal),
+    ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "82nd", "93rd", "98th"]);
+  assert.equal(rankLabel(93.4), "93rd");
 });

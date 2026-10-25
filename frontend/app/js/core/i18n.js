@@ -260,7 +260,7 @@ export const STRINGS = {
     "evidence.townsN": "{n} towns",
     "evidence.towns1": "1 town",
     "evidence.noFloodedTown": "no town named as flooded (roads only)",
-    "evidence.rank": "{p}th",
+    "evidence.rank": "{p}",
     "evidence.rankTop1": "top 1%",
     "evidence.top5": "a town in top 5%",
     "evidence.flowShort": "flow {rank}",
