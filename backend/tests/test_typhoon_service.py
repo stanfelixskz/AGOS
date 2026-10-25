@@ -132,9 +132,29 @@ class ExtractionTests(unittest.TestCase):
                 Session.calls += 1
                 raise requests.ConnectTimeout("slow")
 
+        ts._geocode_cache.clear()
         with self.assertRaises(ts.GeocoderUnavailable):
             ts.geocode_place("Virac, Catanduanes", session=Session())
-        self.assertEqual(Session.calls, 2)
+        self.assertEqual(Session.calls, ts.GEOCODE_ATTEMPTS)
+
+    def test_geocode_answers_are_cached(self):
+        class Response:
+            def raise_for_status(self):
+                pass
+            def json(self):
+                return {"results": [{"name": "Virac", "admin1": "Bicol Region", "latitude": 13.58, "longitude": 124.24}]}
+
+        class Session:
+            calls = 0
+            def get(self, *args, **kwargs):
+                Session.calls += 1
+                return Response()
+
+        ts._geocode_cache.clear()
+        first = ts.geocode_place("Virac, Catanduanes", session=Session())
+        second = ts.geocode_place("virac, catanduanes", session=Session())
+        self.assertEqual(first, second)
+        self.assertEqual(Session.calls, 1)
 
     def test_text_without_storm_details(self):
         r = ts.extract_typhoon("The city council approved a new budget today.", geocode=fake_geocode)

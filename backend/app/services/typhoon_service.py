@@ -292,12 +292,17 @@ def destination_point(lat: float, lon: float, bearing_deg: float, distance_km: f
     return round(math.degrees(p2), 3), round((math.degrees(l2) + 540) % 360 - 180, 3)
 
 
+GEOCODE_TIMEOUT = (6, 20)  # the geocoder can take 5-10 s to answer from the Philippines
+GEOCODE_ATTEMPTS = 3
+_geocode_cache: dict[str, dict | None] = {}
+
+
 def _geocode_request(session: Any, params: dict) -> list[dict]:
-    """One geocoder query, retried once. Raises GeocoderUnavailable when it cannot be reached."""
+    """One geocoder query, retried. Raises GeocoderUnavailable when it cannot be reached."""
     last_error = None
-    for _ in range(2):
+    for _ in range(GEOCODE_ATTEMPTS):
         try:
-            response = session.get(GEOCODING_URL, params=params, timeout=10)
+            response = session.get(GEOCODING_URL, params=params, timeout=GEOCODE_TIMEOUT)
             response.raise_for_status()
             return response.json().get("results") or []
         except (requests.RequestException, ValueError) as error:
@@ -309,8 +314,18 @@ def geocode_place(place: str, session: Any = requests) -> dict[str, Any] | None:
     """Locate a named place with the Open-Meteo Geocoding API (Philippines first).
 
     Returns None when the place is not found; raises GeocoderUnavailable
-    when the service cannot be reached.
+    when the service cannot be reached. Answers are remembered for the life
+    of the server (place coordinates do not change).
     """
+    key = place.strip().lower()
+    if key in _geocode_cache:
+        return _geocode_cache[key]
+    found = _geocode_lookup(place, session)
+    _geocode_cache[key] = found
+    return found
+
+
+def _geocode_lookup(place: str, session: Any) -> dict[str, Any] | None:
     name, _, hint = place.partition(",")
     name, hint = name.strip(), hint.strip().lower()
     for params in ({"countryCode": "PH"}, {}):

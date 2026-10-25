@@ -465,7 +465,7 @@ export async function mount(container, route) {
     ui.tyRead.disabled = true;
     ui.tyStatus.textContent = t("typhoon.reading");
     try {
-      const data = await getJSON(`/api/typhoon/from-url?url=${encodeURIComponent(url)}`, { timeoutMs: 45000 });
+      const data = await getJSON(`/api/typhoon/from-url?url=${encodeURIComponent(url)}`, { timeoutMs: 90000 });
       if (!state.alive) return;
       if (!data.found) {
         ui.tyStatus.textContent = t("typhoon.notFound");
