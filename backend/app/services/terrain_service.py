@@ -8,8 +8,11 @@ cell, what can be measured from public data:
   elevation_m            Copernicus DEM GLO-90 (90 m) via the Open-Meteo Elevation API
   slope_deg              from neighbouring cells' elevations (central differences)
   dist_river_m           straight-line distance to the nearest mapped waterway
-  height_above_river_m   cell elevation minus the DEM elevation at the nearest
-                         sampled point on a waterway (a rough HAND-style value)
+  height_above_river_m   EXPERIMENTAL - do not use yet. Cell elevation minus the DEM
+                         elevation at the nearest sampled waterway point. The first
+                         real run gave values from -391 m to +724 m (the nearest
+                         sample is often far up a slope), so it is not a reliable
+                         height above the river. To be reworked before any use.
 
 Rules
 - Nothing is invented. A value that cannot be measured is stored as NULL.
