@@ -1,3 +1,4 @@
+import contextlib
 import os
 import sqlite3
 import tempfile
@@ -102,9 +103,9 @@ class BuildTests(unittest.TestCase):
     def _connect(self):
         return sqlite3.connect(self._path)
 
-    @property
-    def _db(self):
-        return sqlite3.connect(self._path)
+    def _query(self, sql):
+        with contextlib.closing(sqlite3.connect(self._path)) as db:
+            return db.execute(sql).fetchone()
 
     def _build(self, **kw):
         return ts.build_terrain(
@@ -116,9 +117,9 @@ class BuildTests(unittest.TestCase):
         first = self._build()
         second = self._build()
         self.assertEqual(first["cells"], second["cells"])
-        count = self._db.execute("SELECT COUNT(*) FROM terrain_cells").fetchone()[0]
+        count = self._query("SELECT COUNT(*) FROM terrain_cells")[0]
         self.assertEqual(count, first["cells"])
-        row = self._db.execute("SELECT elevation_source, river_source, dist_river_m FROM terrain_cells LIMIT 1").fetchone()
+        row = self._query("SELECT elevation_source, river_source, dist_river_m FROM terrain_cells LIMIT 1")
         self.assertIn("Copernicus", row[0])
         self.assertIsNone(row[1])
         self.assertIsNone(row[2])
@@ -132,7 +133,7 @@ class BuildTests(unittest.TestCase):
         )
         self.assertEqual(ts_summary["with_elevation"], 0)
         self.assertEqual(ts_summary["errors"], ["down"])
-        self.assertEqual(self._db.execute("SELECT COUNT(elevation_m) FROM terrain_cells").fetchone()[0], 0)
+        self.assertEqual(self._query("SELECT COUNT(elevation_m) FROM terrain_cells")[0], 0)
 
     def test_summary_not_built(self):
         self.assertEqual(ts.terrain_summary(connect=self._connect)["status"], "not_built")
