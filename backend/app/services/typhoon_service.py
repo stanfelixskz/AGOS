@@ -32,7 +32,7 @@ GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "AGOS-flood-research/0.1 (Bataan student project; reads public articles)"
 FETCH_TIMEOUT = (5, 12)
 MAX_BYTES = 3 * 1024 * 1024
-MAX_REDIRECTS = 3
+MAX_REDIRECTS = 5
 EARTH_RADIUS_KM = 6371.0088
 
 SOURCE_NOTE = (
@@ -204,7 +204,8 @@ COMPASS = {
 
 _DIR_WORDS = r"(?i:(?:north|south|east|west)(?:[\s-]*(?:north|south|east|west)){0,2})"
 _DIR = rf"(?:{_DIR_WORDS}|\b[NSEW]{{1,3}}\b)"
-_PLACE = r"[A-Z][\w.'’-]*(?:\s+(?:de\s+|del\s+)?[A-Z][\w.'’-]*){0,3}(?:,\s*[A-Z][\w.'’-]*(?:\s+[A-Z][\w.'’-]*){0,2})?"
+# Place names stay on one line (spaces only) and do not swallow a sentence's final period.
+_PLACE = r"[A-Z][\w'’-]*(?:\.(?=\w))?(?:[ \t]+(?:de[ \t]+|del[ \t]+)?[A-Z][\w'’-]*){0,3}(?:,[ \t]*[A-Z][\w'’-]*(?:[ \t]+[A-Z][\w'’-]*){0,2})?"
 _NUM = r"\d{1,3}(?:,\d{3})+|\d+"
 
 RE_STORM = re.compile(
