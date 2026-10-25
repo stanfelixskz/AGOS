@@ -118,31 +118,87 @@ const SHAPE = [
   { layers: 7, cdo: 58, bands: 3, turns: 0.9, width: 2.0, eye: 7.5, rough: 9 },
 ];
 
-const svgCache = new Map();
+function svgWrap(defs, body) {
+  return `<svg viewBox="-100 -100 200 200" width="100%" height="100%" aria-hidden="true" focusable="false"><defs>${defs}</defs>${body}</svg>`;
+}
 
-/** The storm illustration (viewBox -100..100) for strength level 0-4. Built once per level. */
-export function typhoonSVG(level = 2) {
+/* Rough, softly blended cloud edges: noise displacement, then a blur so the
+   color bands melt into each other instead of ending in hard lines. */
+function cloudFilter(id, { rough, blur, seed }) {
+  return `<filter id="${id}" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="4" seed="${seed}" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="${rough}" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+    <feGaussianBlur in="rough" stdDeviation="${blur}"/>
+  </filter>`;
+}
+
+const layerCache = new Map();
+
+/**
+ * The storm illustration as separate layers (each an SVG, viewBox -100..100),
+ * so the page can turn them at different speeds:
+ *   haze  – wispy outer cloud shield (slowest)
+ *   ghost – a soft, pale copy of the rain bands (drifts against the bands)
+ *   bands – the colored spiral rain bands
+ *   core  – the round central cloud mass and eye (fastest)
+ * Built once per strength level 0-4.
+ */
+export function typhoonLayers(level = 2) {
   const lv = Math.max(0, Math.min(4, level ?? 2));
-  if (svgCache.has(lv)) return svgCache.get(lv);
+  if (layerCache.has(lv)) return layerCache.get(lv);
   const s = SHAPE[lv];
   const r0 = s.cdo * 0.5;
-  const layers = IR_LAYERS.slice(0, s.layers).map((layer) => {
-    const paths = Array.from({ length: s.bands }, (_, k) =>
-      `<path d="${band((k * 2 * Math.PI) / s.bands, { r0, rEnd: r0 + (R_OUT - r0) * layer.reach, turns: s.turns, width: s.width, share: layer.width })}"/>`).join("");
-    return `<g fill="${layer.color}" fill-opacity="${layer.opacity}">${paths}<circle r="${(s.cdo * layer.core).toFixed(1)}"/></g>`;
-  }).join("");
-  const eye = s.eye ? `<circle r="${s.eye}" fill="#2b2f36"/>` : "";
+  const used = IR_LAYERS.slice(0, s.layers);
   const id = `ty${lv}`;
-  const svg = `<svg viewBox="-100 -100 200 200" width="100%" height="100%" aria-hidden="true" focusable="false">
-    <defs>
-      <filter id="${id}-cloud" x="-15%" y="-15%" width="130%" height="130%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="${11 + lv}" result="noise"/>
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="${s.rough}" xChannelSelector="R" yChannelSelector="G"/>
-        <feGaussianBlur stdDeviation="0.4"/>
-      </filter>
-    </defs>
-    <g filter="url(#${id}-cloud)">${layers}${eye}</g>
-  </svg>`;
-  svgCache.set(lv, svg);
-  return svg;
+  const bandPaths = (layer) => Array.from({ length: s.bands }, (_, k) =>
+    `<path d="${band((k * 2 * Math.PI) / s.bands, { r0, rEnd: r0 + (R_OUT - r0) * layer.reach, turns: s.turns, width: s.width, share: layer.width })}"/>`).join("");
+
+  const haze = svgWrap(
+    `<radialGradient id="${id}-hz-g"><stop offset="0" stop-color="#dfe5ec" stop-opacity=".55"/><stop offset=".6" stop-color="#c3ccd6" stop-opacity=".28"/><stop offset="1" stop-color="#c3ccd6" stop-opacity="0"/></radialGradient>
+     <filter id="${id}-hz" x="0" y="0" width="100%" height="100%">
+       <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="4" seed="${3 + lv}"/>
+       <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.9 -0.62"/>
+       <feComposite in2="SourceGraphic" operator="in"/>
+     </filter>`,
+    `<circle r="99" fill="url(#${id}-hz-g)" filter="url(#${id}-hz)"/>`,
+  );
+
+  const ghost = svgWrap(
+    cloudFilter(`${id}-gh`, { rough: s.rough * 1.4, blur: 3.2, seed: 21 + lv }),
+    `<g filter="url(#${id}-gh)" fill="#e6ebf1" fill-opacity=".5">${bandPaths(IR_LAYERS[0])}</g>`,
+  );
+
+  const bands = svgWrap(
+    cloudFilter(`${id}-bd`, { rough: s.rough, blur: 1.3, seed: 11 + lv }),
+    `<g filter="url(#${id}-bd)">${used.map((layer) =>
+      `<g fill="${layer.color}" fill-opacity="${layer.opacity}">${bandPaths(layer)}</g>`).join("")}</g>`,
+  );
+
+  // Central cloud mass: one soft gradient of the warm (cold-cloud) colors that
+  // fades out at its edge, so it melts into the roots of the bands.
+  const warm = used.slice(3).reverse();
+  const plateau = 0.06 * (warm.length - 1); // stronger storms keep a solid cold (red) center
+  const coreStops = `<stop offset="0" stop-color="${warm[0].color}"/>`
+    + warm.map((layer, i) =>
+      `<stop offset="${(plateau + (i / warm.length) * (0.72 - plateau)).toFixed(3)}" stop-color="${layer.color}"/>`).join("")
+    + `<stop offset="1" stop-color="${warm[warm.length - 1].color}" stop-opacity="0"/>`;
+  const eye = s.eye
+    ? `<circle r="${(s.eye * 1.9).toFixed(1)}" fill="url(#${id}-eye)"/>`
+    : "";
+  const core = svgWrap(
+    `${cloudFilter(`${id}-cr`, { rough: s.rough * 0.8, blur: 1.4, seed: 31 + lv })}
+     <radialGradient id="${id}-cg">${coreStops}</radialGradient>
+     <radialGradient id="${id}-eye"><stop offset="0" stop-color="#1f242b"/><stop offset=".5" stop-color="#2b2f36" stop-opacity=".95"/><stop offset="1" stop-color="#2b2f36" stop-opacity="0"/></radialGradient>`,
+    `<circle r="${(s.cdo * 1.2).toFixed(1)}" fill="url(#${id}-cg)" filter="url(#${id}-cr)"/>${eye}`,
+  );
+
+  const parts = { haze, ghost, bands, core };
+  layerCache.set(lv, parts);
+  return parts;
+}
+
+/** All layers stacked in one SVG-like string (used for previews and tests). */
+export function typhoonSVG(level = 2) {
+  const { haze, ghost, bands, core } = typhoonLayers(level);
+  return [haze, ghost, bands, core].join("");
 }

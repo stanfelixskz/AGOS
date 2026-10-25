@@ -9,7 +9,7 @@
 import { loadMapLibre } from "./loader.js";
 import { escapeHTML } from "../core/format.js";
 import { levelColor } from "../core/levels.js";
-import { circlePolygon, destination, intensityLevel, kmToPixels, typhoonSVG, unscaledSize } from "./typhoon.js";
+import { circlePolygon, destination, intensityLevel, kmToPixels, typhoonLayers, unscaledSize } from "./typhoon.js";
 
 export const BATAAN_BOUNDS = [[120.18, 14.33], [120.72, 15.01]];
 const MAX_BOUNDS = [[119.6, 13.9], [121.3, 15.45]];
@@ -263,7 +263,7 @@ export async function createAgosMap(container, options = {}) {
     el.className = `typhoon-marker${ty.position.latitude < 0 ? " is-south" : ""}${ty.radius_km ? "" : " is-unscaled"}`;
     const bearing = ty.movement?.bearing_deg;
     el.innerHTML = `
-      <div class="typhoon-spin">${typhoonSVG(intensityLevel(ty))}</div>
+      ${Object.entries(typhoonLayers(intensityLevel(ty))).map(([part, svg]) => `<div class="typhoon-layer typhoon-${part}">${svg}</div>`).join("")}
       ${Number.isFinite(bearing) ? `<span class="typhoon-heading" style="--bearing:${bearing}deg" aria-hidden="true"></span>` : ""}
       <button type="button" class="typhoon-label">${escapeHTML(label)}</button>`;
     el.querySelector(".typhoon-label").addEventListener("click", (event) => {
