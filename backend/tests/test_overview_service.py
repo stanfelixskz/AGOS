@@ -78,6 +78,45 @@ class OverviewTests(unittest.TestCase):
         self.assertIn("not official PAGASA warnings", data["notes"][0])
 
 
+class AlertBriefingTests(unittest.TestCase):
+    def test_alerts_only_for_yellow_and_above_sorted_by_severity(self):
+        data = ov.build_overview(outlook({"Balanga": [0, 8, 9, 0], "Hermosa": [0, 2, 31, 16]}))
+        alerts = data["alerts"]
+        self.assertEqual([a["municipality"] for a in alerts], ["Hermosa", "Balanga"])
+        self.assertEqual(alerts[0]["level"], "red")
+        self.assertEqual(alerts[0]["peak_mm_h"], 31.0)
+        self.assertEqual(alerts[0]["hours_at_or_above_yellow"], 2)
+        self.assertEqual(alerts[1]["level"], "yellow")
+        self.assertIn("Red-level", alerts[0]["text"]["en"])
+        self.assertIn("Posible", alerts[0]["text"]["fil"])
+
+    def test_briefing_with_alerts_names_towns_and_says_not_official(self):
+        data = ov.build_overview(outlook({"Balanga": [0, 16], "Hermosa": [0, 20]}))
+        en = data["briefing"]["en"]
+        self.assertIn("Orange-level", en)
+        self.assertIn("Hermosa and Balanga", en)  # most severe first
+        self.assertIn("20.0 mm/h in Hermosa", en)
+        self.assertIn("not an official PAGASA warning", en)
+        self.assertIn("hindi opisyal", data["briefing"]["fil"])
+
+    def test_briefing_without_alerts_reports_heaviest_hour(self):
+        data = ov.build_overview(outlook({"Balanga": [0, 3], "Hermosa": [0, 1]}))
+        self.assertEqual(data["alerts"], [])
+        self.assertIn("No town reaches yellow", data["briefing"]["en"])
+        self.assertIn("3.0 mm/h in Balanga", data["briefing"]["en"])
+
+    def test_briefing_dry_and_missing(self):
+        dry = ov.build_overview(outlook({"Balanga": [0, 0.2]}))
+        self.assertIn("Little or no rain", dry["briefing"]["en"])
+        missing = ov.build_overview(outlook({"Balanga": [None]}))
+        self.assertIn("not available", missing["briefing"]["en"])
+
+    def test_format_when(self):
+        self.assertEqual(ov.format_when("2026-09-06T16:00", "en"), "Sun 4 PM")
+        self.assertEqual(ov.format_when("2026-09-06T16:00", "fil"), "Linggo 4 PM")
+        self.assertEqual(ov.format_when(None), "")
+
+
 class EvacuationTests(unittest.TestCase):
     def test_repo_file_loads_and_every_center_is_unverified(self):
         data = ov.load_evacuation_centers()
