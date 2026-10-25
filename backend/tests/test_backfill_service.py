@@ -25,7 +25,7 @@ class PlanTests(unittest.TestCase):
         self.assertTrue(any(s == "open_meteo_archive" and st.year == 1983 for _, s, st, _ in todo))
         self.assertEqual(todo[0][2].year, 2026)
 
-    def test_completed_runs_ignores_errors_and_empty(self):
+    def test_completed_runs_ignores_errors_but_keeps_empty_successes(self):
         db = sqlite3.connect(":memory:")
         db.execute("CREATE TABLE ingest_runs (source, latitude, longitude, start_date, end_date, status, records_received)")
         db.executemany("INSERT INTO ingest_runs VALUES (?,?,?,?,?,?,?)", [
@@ -33,7 +33,10 @@ class PlanTests(unittest.TestCase):
             ("s", 1.0, 2.0, "2021-01-01", "2021-12-31", "error", 0),
             ("s", 1.0, 2.0, "2022-01-01", "2022-12-31", "success", 0),
         ])
-        self.assertEqual(bf.completed_runs(db), {("s", 1.0, 2.0, "2020-01-01", "2020-12-31")})
+        self.assertEqual(bf.completed_runs(db), {
+            ("s", 1.0, 2.0, "2020-01-01", "2020-12-31"),
+            ("s", 1.0, 2.0, "2022-01-01", "2022-12-31"),
+        })
         self.assertEqual(bf.completed_runs(sqlite3.connect(":memory:")), set())
 
 

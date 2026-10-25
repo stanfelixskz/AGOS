@@ -13,7 +13,8 @@ logging), one request per municipality + source + calendar year.
 Rules
 - Newest years first, so an interrupted run still leaves the most useful years.
 - Resumable: a chunk already logged as a success in `ingest_runs` for exactly the
-  same point and dates is skipped. The current year is never "complete" (it ends
+  same point and dates is skipped (even with 0 records: that is the source's answer,
+  e.g. GloFAS has no river cell at some town points; asking again would not change it). The current year is never "complete" (it ends
   a few days before today), so it is simply fetched again on the next run.
 - Paced requests; a per-minute HTTP 429 waits and retries; an hourly or daily
   limit stops the run cleanly (progress is saved; run again later).
@@ -79,7 +80,7 @@ def completed_runs(connection: sqlite3.Connection) -> set[tuple[str, float, floa
     try:
         rows = connection.execute(
             "SELECT source, latitude, longitude, start_date, end_date FROM ingest_runs "
-            "WHERE status = 'success' AND records_received > 0"
+            "WHERE status = 'success'"
         ).fetchall()
     except sqlite3.OperationalError:  # table not created yet
         return set()
