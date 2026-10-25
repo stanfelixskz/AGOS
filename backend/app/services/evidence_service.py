@@ -96,18 +96,33 @@ class TownRecord:
         self.sorted3 = sorted(self.rain3.values())
         self.sorted_flow = sorted(self.flow.values())
         self._flags: dict[int, dict[str, bool]] = {}
+        self._top: dict[int, bool] | None = None
+        # day of the year for every 3-day end date, parsed once (the season filter needs it often)
+        self._doy = {d: date.fromisoformat(d).timetuple().tm_yday for d in self.rain3}
         self.first = min(self.rain) if self.rain else None
         self.last = max(self.rain) if self.rain else None
 
     def _window_flags(self, window_days: int) -> dict[str, bool]:
         """End date -> does the window of this length ending there contain a top-5% 3-day total?"""
         if window_days not in self._flags:
+            if self._top is None:
+                # once per town: is each 3-day total in the top 5%? (keyed by day number)
+                self._top = {date.fromisoformat(d).toordinal(): in_top(v, self.sorted3) for d, v in self.rain3.items()}
+            top = self._top
             flags: dict[str, bool] = {}
             for end in self.rain3:
-                last = date.fromisoformat(end)
-                window = _days(last - timedelta(days=window_days - 1), last)
-                if all(d in self.rain3 for d in window):
-                    flags[end] = in_top(max(self.rain3[d] for d in window), self.sorted3)
+                last = date.fromisoformat(end).toordinal()
+                hit = False
+                complete = True
+                for day in range(last - window_days + 1, last + 1):
+                    value = top.get(day)
+                    if value is None:
+                        complete = False
+                        break
+                    hit = hit or value
+                if complete:
+                    # the largest total is in the top 5% exactly when any total is
+                    flags[end] = hit
             self._flags[window_days] = flags
         return self._flags[window_days]
 
@@ -120,11 +135,14 @@ class TownRecord:
         flags = self._window_flags(window_days)
         if around is not None:
             target = around.timetuple().tm_yday
-            flags = {
-                end: hit for end, hit in flags.items()
-                if min(abs(date.fromisoformat(end).timetuple().tm_yday - target),
-                       365 - abs(date.fromisoformat(end).timetuple().tm_yday - target)) <= SEASON_DAYS
-            }
+            doy = self._doy
+            hits = total = 0
+            for end, hit in flags.items():
+                gap = abs(doy[end] - target)
+                if min(gap, 365 - gap) <= SEASON_DAYS:
+                    total += 1
+                    hits += hit
+            return round(hits / total, 4) if total else None
         if not flags:
             return None
         return round(sum(flags.values()) / len(flags), 4)

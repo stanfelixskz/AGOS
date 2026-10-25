@@ -70,6 +70,8 @@ class Series:
         self.last = record.last
         self.windows: list[tuple[int, int]] = []  # inclusive ordinals of the case windows with complete data
         self.record = record
+        self._alerts: dict[tuple[float, str], tuple[list[int], set[int], list[tuple[int, int]]]] = {}
+        self._by_year: dict[tuple[float, str], dict[int, list[int]]] = {}
 
     def add_case(self, start: date, end: date) -> bool:
         """Register a flood window; False if the rain record does not fully cover it."""
@@ -82,10 +84,37 @@ class Series:
         return True
 
     def alert_days(self, t: float, rule: str) -> list[int]:
-        days = {d for d, p in self.rain_pct.items() if p >= t}
-        if rule == "rain_or_flow":
-            days |= {d for d, p in self.flow_pct.items() if p >= t and d in self.rain_pct}
-        return sorted(date.fromisoformat(d).toordinal() for d in days)
+        return self.alerts(t, rule)[0]
+
+    def alerts(self, t: float, rule: str) -> tuple[list[int], set[int], list[tuple[int, int]]]:
+        """(sorted alert days, the same as a set, alert episodes), computed once per level and rule."""
+        key = (t, rule)
+        if key not in self._alerts:
+            days = {d for d, p in self.rain_pct.items() if p >= t}
+            if rule == "rain_or_flow":
+                days |= {d for d, p in self.flow_pct.items() if p >= t and d in self.rain_pct}
+            ordered = sorted(date.fromisoformat(d).toordinal() for d in days)
+            self._alerts[key] = (ordered, set(ordered), episodes(ordered))
+        return self._alerts[key]
+
+    def counts_by_year(self, t: float, rule: str) -> dict[int, list[int]]:
+        """Calendar year -> [episodes, hit episodes, cases, caught], computed once per level and rule."""
+        key = (t, rule)
+        if key not in self._by_year:
+            _days, alert_set, eps_list = self.alerts(t, rule)
+            out: dict[int, list[int]] = {}
+            for first, last in eps_list:
+                row = out.setdefault(_year(first), [0, 0, 0, 0])
+                row[0] += 1
+                if any(first <= hi and last >= lo for lo, hi in self.windows):
+                    row[1] += 1
+            for lo, hi in self.windows:
+                row = out.setdefault(_year(lo), [0, 0, 0, 0])
+                row[2] += 1
+                if any(d in alert_set for d in range(lo, hi + 1)):
+                    row[3] += 1
+            self._by_year[key] = out
+        return self._by_year[key]
 
 
 def episodes(days: list[int]) -> list[tuple[int, int]]:
@@ -104,23 +133,13 @@ def _year(ordinal: int) -> int:
 
 def score(series: Mapping[str, Series], t: float, rule: str, years: set[int] | None = None) -> dict[str, int]:
     """Counts over the given calendar years (by episode start / window start); None means all."""
-    eps = hit_eps = cases = caught = 0
+    total = [0, 0, 0, 0]
     for s in series.values():
-        days = s.alert_days(t, rule)
-        alert_set = set(days)
-        for first, last in episodes(days):
-            if years is not None and _year(first) not in years:
-                continue
-            eps += 1
-            if any(first <= hi and last >= lo for lo, hi in s.windows):
-                hit_eps += 1
-        for lo, hi in s.windows:
-            if years is not None and _year(lo) not in years:
-                continue
-            cases += 1
-            if any(d in alert_set for d in range(lo, hi + 1)):
-                caught += 1
-    return {"episodes": eps, "hit_episodes": hit_eps, "cases": cases, "caught": caught}
+        for year, row in s.counts_by_year(t, rule).items():
+            if years is None or year in years:
+                for i in range(4):
+                    total[i] += row[i]
+    return {"episodes": total[0], "hit_episodes": total[1], "cases": total[2], "caught": total[3]}
 
 
 def _rates(c: Mapping[str, int]) -> dict[str, Any]:
