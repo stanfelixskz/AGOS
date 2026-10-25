@@ -22,7 +22,7 @@ import urllib.request
 from datetime import date, timedelta
 
 URL = "https://archive-api.open-meteo.com/v1/archive"
-POINT = ("Balanga", 14.6769, 120.5361)
+POINT = ("Balanga", 14.6760, 120.5363)  # same point as app/data/municipalities.py
 YEARS = [1995, 2005, 2015, 2016, 2017, 2018, 2020, 2024]
 MODELS = ["best_match", "era5", "ecmwf_ifs"]
 
