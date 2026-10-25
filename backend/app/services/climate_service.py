@@ -136,11 +136,15 @@ def monthly_climate(daily: Mapping[str, float], full_years: list[int]) -> list[d
     """Average per calendar month over full years only."""
     if not full_years:
         return []
+    # group the days by (year, month) once, keeping their order (sums stay identical)
+    groups: dict[str, list[float]] = {}
+    for d, v in daily.items():
+        groups.setdefault(d[:7], []).append(v)
     out = []
     for month in range(1, 13):
         totals, rain_days, heavy = [], [], []
         for year in full_years:
-            values = [v for d, v in daily.items() if d.startswith(f"{year}-{month:02d}-")]
+            values = groups.get(f"{year}-{month:02d}", [])
             totals.append(sum(values))
             rain_days.append(sum(1 for v in values if v >= RAIN_DAY_MM))
             heavy.append(sum(1 for v in values if v >= HEAVY_MM[0]))

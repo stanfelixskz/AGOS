@@ -54,8 +54,12 @@ export function floodMonths(eventsData) {
   return counts.map((count, i) => ({ month: i + 1, count })).filter((m) => m.count > 0);
 }
 
-function rainLine(rain) {
-  if (!rain) return `<span class="subtle">${escapeHTML(t("resident.rainNotTested"))}</span>`;
+function rainLine(rain, entry, evidenceLoaded) {
+  if (!rain) {
+    // say WHY there is no rain check: not loaded, not a flooded town, or no data for it
+    const key = !evidenceLoaded ? "resident.rainNotLoaded" : entry.evidence !== "flooded" ? "resident.rainNotTested" : "resident.rainNoData";
+    return `<span class="subtle">${escapeHTML(t(key))}</span>`;
+  }
   if (rain.status !== "ok") {
     return `<span class="subtle">${escapeHTML(t(rain.status === "outside_record" ? "evidence.beforeRecord" : "evidence.incomplete"))}</span>`;
   }
@@ -64,7 +68,7 @@ function rainLine(rain) {
   return `${escapeHTML(t("resident.rainBefore", { mm: num(rain.max_3day_mm, 0) }))} ${badge}`;
 }
 
-function floodItem({ event, entry, rain }) {
+function floodItem({ event, entry, rain }, evidenceLoaded) {
   const when = event.start_date ? dateRange(event.start_date, event.end_date) : (event.period || t("resident.noDate"));
   const kind = EVIDENCE_KINDS.includes(entry.evidence) ? t(`resident.ev.${entry.evidence}`) : entry.evidence;
   const source = event.sources?.[0];
@@ -74,7 +78,7 @@ function floodItem({ event, entry, rain }) {
       <span class="subtle">${escapeHTML(kind)}</span>
     </div>
     ${entry.note ? `<div>${escapeHTML(entry.note)}</div>` : ""}
-    <div>${rainLine(rain)}</div>
+    <div>${rainLine(rain, entry, evidenceLoaded)}</div>
     ${source ? `<div class="subtle">${escapeHTML(t("resident.source"))}: <a href="${escapeHTML(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(source.publisher)}</a></div>` : ""}
   </li>`;
 }
@@ -82,16 +86,18 @@ function floodItem({ event, entry, rain }) {
 /** "Past floods in <town>" card. */
 export function renderTownFloods(eventsData, evidenceData, town) {
   const list = townFloods(eventsData, evidenceData, town);
+  const loaded = Boolean(evidenceData?.events);
+  const item = (x) => floodItem(x, loaded);
   const s = evidenceData?.summary;
   const bataan = s && isNumber(s.share_top5) && isNumber(s.chance_top5)
     ? `<div class="notice notice-info">${icon("info", { size: 18 })}<div>${escapeHTML(t("resident.bataanFinding", { share: num(s.share_top5 * 100, 0), chance: num(s.chance_top5 * 100, 0) }))}</div></div>`
     : "";
   const rest = list.slice(FIRST_SHOWN);
   const more = rest.length
-    ? `<details class="town-floods-more"><summary>${escapeHTML(t("resident.showAll", { n: list.length }))}</summary><ul class="town-floods">${rest.map(floodItem).join("")}</ul></details>`
+    ? `<details class="town-floods-more"><summary>${escapeHTML(t("resident.showAll", { n: list.length }))}</summary><ul class="town-floods">${rest.map(item).join("")}</ul></details>`
     : "";
   const body = list.length
-    ? `<ul class="town-floods">${list.slice(0, FIRST_SHOWN).map(floodItem).join("")}</ul>${more}`
+    ? `<ul class="town-floods">${list.slice(0, FIRST_SHOWN).map(item).join("")}</ul>${more}`
     : `<div class="notice notice-info">${icon("info", { size: 18 })}<div>${escapeHTML(t("resident.noFloods", { town }))}</div></div>`;
   return `<section class="card" aria-labelledby="townFloodsTitle">
     <div class="card-head">

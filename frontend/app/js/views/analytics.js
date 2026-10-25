@@ -294,7 +294,7 @@ export async function mount(container) {
     const [historyResult, skillResult, climateResult, evidenceResult, modelResult, eventsResult] = await Promise.allSettled([
       getJSON(`/api/history?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON(`/skill/rain?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
-      getJSON("/api/climate", { ttlMs: 30 * 60 * 1000, timeoutMs: 30000 }),
+      getJSON("/api/climate", { ttlMs: 30 * 60 * 1000, timeoutMs: 60000 }),
       getJSON("/api/flood-evidence", { ttlMs: 30 * 60 * 1000, timeoutMs: 45000 }),
       getJSON("/api/flood-model", { ttlMs: 30 * 60 * 1000, timeoutMs: 60000 }),
       getJSON("/api/flood-events", { ttlMs: 30 * 60 * 1000, timeoutMs: 30000 }),
