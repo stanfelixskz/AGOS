@@ -683,6 +683,16 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .detail-fold[open] .fold-chevron { transform: rotate(180deg); }
 .drawer-grip { cursor: grab; touch-action: none; }
 
+/* Evacuation center detail (map drawer and Evacuate page). */
+.center-detail { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) 0; }
+.center-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.center-actions .btn { flex: 1 1 140px; justify-content: center; }
+.center-nearby h4 { font-size: var(--text-sm); margin-bottom: var(--space-2); }
+.center-nearby .list > li { padding: var(--space-2) 0; }
+.evac-detail:not(:empty) { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.evac-detail .center-detail { padding: 0; }
+.evac-detail-title { font-size: var(--text-md); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+
 /* Rain animation canvas: above the map and town shapes, under the markers, never takes clicks. */
 .rainfx-canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
 
@@ -789,7 +799,7 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 /* Evacuate                                                            */
 /* ------------------------------------------------------------------ */
 .evac-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: var(--space-4); align-items: start; }
-.evac-map-card { position: sticky; top: calc(var(--topbar-h) + var(--space-4)); }
+.evac-map-card { position: sticky; top: calc(var(--topbar-h) + var(--space-4)); max-height: calc(100dvh - var(--topbar-h) - 2 * var(--space-4)); overflow-y: auto; }
 .evac-map { position: relative; height: min(68vh, 620px); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-2); }
 .evac-map .map-loading { position: absolute; inset: 0; }
 .evac-filters { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin: var(--space-4) 0 var(--space-2); }
@@ -830,7 +840,7 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 
 @media (max-width: 960px) {
   .evac-layout, .report-layout { grid-template-columns: minmax(0, 1fr); }
-  .evac-map-card { position: static; order: -1; }
+  .evac-map-card { position: static; order: -1; max-height: none; overflow: visible; }
   .evac-map { height: 300px; }
 }
 @media (max-width: 520px) {

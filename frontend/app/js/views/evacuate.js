@@ -9,15 +9,9 @@ import { t } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
 import { escapeHTML, num, distanceKm, isNumber } from "../core/format.js";
 import { effectiveTheme } from "../core/theme.js";
-import { loadingState, errorState, onRetry, toast } from "../core/ui.js";
+import { loadingState, errorState, onRetry } from "../core/ui.js";
 import { EXPLAIN } from "../core/explain.js";
-
-function directionsUrl(center, here) {
-  if (!center.has_coordinates) return center.google_maps_url || null;
-  const params = new URLSearchParams({ api: "1", destination: `${center.latitude},${center.longitude}` });
-  if (here) params.set("origin", `${here[1]},${here[0]}`);
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
-}
+import { directionsUrl, renderCenterDetail, hydrateCenterDetail } from "./parts/center-detail.js";
 
 export async function mount(container) {
   const state = { alive: true, centers: [], here: null, query: "", town: "", engine: null, selected: null };
@@ -54,6 +48,7 @@ export async function mount(container) {
       <section class="card evac-map-card" aria-label="${escapeHTML(t("evac.mapLabel"))}">
         <div class="evac-map" id="evacMap"><div class="map-loading">${loadingState(t("map.loading"))}</div></div>
         <p class="subtle" style="margin-top:8px">${escapeHTML(t("evac.mapNote"))}</p>
+        <div id="evacDetail" class="evac-detail" aria-live="polite"></div>
       </section>
     </div>`;
 
@@ -93,13 +88,26 @@ export async function mount(container) {
     }).join("");
   }
 
+  /** Select one center: pin, list row and the detail card under the map stay in step. */
+  function selectCenter(center, { fly = true, scrollList = false } = {}) {
+    state.selected = center?.id || null;
+    state.engine?.selectCenter(state.selected);
+    if (center?.has_coordinates && fly) state.engine?.flyTo(center.longitude, center.latitude, 13);
+    renderList();
+    const detail = $("#evacDetail");
+    if (!center) {
+      detail.innerHTML = "";
+      return;
+    }
+    detail.innerHTML = `<h3 class="evac-detail-title">${escapeHTML(center.name)} <span class="badge badge-warning">${escapeHTML(t("common.unverified"))}</span></h3>${renderCenterDetail(center, { all: state.centers, here: state.here })}`;
+    hydrateCenterDetail(detail, { onPick: (id) => selectCenter(state.centers.find((c) => c.id === id), { scrollList: true }) });
+    if (scrollList) listEl.querySelector(`[data-id="${CSS.escape(center.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
   listEl.addEventListener("click", (event) => {
     const button = event.target.closest("[data-focus]");
     if (!button) return;
-    const center = state.centers.find((c) => c.id === button.dataset.focus);
-    state.selected = center?.id || null;
-    if (center?.has_coordinates) state.engine?.flyTo(center.longitude, center.latitude, 13);
-    renderList();
+    selectCenter(state.centers.find((c) => c.id === button.dataset.focus));
     if (window.matchMedia("(max-width: 960px)").matches) $("#evacMap").scrollIntoView({ behavior: "smooth", block: "center" });
   });
   $("#evacSearch").addEventListener("input", (e) => { state.query = e.target.value; renderList(); });
@@ -148,12 +156,7 @@ export async function mount(container) {
     state.engine = await createAgosMap(mapEl, {
       theme: effectiveTheme(),
       cooperative: true,
-      onSelectCenter: (center) => {
-        state.selected = center.id;
-        renderList();
-        listEl.querySelector(`[data-id="${CSS.escape(center.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        toast(center.name);
-      },
+      onSelectCenter: (center) => selectCenter(center, { fly: false, scrollList: true }),
     });
     if (!state.alive) { state.engine.destroy(); return undefined; }
     await state.engine.ready;
