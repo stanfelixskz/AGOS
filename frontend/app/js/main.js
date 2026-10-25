@@ -31,13 +31,22 @@ const VIEWS = {
   notfound: () => import("./views/notfound.js"),
 };
 
-const state = { route: null, cleanup: null, token: 0, status: "checking" };
+const state = { route: null, cleanup: null, token: 0, status: "checking", navShown: false };
 
 function renderNav() {
   const sideNav = document.getElementById("sideNav");
   const tabbar = document.getElementById("tabbar");
-  sideNav.innerHTML = NAV.map((item) => `
-    <a href="#/${item.id}" data-nav="${item.id}">${icon(item.icon)}<span>${escapeHTML(t(`nav.${item.id}`))}</span></a>`).join("");
+  sideNav.innerHTML = `<span class="nav-indicator" aria-hidden="true"></span>` + NAV.map((item, i) => `
+    <a href="#/${item.id}" data-nav="${item.id}" style="--i:${i}">${icon(item.icon)}<span>${escapeHTML(t(`nav.${item.id}`))}</span></a>`).join("");
+  sideNav.classList.add("has-indicator");
+  // Staggered entrance on first load only, not when the language changes.
+  if (!state.navShown) {
+    state.navShown = true;
+    sideNav.classList.add("is-entering");
+    sideNav.addEventListener("animationend", (e) => {
+      if (e.target === sideNav.lastElementChild) sideNav.classList.remove("is-entering");
+    });
+  }
   tabbar.innerHTML = NAV.filter((item) => !item.sidebarOnly).map((item) => `
     <a href="#/${item.id}" data-nav="${item.id}">${icon(item.icon, { size: 22 })}<span>${escapeHTML(t(`nav.${item.id}`))}</span></a>`).join("");
   document.getElementById("sidebarDisclaimer").textContent = t("app.disclaimer");
@@ -52,6 +61,25 @@ function markActiveNav() {
     if (link.dataset.nav === active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
+  moveNavIndicator();
+}
+
+/* Slide the sidebar highlight to the active link. The first placement after
+   each render is instant; later moves animate (the is-ready class). */
+function moveNavIndicator() {
+  const indicator = document.querySelector("#sideNav .nav-indicator");
+  if (!indicator) return;
+  const link = document.querySelector('#sideNav a[aria-current="page"]');
+  if (!link || !link.offsetHeight) {
+    indicator.classList.remove("is-visible");
+    return;
+  }
+  indicator.style.setProperty("--nav-y", `${link.offsetTop}px`);
+  indicator.style.setProperty("--nav-h", `${link.offsetHeight}px`);
+  indicator.classList.add("is-visible");
+  if (!indicator.classList.contains("is-ready")) {
+    requestAnimationFrame(() => requestAnimationFrame(() => indicator.classList.add("is-ready")));
+  }
 }
 
 function renderTopbarActions() {
@@ -138,7 +166,13 @@ async function show(route) {
 
   container.className = module.layout === "flush" ? "content content-flush" : "content";
   container.innerHTML = "";
-  if (!previous || previous.view !== route.view) window.scrollTo(0, 0);
+  if (!previous || previous.view !== route.view) {
+    window.scrollTo(0, 0);
+    // Restart the fade-in for the new page.
+    container.classList.remove("is-entering");
+    void container.offsetWidth;
+    container.classList.add("is-entering");
+  }
   try {
     const cleanup = (await module.mount(container, route)) || null;
     if (token !== state.token) {
@@ -167,6 +201,10 @@ function start() {
   });
 
   onRoute(show);
+  // The sidebar is hidden on small screens and fonts change link heights;
+  // re-place the highlight when either settles.
+  window.addEventListener("resize", moveNavIndicator);
+  document.fonts?.ready.then(moveNavIndicator);
   checkBackend();
   setInterval(checkBackend, 5 * 60 * 1000);
 }
