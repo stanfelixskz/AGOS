@@ -13,7 +13,7 @@ import { effectiveTheme } from "../core/theme.js";
 import { EXPLAIN } from "../core/explain.js";
 import { buildHash } from "../core/router.js";
 import { createAgosMap } from "../map/engine.js";
-import { renderDetail, hydrateDetail, levelPill } from "./parts/muni-detail.js";
+import { renderDetail, hydrateDetail } from "./parts/muni-detail.js";
 import { loadingState, errorState, onRetry } from "../core/ui.js";
 
 export const layout = "flush";
@@ -93,6 +93,7 @@ export async function mount(container, route) {
       </aside>
 
       <aside class="map-panel map-drawer" id="drawer" aria-label="${escapeHTML(t("common.details"))}" hidden>
+        <button class="sheet-handle drawer-grip" type="button" id="drawerGrip" aria-expanded="false" aria-label="${escapeHTML(t("map.sheetExpand"))}"><span class="sheet-grip" aria-hidden="true"></span></button>
         <div class="drawer-head">
           <div id="drawerTitle" class="drawer-title"></div>
           <button class="btn btn-ghost btn-icon btn-sm" type="button" id="drawerClose" aria-label="${escapeHTML(t("common.close"))}">${icon("close", { size: 18 })}</button>
@@ -107,7 +108,7 @@ export async function mount(container, route) {
     handleSummary: $("#handleSummary"), search: $("#mapSearch"), results: $("#searchResults"), locate: $("#locateBtn"),
     hourControls: $("#hourControls"), slider: $("#hourSlider"), play: $("#playBtn"), timeLabel: $("#timeLabel"),
     rainStatus: $("#rainStatus"), layerList: $("#layerList"), basemap: $("#basemapName"),
-    drawer: $("#drawer"), drawerTitle: $("#drawerTitle"), drawerBody: $("#drawerBody"), drawerClose: $("#drawerClose"),
+    drawer: $("#drawer"), drawerTitle: $("#drawerTitle"), drawerBody: $("#drawerBody"), drawerClose: $("#drawerClose"), drawerGrip: $("#drawerGrip"),
   };
 
   const state = {
@@ -155,6 +156,8 @@ export async function mount(container, route) {
         const mm = p?.precipitation_mm;
         return {
           name: m.name, point: m.point, level: p?.level || "nodata",
+          levelText: levelLabel(p?.level || "nodata", getLang()),
+          modeText: hourLabel(p?.time, state.hour),
           valueText: isNumber(mm) ? `${num(mm, 1)} mm/h` : "—",
           labelText: `${levelLabel(p?.level || "nodata", getLang())}, ${isNumber(mm) ? `${num(mm, 1)} mm per hour` : "no data"}`,
         };
@@ -162,6 +165,8 @@ export async function mount(container, route) {
       const w = m.windows?.next_24h || {};
       return {
         name: m.name, point: m.point, level: m.level_24h,
+        levelText: levelLabel(m.level_24h, getLang()),
+        modeText: t("map.hoverPeak"),
         valueText: isNumber(w.peak_mm_h) ? `${num(w.peak_mm_h, 1)} mm/h` : "—",
         labelText: `${levelLabel(m.level_24h, getLang())}, peak ${isNumber(w.peak_mm_h) ? `${num(w.peak_mm_h, 1)} mm per hour` : "not available"} in the next 24 hours`,
       };
@@ -257,6 +262,7 @@ export async function mount(container, route) {
     ui.drawerTitle.innerHTML = titleHTML;
     ui.drawerBody.innerHTML = bodyHTML;
     ui.drawer.hidden = false;
+    setSheet(false);
     ui.view.classList.add("has-drawer");
     ui.drawerBody.scrollTop = 0;
   }
@@ -271,6 +277,27 @@ export async function mount(container, route) {
     history.replaceState(null, "", buildHash("map"));
   }
   ui.drawerClose.addEventListener("click", closeDrawer);
+
+  // Phone bottom sheet: tap the grip to switch between half and full height;
+  // swipe up to expand, swipe down to collapse (or close when already half).
+  function setSheet(expanded) {
+    ui.drawer.classList.toggle("is-expanded", expanded);
+    ui.drawerGrip.setAttribute("aria-expanded", String(expanded));
+    ui.drawerGrip.setAttribute("aria-label", t(expanded ? "map.sheetCollapse" : "map.sheetExpand"));
+  }
+  let gripStart = null;
+  ui.drawerGrip.addEventListener("pointerdown", (event) => { gripStart = event.clientY; });
+  ui.drawerGrip.addEventListener("pointerup", (event) => {
+    const dy = gripStart === null ? 0 : event.clientY - gripStart;
+    gripStart = null;
+    const expanded = ui.drawer.classList.contains("is-expanded");
+    if (dy < -30) setSheet(true);
+    else if (dy > 30) { if (expanded) setSheet(false); else closeDrawer(); }
+    else setSheet(!expanded);
+  });
+  ui.drawerGrip.addEventListener("pointercancel", () => { gripStart = null; });
+  // Keyboard (Enter/Space) arrives as a click with no pointer movement.
+  ui.drawerGrip.addEventListener("click", (event) => { if (event.detail === 0) setSheet(!ui.drawer.classList.contains("is-expanded")); });
   container.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !ui.drawer.hidden) closeDrawer();
   });
@@ -283,13 +310,12 @@ export async function mount(container, route) {
     if (fly && muni?.point) state.engine?.flyTo(muni.point.longitude, muni.point.latitude, 10.6);
     history.replaceState(null, "", buildHash("map", [], { m: canonical }));
     const token = ++state.detailToken;
-    const pill = muni ? levelPill(muni.level_24h) : "";
-    openDrawer(`<span class="eyebrow">${escapeHTML(t("common.municipality"))}</span><h2>${escapeHTML(canonical)}</h2>${pill}`, loadingState());
+    openDrawer(`<span class="eyebrow">${escapeHTML(t("common.municipality"))}</span><h2>${escapeHTML(canonical)}</h2>`, loadingState());
     try {
       const data = await getJSON(`/api/municipalities/${encodeURIComponent(canonical)}`, { ttlMs: 5 * 60 * 1000, timeoutMs: 30000 });
       if (!state.alive || token !== state.detailToken) return;
       const reports = { status: "ok", data: state.reports.filter((r) => String(r.municipality || "").toLowerCase() === canonical.toLowerCase()) };
-      ui.drawerBody.innerHTML = renderDetail(data, { reports });
+      ui.drawerBody.innerHTML = renderDetail(data, { reports, collapsible: true, banner: true });
       state.drawerCleanup = hydrateDetail(ui.drawerBody, data);
     } catch (error) {
       if (!state.alive || token !== state.detailToken) return;

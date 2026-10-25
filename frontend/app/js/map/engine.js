@@ -68,6 +68,11 @@ export function precipTileUrl(date = new Date()) {
   return { url: PRECIP_TILES.replace("{date}", day).replace("{hour}", pad(date.getUTCHours())), utcHour: `${day} ${pad(date.getUTCHours())}:00 UTC` };
 }
 
+/** Compare town names across sources ("City of Balanga" = "Balanga"). */
+function normName(name) {
+  return String(name || "").toLowerCase().replace(/city of |city/g, "").trim();
+}
+
 function featureName(feature) {
   const p = feature?.properties || {};
   return p.name ?? p.MUNICIPALITY ?? p.municipality ?? p.NAME_2 ?? p.name_2 ?? p.adm3_en ?? p.ADM3_EN ?? null;
@@ -156,7 +161,21 @@ export async function createAgosMap(container, options = {}) {
       map.addSource("agos-boundaries", { type: "geojson", data: state.boundaries, attribution: state.boundaryAttribution || undefined });
     }
     if (!map.getLayer("agos-boundary-fill")) {
-      map.addLayer({ id: "agos-boundary-fill", type: "fill", source: "agos-boundaries", layout: { visibility: vis(state.visible.boundaries) }, paint: { "fill-color": "#0b63c4", "fill-opacity": ["case", ["boolean", ["feature-state", "selected"], false], 0.12, 0.025] } });
+      // Town shapes: tinted with the rain level (feature-state "color"), stronger on hover/select.
+      map.addLayer({
+        id: "agos-boundary-fill", type: "fill", source: "agos-boundaries", layout: { visibility: vis(state.visible.boundaries || state.visible.rain) },
+        paint: {
+          "fill-color": ["coalesce", ["feature-state", "color"], "#0b63c4"],
+          "fill-opacity": ["case",
+            ["boolean", ["feature-state", "selected"], false], 0.46,
+            ["boolean", ["feature-state", "hover"], false], 0.36,
+            ["boolean", ["feature-state", "tinted"], false], 0.24,
+            0.025],
+        },
+      });
+    }
+    if (!map.getLayer("agos-boundary-selected")) {
+      map.addLayer({ id: "agos-boundary-selected", type: "line", source: "agos-boundaries", layout: { visibility: vis(state.visible.boundaries || state.visible.rain) }, paint: { "line-color": "#0b63c4", "line-width": ["case", ["boolean", ["feature-state", "selected"], false], 3.2, 0] } });
     }
     if (!map.getLayer("agos-boundary-line")) {
       map.addLayer({ id: "agos-boundary-line", type: "line", source: "agos-boundaries", layout: { visibility: vis(state.visible.boundaries) }, paint: { "line-color": "#0b63c4", "line-opacity": 0.55, "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 12, 1.8] } });
@@ -206,6 +225,73 @@ export async function createAgosMap(container, options = {}) {
     addBoundaryLayers();
     addRasterLayers();
     addPointLayers();
+    applyTint();
+  }
+
+  // ---------------- town shape tint, hover ----------------
+  function featureIdFor(name) {
+    const key = normName(name);
+    return state.boundaries?.features.find((f) => normName(featureName(f)) === key)?.id;
+  }
+
+  /** Color each town shape by its rain level (only while the rain layer is on). */
+  function applyTint() {
+    if (!state.boundaries || !map.getSource("agos-boundaries")) return;
+    const byId = new Map();
+    if (state.visible.rain) {
+      for (const row of state.rainRows) {
+        const id = featureIdFor(row.name);
+        if (id !== undefined) byId.set(id, row);
+      }
+    }
+    for (const f of state.boundaries.features) {
+      const row = byId.get(f.id);
+      const tinted = Boolean(row) && row.level !== "nodata";
+      map.setFeatureState({ source: "agos-boundaries", id: f.id }, { tinted, color: tinted ? levelColor(row.level) : null });
+    }
+  }
+
+  function updateFillVisibility() {
+    for (const id of ["agos-boundary-fill", "agos-boundary-selected"]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis(state.visible.boundaries || state.visible.rain));
+    }
+  }
+
+  const hoverCard = document.createElement("div");
+  hoverCard.className = "map-hovercard";
+  hoverCard.hidden = true;
+  hoverCard.setAttribute("aria-hidden", "true");
+  container.appendChild(hoverCard);
+  let hoverId = null;
+
+  function clearHover() {
+    if (hoverId !== null) map.setFeatureState({ source: "agos-boundaries", id: hoverId }, { hover: false });
+    hoverId = null;
+    hoverCard.hidden = true;
+  }
+
+  function onHover(event) {
+    const feature = event.features?.[0];
+    if (!feature || map.getZoom() >= 12) return clearHover();
+    if (map.queryRenderedFeatures(event.point, { layers: ["agos-centers", "agos-reports"].filter((id) => map.getLayer(id)) }).length) return clearHover();
+    if (feature.id !== hoverId) {
+      clearHover();
+      hoverId = feature.id;
+      map.setFeatureState({ source: "agos-boundaries", id: hoverId }, { hover: true });
+    }
+    const key = normName(featureName(feature));
+    const row = state.rainRows.find((r) => normName(r.name) === key);
+    if (!row) return clearHover();
+    hoverCard.innerHTML = `<strong>${escapeHTML(row.name)}</strong><span class="hc-level"><span class="hc-dot" style="background:${levelColor(row.level)}"></span>${escapeHTML(row.levelText || "")} · <span class="num">${escapeHTML(row.valueText)}</span></span><span class="hc-sub">${escapeHTML(row.modeText || "")}</span>`;
+    hoverCard.hidden = false;
+    // Keep the card inside the map: flip to the left / above the pointer near the edges.
+    const width = hoverCard.offsetWidth || 160;
+    const height = hoverCard.offsetHeight || 70;
+    let x = event.point.x + 14;
+    let y = event.point.y + 14;
+    if (x + width > container.clientWidth - 8) x = event.point.x - 14 - width;
+    if (y + height > container.clientHeight - 8) y = event.point.y - 14 - height;
+    hoverCard.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, y)}px)`;
   }
 
   async function loadBoundaries() {
@@ -247,10 +333,14 @@ export async function createAgosMap(container, options = {}) {
     map.on("click", "agos-boundary-fill", (event) => {
       if (map.queryRenderedFeatures(event.point, { layers: ["agos-centers", "agos-reports"].filter((id) => map.getLayer(id)) }).length) return;
       const name = featureName(event.features?.[0]);
-      const match = name && state.rainRows.find((row) => row.name.toLowerCase().replace(/city of |city/g, "").trim() === String(name).toLowerCase().replace(/city of |city/g, "").trim());
+      const match = name && state.rainRows.find((row) => normName(row.name) === normName(name));
       if (match) options.onSelectMunicipality?.(match.name);
     });
-    for (const id of ["agos-centers", "agos-reports"]) {
+    if (window.matchMedia?.("(hover: hover)").matches) {
+      map.on("mousemove", "agos-boundary-fill", onHover);
+      map.on("mouseleave", "agos-boundary-fill", clearHover);
+    }
+    for (const id of ["agos-boundary-fill", "agos-centers", "agos-reports"]) {
       map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
     }
@@ -341,7 +431,7 @@ export async function createAgosMap(container, options = {}) {
       if (!(id in state.visible)) return;
       state.visible[id] = Boolean(visible);
       const layerIds = {
-        boundaries: ["agos-boundary-fill", "agos-boundary-line"],
+        boundaries: ["agos-boundary-line"],
         mgb: ["agos-mgb"], precip: ["agos-precip"], evacuation: ["agos-centers"], reports: ["agos-reports"],
       }[id] || [];
       for (const layerId of layerIds) {
@@ -354,7 +444,12 @@ export async function createAgosMap(container, options = {}) {
           map.getSource("agos-precip")?.setTiles([fresh.url]);
         }
       }
-      if (id === "rain") renderRainMarkers();
+      if (id === "rain" || id === "boundaries") updateFillVisibility();
+      if (id === "rain") {
+        applyTint();
+        renderRainMarkers();
+        if (!visible) clearHover();
+      }
       emit();
     },
 
@@ -367,6 +462,7 @@ export async function createAgosMap(container, options = {}) {
       state.rainRows = rows;
       state.available.rain = available;
       state.messages.rain = message;
+      applyTint();
       renderRainMarkers();
       emit();
     },
@@ -392,8 +488,7 @@ export async function createAgosMap(container, options = {}) {
       renderRainMarkers();
       if (state.boundaries && map.getSource("agos-boundaries")) {
         state.boundaries.features.forEach((f) => {
-          const n = String(featureName(f) || "").toLowerCase();
-          const on = Boolean(name) && n.replace(/city of |city/g, "").trim() === name.toLowerCase();
+          const on = Boolean(name) && normName(featureName(f)) === normName(name);
           map.setFeatureState({ source: "agos-boundaries", id: f.id }, { selected: on });
         });
       }
@@ -436,6 +531,7 @@ export async function createAgosMap(container, options = {}) {
     destroy() {
       for (const marker of state.markers.values()) marker.remove();
       state.userMarker?.remove();
+      hoverCard.remove();
       map.remove();
     },
   };
