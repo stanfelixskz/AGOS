@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
 from app.services.history_service import history_report
+from app.services import typhoon_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
     get_bataan_rainfall_outlook,
@@ -64,3 +65,14 @@ def evacuation_centers():
 def daily_history(days: int = Query(30, ge=7, le=365)):
     """Daily rain and river flow per town, from the AGOS database only."""
     return history_report(days=days)
+
+
+@router.get("/typhoon/from-url")
+def typhoon_from_url(url: str = Query(..., min_length=8, max_length=2048)):
+    """Storm details stated in a news article or bulletin (unverified, extracted text)."""
+    try:
+        return typhoon_service.typhoon_from_url(url)
+    except typhoon_service.UrlRejected as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except typhoon_service.FetchFailed as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error

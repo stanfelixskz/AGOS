@@ -11,8 +11,12 @@ import { escapeHTML } from "../core/format.js";
 import { levelColor } from "../core/levels.js";
 import { createRainFx } from "./rainfx.js";
 import { addPinImages, PIN_ID, PIN_SELECTED_ID } from "./pins.js";
+import { circlePolygon, destination, kmToPixels, typhoonSVG } from "./typhoon.js";
 
 export const BATAAN_BOUNDS = [[120.18, 14.33], [120.72, 15.01]];
+const MAX_BOUNDS = [[119.6, 13.9], [121.3, 15.45]];
+// Size of the typhoon symbol when the article gives no wind extent.
+const TYPHOON_UNSCALED_PX = 84;
 
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles";
 const MGB_TILES = "https://controlmap.mgb.gov.ph/arcgis/rest/services/GeospatialDataInventory_Public/GDI_Detailed_Flood_Susceptibility_Public/MapServer/tile/{z}/{y}/{x}";
@@ -94,7 +98,7 @@ export async function createAgosMap(container, options = {}) {
     style: basemap.style,
     bounds: BATAAN_BOUNDS,
     fitBoundsOptions: { padding: 24 },
-    maxBounds: [[119.6, 13.9], [121.3, 15.45]],
+    maxBounds: MAX_BOUNDS,
     attributionControl: { compact: true },
     cooperativeGestures: Boolean(options.cooperative),
     dragRotate: false,
@@ -118,6 +122,8 @@ export async function createAgosMap(container, options = {}) {
     selected: null,
     selectedCenter: null,
     userMarker: null,
+    typhoon: null,
+    typhoonMarker: null,
     precip: precipTileUrl(),
     precipDate: null,       // null = the current hour
     precipOpacity: 0.7,
@@ -244,10 +250,61 @@ export async function createAgosMap(container, options = {}) {
     }
   }
 
+  // ---------------- typhoon (from an article) ----------------
+  function typhoonGeoJSON() {
+    const ty = state.typhoon;
+    const radius = ty?.radius_km?.value;
+    if (!ty?.position || !radius) return { type: "FeatureCollection", features: [] };
+    return { type: "FeatureCollection", features: [circlePolygon([ty.position.longitude, ty.position.latitude], radius)] };
+  }
+
+  function addTyphoonLayers() {
+    if (!map.getSource("agos-typhoon")) map.addSource("agos-typhoon", { type: "geojson", data: typhoonGeoJSON() });
+    if (!map.getLayer("agos-typhoon-fill")) {
+      map.addLayer({ id: "agos-typhoon-fill", type: "fill", source: "agos-typhoon", paint: { "fill-color": "#dc2626", "fill-opacity": 0.06 } });
+    }
+    if (!map.getLayer("agos-typhoon-line")) {
+      map.addLayer({ id: "agos-typhoon-line", type: "line", source: "agos-typhoon", paint: { "line-color": "#dc2626", "line-width": 2, "line-opacity": 0.85, "line-dasharray": [3, 2] } });
+    }
+  }
+
+  /** Keep the spiral the size of the stated wind extent at every zoom. */
+  function sizeTyphoon() {
+    const ty = state.typhoon;
+    const el = state.typhoonMarker?.getElement();
+    if (!ty || !el) return;
+    const radius = ty.radius_km?.value;
+    const px = radius ? 2 * kmToPixels(radius, ty.position.latitude, map.getZoom()) : TYPHOON_UNSCALED_PX;
+    el.style.setProperty("--size", `${Math.round(Math.min(4000, Math.max(28, px)))}px`);
+  }
+
+  function renderTyphoonMarker(label) {
+    state.typhoonMarker?.remove();
+    state.typhoonMarker = null;
+    const ty = state.typhoon;
+    if (!ty?.position) return;
+    const el = document.createElement("div");
+    el.className = `typhoon-marker${ty.position.latitude < 0 ? " is-south" : ""}${ty.radius_km ? "" : " is-unscaled"}`;
+    const bearing = ty.movement?.bearing_deg;
+    el.innerHTML = `
+      <div class="typhoon-spin">${typhoonSVG()}</div>
+      ${Number.isFinite(bearing) ? `<span class="typhoon-heading" style="--bearing:${bearing}deg" aria-hidden="true"></span>` : ""}
+      <button type="button" class="typhoon-label">${escapeHTML(label)}</button>`;
+    el.querySelector(".typhoon-label").addEventListener("click", (event) => {
+      event.stopPropagation();
+      options.onSelectTyphoon?.(ty);
+    });
+    state.typhoonMarker = new maplibregl.Marker({ element: el, anchor: "center" })
+      .setLngLat([ty.position.longitude, ty.position.latitude])
+      .addTo(map);
+    sizeTyphoon();
+  }
+
   function addAllOverlays() {
     addBoundaryLayers();
     addRasterLayers();
     addPointLayers();
+    addTyphoonLayers();
     applyTint();
   }
 
@@ -405,6 +462,7 @@ export async function createAgosMap(container, options = {}) {
       container.classList.toggle("map-zoomed", map.getZoom() >= 12);
     };
     map.on("zoom", updateLabels);
+    map.on("zoom", sizeTyphoon);
     updateLabels();
   }
 
@@ -604,6 +662,37 @@ export async function createAgosMap(container, options = {}) {
       map.fitBounds(BATAAN_BOUNDS, { padding: 24, duration: 700 });
     },
 
+    /**
+     * Show a storm read from an article (typhoon_service result with a
+     * position). The map is unlocked from Bataan while a storm is shown,
+     * and framed to show both the storm and Bataan.
+     */
+    setTyphoon(typhoon, label) {
+      state.typhoon = typhoon?.position ? typhoon : null;
+      map.getSource("agos-typhoon")?.setData(typhoonGeoJSON());
+      renderTyphoonMarker(label);
+      if (!state.typhoon) return;
+      map.setMaxBounds(null);
+      const center = [state.typhoon.position.longitude, state.typhoon.position.latitude];
+      const reach = state.typhoon.radius_km?.value || 60;
+      const lons = [BATAAN_BOUNDS[0][0], BATAAN_BOUNDS[1][0]];
+      const lats = [BATAAN_BOUNDS[0][1], BATAAN_BOUNDS[1][1]];
+      for (const bearing of [0, 90, 180, 270]) {
+        const [lon, lat] = destination(center, bearing, reach);
+        lons.push(lon);
+        lats.push(lat);
+      }
+      map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: 48, duration: 1200, maxZoom: 9 });
+    },
+
+    clearTyphoon() {
+      state.typhoon = null;
+      map.getSource("agos-typhoon")?.setData(typhoonGeoJSON());
+      renderTyphoonMarker("");
+      map.setMaxBounds(MAX_BOUNDS);
+      controller.fitBataan();
+    },
+
     showUser(lon, lat) {
       if (!state.userMarker) {
         const el = document.createElement("div");
@@ -634,6 +723,7 @@ export async function createAgosMap(container, options = {}) {
     destroy() {
       for (const marker of state.markers.values()) marker.remove();
       state.userMarker?.remove();
+      state.typhoonMarker?.remove();
       hoverCard.remove();
       rainfx?.destroy();
       map.remove();

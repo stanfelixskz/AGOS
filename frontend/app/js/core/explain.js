@@ -152,6 +152,26 @@ const TEXT = {
         ${sourceLink("GloFAS", "glofas")}`,
     }),
   },
+  typhoon: {
+    en: () => ({
+      title: "Typhoon from an article",
+      body: `<p>Paste a link to a news article or a PAGASA bulletin. AGOS reads the page text and picks out only what it states: name, category, position, winds, movement and size.</p>
+        <p><strong>Position</strong> is either the coordinates written in the article, or a distance and direction from a named place (for example “320 km East of Virac”), located with the Open-Meteo geocoder. If neither is written, no symbol is drawn.</p>
+        ${swatchList([["#dc2626", "Dashed circle", "wind-extent radius stated in the article"]])}
+        <p>The <strong>spiral</strong> is an illustration: it turns counter-clockwise like storms north of the equator. It is drawn to the stated wind extent; without one it has a fixed size and is not to scale. The small arrow shows the stated direction of movement, not a forecast track.</p>
+        <p>All of this is <strong>unverified and may be outdated</strong>. Follow PAGASA bulletins and your LGU.</p>
+        ${sourceLink("Typhoon details from an article link", "typhoon-article")}`,
+    }),
+    fil: () => ({
+      title: "Bagyo mula sa artikulo",
+      body: `<p>Idikit ang link ng balita o PAGASA bulletin. Babasahin ng AGOS ang teksto ng pahina at kukunin lang ang nakasulat: pangalan, kategorya, lokasyon, hangin, galaw at laki.</p>
+        <p>Ang <strong>lokasyon</strong> ay ang coordinates na nakasulat sa artikulo, o ang layo at direksyon mula sa isang lugar (halimbawa “320 km East of Virac”), na hinanap gamit ang Open-Meteo geocoder. Kung wala ang alinman, walang simbolong iguguhit.</p>
+        ${swatchList([["#dc2626", "Putol-putol na bilog", "radius ng lawak ng hangin na nakasulat sa artikulo"]])}
+        <p>Ang <strong>spiral</strong> ay paglalarawan lang: umiikot ito pakaliwa gaya ng mga bagyo sa hilaga ng ekwador. Iginuguhit ito ayon sa nakasulat na lawak ng hangin; kung wala, nakapirmi ang laki at hindi ito ayon sa sukat. Ang maliit na arrow ay ang nakasulat na direksyon ng galaw, hindi forecast track.</p>
+        <p>Lahat ng ito ay <strong>hindi beripikado at maaaring luma na</strong>. Sundin ang PAGASA bulletin at ang inyong LGU.</p>
+        ${sourceLink("Typhoon details from an article link", "typhoon-article")}`,
+    }),
+  },
 };
 
 export function explain(id) {
