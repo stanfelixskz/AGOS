@@ -9,8 +9,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-POINTS = {"Manila Bay side (Orion)": (14.62, 120.58), "West coast (Bagac)": (14.60, 120.39)}
-RANGES = [("recent", {"past_days": 3, "forecast_days": 1}), ("2018", {"start_date": "2018-09-01", "end_date": "2018-09-03"}), ("2012", {"start_date": "2012-08-06", "end_date": "2012-08-08"})]
+POINTS = {"Manila Bay side (Orion)": (14.62, 120.58)}
+RANGES = [("recent", {"past_days": 3, "forecast_days": 1})] + [
+    (str(y), {"start_date": f"{y}-08-01", "end_date": f"{y}-08-03"}) for y in range(2026, 2009, -1)
+]
 
 
 def fetch(lat, lon, extra):
