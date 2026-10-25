@@ -86,10 +86,10 @@ function dischargeSection(section) {
   </section>`;
 }
 
-function susceptibilitySection(section) {
+function susceptibilitySection() {
   return `<section class="detail-section">
     ${sectionHead(t("detail.susceptibility"), "mgb")}
-    <div class="notice">${icon("info", { size: 18 })}<div>${escapeHTML(section?.detail || t("detail.susceptibilityNA"))}</div></div>
+    <div class="notice">${icon("info", { size: 18 })}<div>${escapeHTML(t("detail.susceptibilityNA"))}</div></div>
   </section>`;
 }
 

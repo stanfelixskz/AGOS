@@ -14,6 +14,7 @@ export const SOURCES = [
     usedFor: "Current weather, the 48-hour rain timeline, PAGASA-equivalent rain levels, saved forecast snapshots.",
     limits: "Model output, not rain-gauge measurements. One point per municipality does not represent the whole town. Short, intense local storms can be missed.",
     refresh: "AGOS caches responses for about 15 minutes.",
+    fil: {"kind": "Forecast ng weather model", "what": "Ulan bawat oras, tsansa ng ulan, temperatura, halumigmig, hangin at soil moisture mula sa global at regional na weather model, para sa isang reference point bawat bayan.", "usedFor": "Kasalukuyang panahon, 48-oras na timeline ng ulan, PAGASA-equivalent na antas ng ulan, at mga naipong forecast snapshot.", "limits": "Model output, hindi sukat ng rain gauge. Hindi kinakatawan ng isang punto ang buong bayan. Maaaring hindi makita ang maiikling malalakas na lokal na bagyo.", "refresh": "Itinatabi ng AGOS ang sagot nang mga 15 minuto."},
   },
   {
     id: "open-meteo-archive",
@@ -24,6 +25,7 @@ export const SOURCES = [
     usedFor: "Analytics history and forecast-accuracy checks.",
     limits: "Reanalysis is a model estimate of past weather, not a gauge reading. Recent days arrive with a delay of a few days.",
     refresh: "Ingested by the AGOS scheduler when it is enabled.",
+    fil: {"kind": "Reanalysis (modeled na nakaraang panahon)", "what": "Ulan at panahon bawat araw sa nakaraan, ginagamit bilang batayan ng 'ano talaga ang nangyari'.", "usedFor": "Kasaysayan sa Analytics at pagsuri ng katumpakan ng forecast.", "limits": "Model estimate ang reanalysis, hindi sukat ng gauge. Ilang araw ang pagkaantala bago dumating ang mga bagong araw.", "refresh": "Kinukuha ng AGOS scheduler kapag naka-on."},
   },
   {
     id: "glofas",
@@ -34,6 +36,7 @@ export const SOURCES = [
     usedFor: "River flow in municipality details and analytics.",
     limits: "Simulated, not observed river levels. The grid cell may not be the river you expect. Discharge alone does not confirm flooding.",
     refresh: "Daily.",
+    fil: {"kind": "Modeled na daloy ng ilog", "what": "Simulated na daloy ng ilog bawat araw (m³/s) mula sa Global Flood Awareness System, para sa river grid cell na malapit sa bawat town point.", "usedFor": "Daloy ng ilog sa detalye ng bayan at sa Analytics.", "limits": "Simulated, hindi nasukat na taas ng ilog. Maaaring hindi ito ang ilog na inaasahan mo. Hindi sapat ang daloy lang para kumpirmahin ang baha.", "refresh": "Araw-araw."},
   },
   {
     id: "pagasa-levels",
@@ -44,6 +47,7 @@ export const SOURCES = [
     usedFor: "Colors on the Overview and Map, alerts and briefings.",
     limits: "Applied to model forecasts, so it is NOT an official PAGASA warning. The thresholds come from news explainers of PAGASA criteria and have not been confirmed on a PAGASA page.",
     refresh: "Recomputed whenever the forecast refreshes.",
+    fil: {"kind": "Klasipikasyon ng AGOS", "what": "Kinukulayan ng AGOS ang pinakamalakas na oras ng forecast gamit ang intensity criteria ng PAGASA Heavy Rainfall Warning: Yellow 7.5–15 mm/h, Orange 15–30 mm/h, Red lampas 30 mm/h.", "usedFor": "Mga kulay sa Buod at Mapa, mga alerto at briefing.", "limits": "Inilalapat sa model forecast, kaya HINDI ito opisyal na babala ng PAGASA. Ang mga threshold ay mula sa mga news explainer tungkol sa PAGASA criteria at hindi pa nakukumpirma sa pahina ng PAGASA.", "refresh": "Kinakalkula muli tuwing nagre-refresh ang forecast."},
   },
   {
     id: "mgb",
@@ -54,6 +58,7 @@ export const SOURCES = [
     usedFor: "The flood susceptibility map layer.",
     limits: "Shows where flooding is possible in general, not whether it will flood now. AGOS displays the tiles; it does not extract values from them.",
     refresh: "Static; served by MGB.",
+    fil: {"kind": "Opisyal na hazard map (hindi nagbabago)", "what": "Mga klase ng flood susceptibility mula sa Mines and Geosciences Bureau, ipinapakita bilang map tiles.", "usedFor": "Ang flood susceptibility layer sa mapa.", "limits": "Ipinapakita kung saan posible ang baha sa pangkalahatan, hindi kung babaha ngayon. Ipinapakita lang ng AGOS ang tiles; hindi ito kumukuha ng value mula rito.", "refresh": "Hindi nagbabago; mula sa MGB."},
   },
   {
     id: "weatherapi-tiles",
@@ -64,6 +69,7 @@ export const SOURCES = [
     usedFor: "The optional precipitation tile layer on the map.",
     limits: "Provider colors are not recolored by AGOS. Rain shown is not a flood observation.",
     refresh: "Hourly.",
+    fil: {"kind": "Weather map tiles", "what": "Mga tile ng ulan bawat oras sa sariling kulay ng provider.", "usedFor": "Ang opsyonal na layer ng precipitation tiles sa mapa.", "limits": "Hindi kinukulayan muli ng AGOS. Hindi obserbasyon ng baha ang ulan na ipinapakita.", "refresh": "Bawat oras."},
   },
   {
     id: "basemap",
@@ -74,6 +80,7 @@ export const SOURCES = [
     usedFor: "Map background only.",
     limits: "Background reference, not hazard data. If it cannot load, AGOS falls back to OpenTopoMap tiles.",
     refresh: "Served by the provider.",
+    fil: {"kind": "Basemap", "what": "Background na mapa ng kalsada, lugar at tubig mula sa mga kontribyutor ng OpenStreetMap.", "usedFor": "Background ng mapa lamang.", "limits": "Sanggunian lang, hindi hazard data. Kapag hindi ito ma-load, OpenTopoMap tiles ang gagamitin ng AGOS.", "refresh": "Mula sa provider."},
   },
   {
     id: "community-reports",
@@ -84,6 +91,7 @@ export const SOURCES = [
     usedFor: "Report markers on the map and municipality details.",
     limits: "Unverified until reviewed. Depth is the reporter's estimate.",
     refresh: "Immediately after submission.",
+    fil: {"kind": "Mga isinumite ng komunidad", "what": "Mga ulat ng baha mula sa mga residente sa pahinang Mag-ulat, may opsyonal na litrato at lokasyon.", "usedFor": "Mga marker ng ulat sa mapa at sa detalye ng bayan.", "limits": "Hindi beripikado hangga't hindi nasusuri. Tantiya ng nag-ulat ang lalim.", "refresh": "Agad pagkatapos isumite."},
   },
   {
     id: "evacuation-centers",
@@ -94,6 +102,7 @@ export const SOURCES = [
     usedFor: "The Evacuate page and evacuation markers on the map.",
     limits: "Capacity, availability and operating status are not verified. A listed center is not proof that it is open or safe. Confirm with your barangay or MDRRMO.",
     refresh: "Updated by the AGOS team.",
+    fil: {"kind": "Tinipong listahan", "what": "Mga evacuation center na tinipon ng AGOS team mula sa pampublikong Google Maps listings.", "usedFor": "Ang pahinang Lumikas at mga marker ng evacuation center sa mapa.", "limits": "Hindi beripikado ang kapasidad, availability at katayuan. Hindi patunay na bukas o ligtas ang nakalistang center. Kumpirmahin sa inyong barangay o MDRRMO.", "refresh": "Ina-update ng AGOS team."},
   },
   {
     id: "forecast-skill",
@@ -104,8 +113,14 @@ export const SOURCES = [
     usedFor: "Forecast accuracy % and bias on the Analytics page.",
     limits: "The reference is reanalysis, not a rain gauge. Needs weeks of saved forecasts before results mean anything; AGOS says 'insufficient data' until then.",
     refresh: "Computed on request from the AGOS database.",
+    fil: {"kind": "Pagsusuri ng AGOS", "what": "Ikinukumpara ang mga forecast na inipon ng AGOS bago ang bawat araw sa archive na ulan ng Open-Meteo para sa araw na iyon.", "usedFor": "Katumpakan (%) at bias ng forecast sa pahinang Analytics.", "limits": "Reanalysis ang batayan, hindi rain gauge. Ilang linggo ng naipong forecast ang kailangan bago magkaroon ng kahulugan ang resulta; 'kulang ang datos' ang sasabihin ng AGOS hanggang doon.", "refresh": "Kinakalkula kapag hiniling mula sa database ng AGOS."},
   },
 ];
+
+/** A source's text in the given language (falls back to English). */
+export function sourceText(source, lang = "en") {
+  return lang === "fil" && source.fil ? { ...source, ...source.fil } : source;
+}
 
 export function sourceById(id) {
   return SOURCES.find((source) => source.id === id) || null;

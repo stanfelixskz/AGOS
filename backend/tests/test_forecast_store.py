@@ -57,13 +57,19 @@ class SnapshotTests(unittest.TestCase):
     def setUp(self):
         handle, self.path = tempfile.mkstemp(suffix=".sqlite3")
         os.close(handle)
+        self._opened = []
 
     def tearDown(self):
+        # Windows cannot delete a file that an open connection still holds,
+        # so close every connection the test opened first.
+        for connection in self._opened:
+            connection.close()
         os.unlink(self.path)
 
     def connect(self):
         connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
+        self._opened.append(connection)
         return connection
 
     def run_snapshot(self, payloads, now=NOW):

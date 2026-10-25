@@ -24,8 +24,20 @@ frontend/   Static site (HTML, CSS, vanilla JS, MapLibre GL). No build step.
 | Community reports | `/reports/community` (submit, photo upload), `/reports`, `/reports/{id}` |
 | Data lifecycle | `/data-lifecycle/*` — ingest history into SQLite, daily analytics, validation |
 | System status | `/system/status` — scheduler state, database stats, config checks |
-| Map | MGB flood susceptibility, rainfall tiles, terrain layers, municipalities, evacuation centers |
-| Map legend | "Layers and legend" panel: every layer with a checkbox, color key and "Why these colors?" (source, freshness, limits) |
+| Interface API | `/api/overview` (rain levels, alerts, briefing), `/api/municipalities[/{name}]`, `/api/evacuation-centers`, `/api/history` |
+| Forecast accuracy | `/skill/rain` — saved day-ahead forecasts vs archive rainfall |
+
+### Interface pages (frontend/index.html, hash routes)
+
+| Page | What it answers |
+|---|---|
+| `#/overview` | Is my area safe now? Briefing (English/Filipino), rain alerts, towns ranked, small map |
+| `#/map` | Full map: rain level by town (peak or hour by hour, 48 h), MGB susceptibility, precipitation tiles, evacuation centers, reports; details drawer |
+| `#/municipality/<name>` | Everything about one town, shareable |
+| `#/analytics` | Daily history from the AGOS database and forecast accuracy |
+| `#/evacuate` | Nearest listed evacuation center (straight-line), directions |
+| `#/report` | Submit a flood report; recent reports |
+| `#/sources` | Every data source, live system status, method and limits |
 
 ## Run it locally
 
@@ -90,11 +102,20 @@ httpx is not installed.
 Frontend (needs Node 20+; no packages to install):
 
 ```bash
-node --test frontend/tests/map-legend.test.js
+cd frontend/app
+node --test tests/*.test.js
 ```
 
-This checks that the map legend (`frontend/js/map-legend.js`) still matches the
-layer ids and colors used in `frontend/js/map.js`.
+These cover formatting, routing, the API client, translations (every English
+text has a Filipino one), charts, and that the rain-level thresholds and colors
+match the backend.
+
+MapLibre is loaded from `frontend/vendor/maplibre-gl/` and falls back to a
+pinned CDN copy. To vendor it once (then commit the files):
+
+```bash
+python frontend/tools/vendor_maplibre.py
+```
 
 ## Data sources and honest limits
 
@@ -115,12 +136,17 @@ AGOS never invents data. When a source is unavailable the interface says so.
 Some GIS datasets and research files are intentionally excluded. The map
 expects these under `frontend/data/` and reports them as unavailable when absent:
 
-- `bataan-municipalities.geojson`, `bataan_province_boundary.geojson`
-- `flood-data.json`, `evacuation-centers.json`
-- `tiles/elevation/`, `tiles/slope/`, `tiles/flow_accumulation/` (`{z}/{x}/{y}.png`)
+- `bataan-municipalities.geojson`, `bataan_province_boundary.geojson` (municipal
+  boundary layer; the map works without them and says the layer is unavailable)
+
+The evacuation center list now lives in the repository at
+`backend/app/data/evacuation_centers.json` (one list for the map and the
+Evacuate page). If you have a longer local `evacuation-centers.json`, merge its
+records into that file.
 
 Runtime data (`backend/data/`: community reports, photos, SQLite database) is
 git-ignored because it can contain personal information such as contact numbers.
+The public reports API never returns contact numbers.
 
 ## Contributing workflow
 

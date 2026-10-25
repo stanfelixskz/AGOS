@@ -36,14 +36,29 @@ Python + FastAPI + SQLite (backend). Owner: stanfelixskz. Code lives on `master`
 ```
 backend/
   app/main.py            FastAPI app, routers, startup scheduler
-  app/routes/            weather, rainfall, reports (community), system
-  app/services/          weather_service, rainfall_grid_service, scheduler,
+  app/routes/            weather, rainfall, reports (community), system,
+                         skill (/skill/rain), api (/api/* for the interface)
+  app/services/          weather_service, overview_service (levels, alerts,
+                         briefing, town detail), history_service,
+                         forecast_store, forecast_skill, scheduler,
+                         rainfall_grid_service,
                          report_service (satellite; not wired, do not touch)
+  app/data/              municipality points, evacuation_centers.json
   app/config/settings.py loads backend/.env
   agos_data_lifecycle.py SQLite ingest/analytics/validation (/data-lifecycle/*)
   tests/                 unit + API smoke tests
 frontend/
-  index.html, js/*.js, css/*.css   static site; js/config.js sets the API URL
+  index.html             app shell (hash routes #/overview, #/map, ...)
+  js/config.js           sets the API URL (window.AGOS_CONFIG.apiBase)
+  app/css/agos.css       the only stylesheet (design tokens, components)
+  app/js/main.js         navigation, routing, theme, language, backend badge
+  app/js/core/           api, i18n (en + fil), format, levels, charts, icons,
+                         explain ("why" dialogs), sources registry, router, ui
+  app/js/map/            MapLibre loader + map engine (HTML markers, no glyphs)
+  app/js/views/          one module per page; parts/muni-detail.js is shared
+  app/tests/             node tests (run from frontend/app)
+  vendor/                Inter font, MapLibre (see vendor/README.md)
+  tools/vendor_maplibre.py  downloads MapLibre into vendor/
 ```
 
 ## Run and test (from `backend/`)
@@ -54,25 +69,27 @@ python -m pytest
 uvicorn app.main:app --reload          # http://127.0.0.1:8000/docs
 ```
 Frontend: `cd frontend; python -m http.server 5500` then open http://localhost:5500.
+Frontend tests: `cd frontend/app; node --test tests/*.test.js`.
+Every interface text must exist in English and Filipino (`app/js/core/i18n.js`);
+rain-level thresholds live in `backend/app/services/overview_service.py` and
+`app/js/core/levels.js` (a test keeps them equal).
 Windows PowerShell: activate the venv with `.\.venv\Scripts\Activate.ps1`
 (run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` first if blocked).
 `backend/.env` already exists on the owner's machine: never overwrite it.
 
-(Tests, `requirements-dev.txt`, `js/config.js` and the scheduler arrive with the
-Phase 0 pull request; they may not be on `master` yet.)
-
 ## Not in the repo (intentional)
 
-- `frontend/data/`: municipality and province GeoJSON, `flood-data.json`,
-  `evacuation-centers.json`, terrain tiles under `tiles/`.
+- `frontend/data/`: municipality and province GeoJSON (boundary layer).
 - Sentinel/SAR/DEM processing outputs and scripts, `.tif`, `.qgz`.
 - `backend/.env`, `backend/data/` (reports, photos, SQLite).
 
 ## Known gaps (do not assume these work)
 
-- Evacuation directory (hardcoded in `evacuation.js`) and the map layer
-  (`data/evacuation-centers.json`) use different sources.
-- Analytics page calls Open-Meteo from the browser, not the project database.
+- Evacuation centers: 12 records in `backend/app/data/evacuation_centers.json`;
+  capacity and status are not provided by any source.
+- Community reports have no review/admin screen yet (all show "unverified").
+- Flood susceptibility by area is not computed; the UI shows a labelled slot.
+- MapLibre is not vendored until `tools/vendor_maplibre.py` is run once.
 - CORS allows all origins; restrict before public deployment.
 - Repo default branch on GitHub is `main` (nearly empty); real code is on `master`.
 
@@ -80,6 +97,7 @@ Phase 0 pull request; they may not be on `master` yet.)
 
 The phased upgrade plan and codebase overview are kept in the claude.ai Project
 "AGOS — Flood Intelligence System" (docs `claude/agos-upgrade-plan.md` and
-`claude/agos-codebase-overview.md`). Phase 1 (explainable map: legends, PAGASA
-rainfall levels, municipality detail panel, rain time slider, forecast accuracy,
-tide/low-lying scenarios) follows Phase 0 (foundation).
+`claude/agos-codebase-overview.md`). The redesign
+(`claude/agos-redesign-plan.md`, `claude/agos-redesign-prompt.md`) replaced the
+old one-page interface; next are flood susceptibility
+(`claude/agos-flood-susceptibility-stages.md`) and tide/low-lying scenarios.
