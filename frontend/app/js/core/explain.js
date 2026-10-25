@@ -54,6 +54,18 @@ const TEXT = {
         ${sourceLink("Open-Meteo forecast", "open-meteo-forecast")}`,
     }),
   },
+  animPlanned: {
+    en: () => ({
+      title: "Weather animation: what is planned",
+      body: `<p>Each kind of weather gets its own checkbox. <strong>Rain</strong> works now.</p>
+        <p><strong>Wind</strong> and <strong>clouds and sun</strong> are greyed out on purpose. To draw them honestly AGOS first has to collect the data from the forecast: wind direction for wind, cloud cover and sunshine for clouds and sun. Today it stores wind speed, not direction, and no cloud or sun data. Until then AGOS shows nothing rather than a made-up picture.</p>`,
+    }),
+    fil: () => ({
+      title: "Animasyon ng panahon: ano ang binabalak",
+      body: `<p>May sariling checkbox ang bawat uri ng panahon. Gumagana na ang <strong>Ulan</strong>.</p>
+        <p>Sadyang naka-grey ang <strong>hangin</strong> at <strong>ulap at araw</strong>. Para matapat na maiguhit ang mga ito, kailangan munang kolektahin ng AGOS ang datos mula sa forecast: direksyon ng hangin para sa hangin, cloud cover at sikat ng araw para sa ulap at araw. Sa ngayon, bilis ng hangin lang ang iniimbak, hindi direksyon, at walang datos ng ulap o araw. Hanggang doon, wala munang ipapakita ang AGOS kaysa sa gawa-gawang larawan.</p>`,
+    }),
+  },
   mgb: {
     en: () => ({
       title: "Flood susceptibility (MGB)",

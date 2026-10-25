@@ -105,8 +105,9 @@ export async function createAgosMap(container, options = {}) {
   }
 
   const state = {
-    visible: { boundaries: true, rain: true, rainfx: false, evacuation: true, reports: true, mgb: false, precip: false },
-    available: { boundaries: null, rain: null, rainfx: null, evacuation: null, reports: null, mgb: true, precip: true },
+    visible: { boundaries: true, rain: true, rainfx: false, windfx: false, cloudfx: false, evacuation: true, reports: true, mgb: false, precip: false },
+    // windfx and cloudfx are listed but not available: AGOS stores no wind direction, cloud cover or sun data yet.
+    available: { boundaries: null, rain: null, rainfx: null, windfx: false, cloudfx: false, evacuation: null, reports: null, mgb: true, precip: true },
     messages: {},
     boundaries: null,
     centers: [],
