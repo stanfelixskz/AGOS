@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
+from app.services.climate_service import climate_report
 from app.services.history_service import history_report
 from app.services import typhoon_service
 from app.services.weather_service import (
@@ -65,6 +66,12 @@ def evacuation_centers():
 def daily_history(days: int = Query(30, ge=7, le=365)):
     """Daily rain and river flow per town, from the AGOS database only."""
     return history_report(days=days)
+
+
+@router.get("/climate")
+def rainfall_climate():
+    """Yearly totals, monthly pattern, trend and return levels per town, from the AGOS database only."""
+    return climate_report()
 
 
 @router.get("/typhoon/from-url")

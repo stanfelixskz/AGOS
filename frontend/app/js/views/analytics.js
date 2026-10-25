@@ -12,6 +12,7 @@ import { barChart, lineChart, mountChart } from "../core/charts.js";
 import { EXPLAIN } from "../core/explain.js";
 import { loadingState, errorState, onRetry, openDialog } from "../core/ui.js";
 import { buildHash } from "../core/router.js";
+import { renderClimate, mountClimateCharts, explainClimate } from "./parts/climate.js";
 
 const PERIODS = [7, 30, 90];
 const STORE_KEY = "agos.analytics";
@@ -63,6 +64,8 @@ export async function mount(container) {
     towns: Array.isArray(prefs.towns) && prefs.towns.length ? prefs.towns.slice(0, 3) : ["Balanga"],
     history: null,
     skill: null,
+    climate: null,
+    climateTown: typeof prefs.climateTown === "string" ? prefs.climateTown : "Balanga",
     cleanups: [],
   };
 
@@ -84,7 +87,7 @@ export async function mount(container) {
   container.querySelectorAll("[data-days]").forEach((button) => button.addEventListener("click", () => {
     state.days = Number(button.dataset.days);
     container.querySelectorAll("[data-days]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
-    savePrefs({ days: state.days, towns: state.towns });
+    savePrefs({ days: state.days, towns: state.towns, climateTown: state.climateTown });
     load();
   }));
 
@@ -155,6 +158,13 @@ export async function mount(container) {
       </section>`;
   }
 
+  function climateSection() {
+    const c = state.climate;
+    if (!c) return "";
+    if (c.error) return `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("climate.title"))}</h2></div></div>${errorState(c.error)}</section>`;
+    return renderClimate(c.data, state.climateTown);
+  }
+
   function skillSection() {
     const s = state.skill;
     if (s.error) return `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("analytics.accuracy"))}</h2></div></div>${errorState(s.error)}</section>`;
@@ -199,7 +209,7 @@ export async function mount(container) {
 
   function render() {
     teardownCharts();
-    body.innerHTML = historySection() + skillSection();
+    body.innerHTML = historySection() + climateSection() + skillSection();
 
     body.querySelectorAll("[data-town]").forEach((chip) => chip.addEventListener("click", () => {
       const name = chip.dataset.town;
@@ -208,9 +218,15 @@ export async function mount(container) {
       } else {
         state.towns = [...state.towns, name].slice(-3);
       }
-      savePrefs({ days: state.days, towns: state.towns });
+      savePrefs({ days: state.days, towns: state.towns, climateTown: state.climateTown });
       render();
     }));
+    body.querySelectorAll("[data-ctown]").forEach((chip) => chip.addEventListener("click", () => {
+      state.climateTown = chip.dataset.ctown;
+      savePrefs({ days: state.days, towns: state.towns, climateTown: state.climateTown });
+      render();
+    }));
+    if (state.climate?.data) state.cleanups.push(...mountClimateCharts(body, state.climate.data, state.climateTown));
     body.querySelectorAll("[data-explain]").forEach((button) => button.addEventListener("click", () => explain(button.dataset.explain)));
 
     const data = state.history?.data;
@@ -229,7 +245,9 @@ export async function mount(container) {
 
   function explain(kind) {
     const fil = getLang() === "fil";
-    if (kind === "history") {
+    if (kind === "climate") {
+      openDialog(t("climate.title"), explainClimate(fil));
+    } else if (kind === "history") {
       openDialog(t("analytics.rainHistory"), fil ? `
         <p>Ang ulan bawat araw ay mula sa <strong>archive reanalysis</strong> ng Open-Meteo sa reference point ng bawat bayan: model estimate ng bumagsak na ulan, hindi sukat ng rain gauge. Simulated na GloFAS discharge ang daloy ng ilog.</p>
         <p>Ang mga araw lang na naipon na ng AGOS scheduler ang ipinapakita. Ang kulay-abong marka ay mga araw na hindi naipon — kulang, hindi zero.</p>
@@ -253,12 +271,14 @@ export async function mount(container) {
   async function load() {
     teardownCharts();
     body.innerHTML = loadingState();
-    const [historyResult, skillResult] = await Promise.allSettled([
+    const [historyResult, skillResult, climateResult] = await Promise.allSettled([
       getJSON(`/api/history?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON(`/skill/rain?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
+      getJSON("/api/climate", { ttlMs: 30 * 60 * 1000, timeoutMs: 30000 }),
     ]);
     if (!state.alive) return;
     state.history = historyResult.status === "fulfilled" ? { data: historyResult.value } : { error: historyResult.reason };
+    state.climate = climateResult.status === "fulfilled" ? { data: climateResult.value } : { error: climateResult.reason };
     state.skill = skillResult.status === "fulfilled" ? { data: skillResult.value } : { error: skillResult.reason };
     render();
     onRetry(body, load);
