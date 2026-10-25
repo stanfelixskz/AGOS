@@ -27,7 +27,7 @@ function renderStatus(data) {
   const last = scheduler.last_summary;
   const snap = scheduler.last_forecast_snapshot;
   const rows = [
-    statusRow(t("st.api"), `<span class="badge badge-success">${escapeHTML(data.api?.status || "running")}</span>`),
+    statusRow(t("st.api"), `<span class="badge badge-success">${escapeHTML(!data.api?.status || data.api.status === "running" ? t("st.running") : data.api.status)}</span>`),
     statusRow(t("st.scheduler"), yesNo(scheduler.enabled, scheduler.running ? t("st.running") : t("st.enabled"), t("st.off"))),
     statusRow(t("st.lastFinished"), scheduler.last_finished_at ? `${escapeHTML(formatTime(scheduler.last_finished_at))} <span class="subtle">(${escapeHTML(relativeTime(scheduler.last_finished_at))})</span>` : "—"),
     statusRow(t("st.lastResult"), last ? escapeHTML(last.crashed ? t("st.crashed", { error: last.error }) : t("st.resultText", { ok: last.succeeded ?? "?", all: last.attempted ?? "?" })) : "—"),
