@@ -218,3 +218,22 @@ class SchedulerThreadTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Era5CycleTests(unittest.TestCase):
+    def test_era5_rain_is_ingested_when_given(self):
+        calls = []
+
+        def make(source):
+            def ingest(**kwargs):
+                calls.append(source)
+                return {"records_upserted": 1}
+            return ingest
+
+        summary = run_ingestion_cycle(
+            lookback_days=3, municipalities=TWO_PLACES,
+            ingest_weather=make("archive"), ingest_discharge=make("glofas"), ingest_era5=make("era5"),
+            today=date(2026, 10, 24), pause_seconds=0, sleep=lambda _s: None,
+        )
+        self.assertEqual(calls.count("era5"), len(TWO_PLACES))
+        self.assertEqual(summary["failed"], 0)

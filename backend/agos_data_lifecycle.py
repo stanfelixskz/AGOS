@@ -49,6 +49,14 @@ WEATHER_DAILY_VARIABLES = [
 
 FLOOD_DAILY_VARIABLES = ["river_discharge"]
 
+# ERA5-only rain. The archive's default model ("best_match") is ERA5 up to 2016
+# and ECMWF IFS (9 km) from 2017, so its rain record changes model in 2017.
+# This source asks for ERA5 alone, giving one consistent rain record over all years
+# (published with about 5 days of delay). Stored under its own source name.
+ERA5_SOURCE = "open_meteo_era5"
+ERA5_MODEL = "era5"
+ERA5_DAILY_VARIABLES = ["precipitation_sum"]
+
 UNITS = {
     "precipitation_sum": "mm",
     "rain_sum": "mm",
@@ -510,20 +518,16 @@ def lifecycle_health() -> dict[str, Any]:
 # HISTORICAL WEATHER INGESTION
 # ---------------------------------------------------------------------
 
-@router.post("/ingest/weather")
-def ingest_historical_weather(
-    latitude: float = Query(14.6760, ge=-90, le=90),
-    longitude: float = Query(120.5363, ge=-180, le=180),
-    start_date: date = Query(
-        ...,
-        description="YYYY-MM-DD; up to 366 days per request",
-    ),
-    end_date: date = Query(
-        ...,
-        description="YYYY-MM-DD; historical date",
-    ),
+def _ingest_archive(
+    latitude: float,
+    longitude: float,
+    start_date: date,
+    end_date: date,
+    source: str,
+    variables: list[str],
+    model: str | None = None,
 ) -> dict[str, Any]:
-    """Fetch historical weather and upsert records into SQLite."""
+    """Fetch daily archive values and upsert them under `source` (shared by both archive sources)."""
     _validate_dates(start_date, end_date)
     lat, lon = _validate_coordinates(latitude, longitude)
     _init_db()
@@ -533,17 +537,19 @@ def ingest_historical_weather(
         "longitude": lon,
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
-        "daily": ",".join(WEATHER_DAILY_VARIABLES),
+        "daily": ",".join(variables),
         "timezone": PH_TIMEZONE,
         "wind_speed_unit": "kmh",
         "precipitation_unit": "mm",
     }
+    if model:
+        params["models"] = model
 
     try:
         data = _fetch_json(WEATHER_ARCHIVE_URL, params)
 
         received, stored = _store_daily(
-            "open_meteo_archive",
+            source,
             data,
             "time",
             "daily",
@@ -552,7 +558,7 @@ def ingest_historical_weather(
         )
 
         _log_run(
-            "open_meteo_archive",
+            source,
             lat,
             lon,
             start_date,
@@ -564,7 +570,7 @@ def ingest_historical_weather(
 
     except HTTPException as exc:
         _log_run(
-            "open_meteo_archive",
+            source,
             lat,
             lon,
             start_date,
@@ -578,7 +584,7 @@ def ingest_historical_weather(
         "status": "success",
         "source": (
             "Open-Meteo Historical Weather API "
-            "(reanalysis/model data)"
+            + (f"(model {model}, reanalysis)" if model else "(default best_match: ERA5 to 2016, ECMWF IFS from 2017)")
         ),
         "location": {
             "latitude": lat,
@@ -597,6 +603,46 @@ def ingest_historical_weather(
             "not local rain-gauge observations."
         ),
     }
+
+
+@router.post("/ingest/weather")
+def ingest_historical_weather(
+    latitude: float = Query(14.6760, ge=-90, le=90),
+    longitude: float = Query(120.5363, ge=-180, le=180),
+    start_date: date = Query(
+        ...,
+        description="YYYY-MM-DD; up to 366 days per request",
+    ),
+    end_date: date = Query(
+        ...,
+        description="YYYY-MM-DD; historical date",
+    ),
+) -> dict[str, Any]:
+    """Fetch historical weather (default model) and upsert records into SQLite."""
+    return _ingest_archive(
+        latitude, longitude, start_date, end_date,
+        "open_meteo_archive", WEATHER_DAILY_VARIABLES,
+    )
+
+
+@router.post("/ingest/era5-rain")
+def ingest_era5_rain(
+    latitude: float = Query(14.6760, ge=-90, le=90),
+    longitude: float = Query(120.5363, ge=-180, le=180),
+    start_date: date = Query(
+        ...,
+        description="YYYY-MM-DD; up to 366 days per request",
+    ),
+    end_date: date = Query(
+        ...,
+        description="YYYY-MM-DD; historical date (ERA5 lags about 5 days)",
+    ),
+) -> dict[str, Any]:
+    """Fetch ERA5-only daily rain (one model for all years) and upsert it as open_meteo_era5."""
+    return _ingest_archive(
+        latitude, longitude, start_date, end_date,
+        ERA5_SOURCE, ERA5_DAILY_VARIABLES, ERA5_MODEL,
+    )
 
 
 # ---------------------------------------------------------------------

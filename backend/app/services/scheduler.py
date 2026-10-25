@@ -4,7 +4,7 @@ AGOS — scheduled data ingestion
 Keeps the SQLite analytics database fresh by periodically calling the
 existing data-lifecycle ingestion functions for every Bataan municipality:
 
-- Open-Meteo Historical Weather API (reanalysis / model data)
+- Open-Meteo Historical Weather API (default model, and ERA5-only rain)
 - Open-Meteo Flood API (GloFAS modeled river discharge)
 
 Design notes
@@ -105,14 +105,15 @@ def load_settings(env: Mapping[str, str] | None = None) -> dict[str, Any]:
 # ONE INGESTION CYCLE
 # ---------------------------------------------------------------------
 
-def _default_ingest_functions() -> tuple[IngestFunction, IngestFunction]:
+def _default_ingest_functions() -> tuple[IngestFunction, IngestFunction, IngestFunction]:
     # Imported lazily so this module can be tested without FastAPI.
     from agos_data_lifecycle import (
+        ingest_era5_rain,
         ingest_historical_weather,
         ingest_river_discharge,
     )
 
-    return ingest_historical_weather, ingest_river_discharge
+    return ingest_historical_weather, ingest_river_discharge, ingest_era5_rain
 
 
 def _error_text(error: Exception) -> str:
@@ -140,6 +141,7 @@ def run_ingestion_cycle(
     municipalities: Mapping[str, Mapping[str, float]] | None = None,
     ingest_weather: IngestFunction | None = None,
     ingest_discharge: IngestFunction | None = None,
+    ingest_era5: IngestFunction | None = None,
     today: date | None = None,
     pause_seconds: float = PAUSE_BETWEEN_REQUESTS_SECONDS,
     sleep: Callable[[float], None] = time.sleep,
@@ -149,16 +151,21 @@ def run_ingestion_cycle(
     municipalities = MUNICIPALITIES if municipalities is None else municipalities
 
     if ingest_weather is None or ingest_discharge is None:
-        default_weather, default_discharge = _default_ingest_functions()
+        default_weather, default_discharge, default_era5 = _default_ingest_functions()
         ingest_weather = ingest_weather or default_weather
         ingest_discharge = ingest_discharge or default_discharge
+        ingest_era5 = ingest_era5 or default_era5
 
     start, end = ingestion_period(lookback_days, today)
 
-    sources = (
+    sources = [
         ("open_meteo_archive", ingest_weather),
         ("open_meteo_glofas", ingest_discharge),
-    )
+    ]
+    if ingest_era5 is not None:
+        # ERA5-only rain (one model for all years); it lags about 5 days, so the
+        # lookback window keeps filling the newest days on later cycles.
+        sources.append(("open_meteo_era5", ingest_era5))
 
     results: list[dict[str, Any]] = []
 

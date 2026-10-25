@@ -106,3 +106,13 @@ class RunTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Era5PlanTests(unittest.TestCase):
+    def test_era5_source_is_planned_like_the_others(self):
+        from datetime import date
+        from app.services import backfill_service as bf
+        todo = bf.plan({"A": {"latitude": 14.5, "longitude": 120.5}}, ["open_meteo_era5"], 2024, date(2026, 10, 25), set())
+        self.assertEqual({c[1] for c in todo}, {"open_meteo_era5"})
+        self.assertEqual(todo[0][2].year, 2026)  # newest first
+        self.assertIn("open_meteo_era5", bf.EST_CALLS)

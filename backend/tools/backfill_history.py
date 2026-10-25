@@ -28,20 +28,20 @@ sys.path.insert(0, str(BACKEND))
 from app.data.municipalities import MUNICIPALITIES  # noqa: E402
 from app.services import backfill_service as bf  # noqa: E402
 
-SOURCE_NAMES = {"archive": "open_meteo_archive", "glofas": "open_meteo_glofas"}
+SOURCE_NAMES = {"archive": "open_meteo_archive", "glofas": "open_meteo_glofas", "era5": "open_meteo_era5"}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--from-year", type=int, default=1990)
-    parser.add_argument("--sources", default="archive,glofas", help="archive, glofas, or both (comma separated)")
+    parser.add_argument("--sources", default="archive,glofas", help="archive, glofas and/or era5 (comma separated); era5 = ERA5-only rain")
     parser.add_argument("--pause", type=float, default=8.0, help="seconds between requests")
     parser.add_argument("--max-requests", type=int)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--status", action="store_true")
     args = parser.parse_args()
 
-    from agos_data_lifecycle import _connect, _init_db, ingest_historical_weather, ingest_river_discharge
+    from agos_data_lifecycle import _connect, _init_db, ingest_era5_rain, ingest_historical_weather, ingest_river_discharge
 
     _init_db()
     connection = _connect()
@@ -58,7 +58,7 @@ def main() -> int:
         try:
             sources = [SOURCE_NAMES[s.strip()] for s in args.sources.split(",") if s.strip()]
         except KeyError as error:
-            parser.error(f"unknown source {error}; use archive and/or glofas")
+            parser.error(f"unknown source {error}; use archive, glofas and/or era5")
         todo = bf.plan(MUNICIPALITIES, sources, args.from_year, date.today(), bf.completed_runs(connection))
     finally:
         connection.close()
@@ -74,7 +74,8 @@ def main() -> int:
 
     summary = bf.run_backfill(
         todo, MUNICIPALITIES,
-        {"open_meteo_archive": ingest_historical_weather, "open_meteo_glofas": ingest_river_discharge},
+        {"open_meteo_archive": ingest_historical_weather, "open_meteo_glofas": ingest_river_discharge,
+         "open_meteo_era5": ingest_era5_rain},
         pause_s=args.pause, max_requests=args.max_requests, progress=lambda m: print(m, flush=True),
     )
     print(f"\nsucceeded {summary['succeeded']}, failed {summary['failed']}, "

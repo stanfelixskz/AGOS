@@ -4,7 +4,9 @@ AGOS — historical backfill (plan item 3)
 Fills the SQLite database with past daily data so Analytics has years of
 history instead of a few days:
 
-  open_meteo_archive  daily rain/temperature/wind, ERA5 reanalysis (1940+, gridded model data)
+  open_meteo_archive  daily rain/temperature/wind, Open-Meteo default model (ERA5 to 2016,
+                      ECMWF IFS from 2017; gridded model data)
+  open_meteo_era5     daily rain only, ERA5 alone (1940+, one model for all years)
   open_meteo_glofas   daily modeled river discharge, GloFAS (from 1984, modeled, not a gauge)
 
 It reuses the existing ingest functions (same tables, same validation, same
@@ -32,13 +34,13 @@ from typing import Any, Callable, Iterable, Mapping
 
 logger = logging.getLogger(__name__)
 
-SOURCES = ("open_meteo_archive", "open_meteo_glofas")
-FIRST_YEAR = {"open_meteo_archive": 1940, "open_meteo_glofas": 1984}
+SOURCES = ("open_meteo_archive", "open_meteo_glofas", "open_meteo_era5")
+FIRST_YEAR = {"open_meteo_archive": 1940, "open_meteo_glofas": 1984, "open_meteo_era5": 1940}
 LATEST_LAG_DAYS = 7  # the archive publishes recent days with a delay
 
 # Rough weighted-call cost per one-year request, from the examples on Open-Meteo's
 # pricing page (2 weeks x 15 variables = 1.5 calls). An ESTIMATE, not measured.
-EST_CALLS = {"open_meteo_archive": 15.6, "open_meteo_glofas": 2.6}
+EST_CALLS = {"open_meteo_archive": 15.6, "open_meteo_glofas": 2.6, "open_meteo_era5": 2.6}
 
 Chunk = tuple[str, str, date, date]  # (municipality, source, start, end)
 
