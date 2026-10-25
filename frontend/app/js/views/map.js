@@ -7,7 +7,7 @@
 import { icon } from "../core/icons.js";
 import { t, getLang } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
-import { escapeHTML, num, formatTime, isNumber, distanceKm, relativeTime } from "../core/format.js";
+import { escapeHTML, num, formatTime, isNumber, distanceKm, relativeTime, parseTime } from "../core/format.js";
 import { LEVELS, LEVEL_IDS, levelLabel, levelRange } from "../core/levels.js";
 import { effectiveTheme } from "../core/theme.js";
 import { EXPLAIN } from "../core/explain.js";
@@ -132,12 +132,35 @@ export async function mount(container, route) {
         </div>
         ${s.visible && swatches.length && !unavailable ? `<ul class="swatches">${swatches.map(([color, label]) => `<li><span class="swatch" style="background:${color}"></span>${escapeHTML(label)}</li>`).join("")}</ul>` : ""}
         ${layer.id === "boundaries" && s.visible && state.engine?.boundarySource() === "psgc2023" ? `<p class="subtle">${escapeHTML(t("map.boundarySource"))} <a href="https://github.com/faeldon/philippines-json-maps" target="_blank" rel="noopener noreferrer">philippines-json-maps</a> (MIT) · <a href="#/sources?s=boundaries">${escapeHTML(t("explain.details"))}</a></p>` : ""}
-        ${layer.id === "precip" && s.visible ? `<p class="subtle">${escapeHTML(t("map.precipTime"))}: ${escapeHTML(state.engine?.precipTime() || "")}</p>` : ""}
+        ${layer.id === "precip" && s.visible && !unavailable ? precipControls() : ""}
         ${unavailable || s.message ? `<p class="subtle layer-msg">${icon(unavailable ? "alert" : "info", { size: 14 })} ${escapeHTML(s.message || t("common.notAvailable"))}</p>` : ""}
       </div>`;
     }).join("");
   }
 
+  function precipControls() {
+    const engine = state.engine;
+    if (!engine) return "";
+    const status = engine.precipStatus();
+    const when = formatTime(engine.precipDate().toISOString());
+    const percent = Math.round(engine.precipOpacity() * 100);
+    return `<div class="precip-controls">
+      <p class="chip-line"><span class="chip">${icon("clock", { size: 14 })} ${escapeHTML(t("map.precipChip", { time: when }))}</span> <span class="subtle">${escapeHTML(engine.precipTime())}</span></p>
+      <label class="precip-opacity"><span>${escapeHTML(t("map.precipOpacity"))}</span>
+        <input type="range" min="10" max="100" step="5" value="${percent}" data-precip-opacity aria-label="${escapeHTML(t("map.precipOpacity"))}">
+        <output class="num">${percent}%</output></label>
+      ${status !== "ok" ? `<p class="subtle layer-msg">${icon("alert", { size: 14 })} ${escapeHTML(t(status === "missing" ? "map.precipMissing" : "map.precipPartial"))}</p>` : ""}
+      <p class="subtle">${escapeHTML(t("map.precipNote"))}</p>
+    </div>`;
+  }
+
+  ui.layerList.addEventListener("input", (event) => {
+    const slider = event.target.closest("[data-precip-opacity]");
+    if (!slider) return;
+    state.engine?.setPrecipOpacity(Number(slider.value) / 100);
+    const out = slider.parentElement.querySelector("output");
+    if (out) out.textContent = `${slider.value}%`;
+  });
   ui.layerList.addEventListener("change", (event) => {
     const input = event.target.closest("[data-layer]");
     if (input) state.engine?.setLayer(input.dataset.layer, input.checked);
@@ -185,6 +208,8 @@ export async function mount(container, route) {
     if (!state.overview) return;
     state.engine.setRain(rainRows(), true, "");
     const steps = state.overview.municipalities?.[0]?.series || [];
+    // Precipitation tiles follow the hour shown on the towns (current hour in "peak" mode).
+    state.engine.setPrecipTime(state.mode === "hour" ? parseTime(steps[state.hour]?.time) : null);
     ui.slider.max = String(Math.max(0, steps.length - 1));
     ui.timeLabel.textContent = state.mode === "hour"
       ? hourLabel(steps[state.hour]?.time, state.hour)
