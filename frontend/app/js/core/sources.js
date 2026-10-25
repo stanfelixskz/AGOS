@@ -126,6 +126,28 @@ export const SOURCES = [
     refresh: "Computed on request from the AGOS database.",
     fil: {"kind": "Pagsusuri ng AGOS", "what": "Ikinukumpara ang mga forecast na inipon ng AGOS bago ang bawat araw sa archive na ulan ng Open-Meteo para sa araw na iyon.", "usedFor": "Katumpakan (%) at bias ng forecast sa pahinang Analytics.", "limits": "Reanalysis ang batayan, hindi rain gauge. Ilang linggo ng naipong forecast ang kailangan bago magkaroon ng kahulugan ang resulta; 'kulang ang datos' ang sasabihin ng AGOS hanggang doon.", "refresh": "Kinakalkula kapag hiniling mula sa database ng AGOS."},
   },
+  {
+    id: "typhoon-article",
+    name: "Typhoon details from an article link",
+    url: null,
+    kind: "Text extracted from a news article or bulletin",
+    what: "Storm name, category, position, winds, gusts, movement, wind-extent radius and pressure, picked out of the article text by fixed patterns. Each value is shown with the sentence it came from.",
+    usedFor: "The typhoon symbol, wind-extent circle and details on the Map page.",
+    limits: "Unverified and possibly outdated: the article may be hours or days old. Only values written in the article are used; nothing is estimated. Pages that load their text with scripts, or block automated reading, give no result. If an article mentions several storms, the first one found is used. Not an official PAGASA bulletin.",
+    refresh: "Read once, when you paste the link. Not saved.",
+    fil: {"kind": "Tekstong kinuha mula sa balita o bulletin", "what": "Pangalan, kategorya, lokasyon, hangin, bugso, galaw, radius ng lawak ng hangin at pressure ng bagyo, kinuha mula sa teksto ng artikulo gamit ang mga nakatakdang pattern. Ipinapakita ang bawat value kasama ang pangungusap na pinagmulan nito.", "usedFor": "Simbolo ng bagyo, bilog ng lawak ng hangin at mga detalye sa pahinang Mapa.", "limits": "Hindi beripikado at maaaring luma na: maaaring ilang oras o araw na ang artikulo. Ang mga value lang na nakasulat sa artikulo ang ginagamit; walang tinatantiya. Walang resulta ang mga pahinang naglo-load ng teksto gamit ang script o humaharang sa awtomatikong pagbasa. Kung higit sa isang bagyo ang nabanggit, ang unang nakita ang ginagamit. Hindi ito opisyal na bulletin ng PAGASA.", "refresh": "Binabasa nang isang beses kapag idinikit mo ang link. Hindi iniipon."},
+  },
+  {
+    id: "open-meteo-geocoding",
+    name: "Open-Meteo Geocoding API",
+    url: "https://open-meteo.com/en/docs/geocoding-api",
+    kind: "Place-name lookup (GeoNames data)",
+    what: "Coordinates of a named place, such as the town an article measures the storm’s distance from.",
+    usedFor: "Turning “320 km East of Virac, Catanduanes” into a map position for the typhoon symbol.",
+    limits: "A place name can match the wrong place; AGOS shows which place it used. The projected point is only as exact as the article’s rounded distance and 16-point direction.",
+    refresh: "Looked up each time an article is read.",
+    fil: {"kind": "Paghahanap ng pangalan ng lugar (datos ng GeoNames)", "what": "Coordinates ng isang lugar na may pangalan, gaya ng bayang pinagsusukatan ng artikulo ng layo ng bagyo.", "usedFor": "Paggawa ng lokasyon sa mapa mula sa “320 km East of Virac, Catanduanes” para sa simbolo ng bagyo.", "limits": "Maaaring tumugma ang pangalan sa maling lugar; ipinapakita ng AGOS kung aling lugar ang ginamit. Kasing-eksakto lang ng bilugang layo at 16 na direksyon ng artikulo ang nakuhang punto.", "refresh": "Hinahanap tuwing may binabasang artikulo."},
+  },
 ];
 
 /** A source's text in the given language (falls back to English). */

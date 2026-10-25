@@ -7,7 +7,7 @@
 import { icon } from "../core/icons.js";
 import { t, getLang } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
-import { escapeHTML, num, formatTime, isNumber, distanceKm, relativeTime } from "../core/format.js";
+import { escapeHTML, num, formatTime, isNumber, distanceKm, relativeTime, parseTime, PH_TZ } from "../core/format.js";
 import { LEVELS, LEVEL_IDS, levelLabel, levelRange } from "../core/levels.js";
 import { effectiveTheme } from "../core/theme.js";
 import { EXPLAIN } from "../core/explain.js";
@@ -83,6 +83,20 @@ export async function mount(container, route) {
             <p class="subtle" id="rainStatus"></p>
           </section>
 
+          <section class="panel-section" aria-labelledby="typhoonHeading">
+            <div class="detail-head"><h3 id="typhoonHeading">${escapeHTML(t("typhoon.heading"))}</h3><button class="why" type="button" data-why="typhoon" aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button></div>
+            <form class="typhoon-form" id="typhoonForm" novalidate>
+              <label class="visually-hidden" for="typhoonUrl">${escapeHTML(t("typhoon.urlLabel"))}</label>
+              <input id="typhoonUrl" class="input" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="${escapeHTML(t("typhoon.placeholder"))}">
+              <button class="btn btn-sm btn-primary" type="submit" id="typhoonRead">${escapeHTML(t("typhoon.read"))}</button>
+            </form>
+            <p class="subtle" id="typhoonStatus" aria-live="polite"></p>
+            <div class="row" id="typhoonActions" style="gap:8px" hidden>
+              <button class="btn btn-sm" type="button" id="typhoonDetails">${escapeHTML(t("typhoon.details"))}</button>
+              <button class="btn btn-sm btn-ghost" type="button" id="typhoonRemove">${icon("close", { size: 14 })} ${escapeHTML(t("typhoon.remove"))}</button>
+            </div>
+          </section>
+
           <section class="panel-section" aria-labelledby="layersHeading">
             <h3 id="layersHeading">${escapeHTML(t("map.layers"))}</h3>
             <div id="layerList" class="layer-list"></div>
@@ -109,10 +123,12 @@ export async function mount(container, route) {
     hourControls: $("#hourControls"), slider: $("#hourSlider"), play: $("#playBtn"), timeLabel: $("#timeLabel"),
     rainStatus: $("#rainStatus"), layerList: $("#layerList"), basemap: $("#basemapName"),
     drawer: $("#drawer"), drawerTitle: $("#drawerTitle"), drawerBody: $("#drawerBody"), drawerClose: $("#drawerClose"), drawerGrip: $("#drawerGrip"),
+    tyForm: $("#typhoonForm"), tyUrl: $("#typhoonUrl"), tyRead: $("#typhoonRead"), tyStatus: $("#typhoonStatus"),
+    tyActions: $("#typhoonActions"), tyDetails: $("#typhoonDetails"), tyRemove: $("#typhoonRemove"),
   };
 
   const state = {
-    alive: true, engine: null, overview: null, overviewError: null, centers: [], reports: [],
+    alive: true, engine: null, overview: null, overviewError: null, centers: [], reports: [], typhoon: null,
     mode: "peak", hour: 0, playTimer: null, selected: null, drawerCleanup: null, refreshTimer: null, detailToken: 0,
   };
 
@@ -359,6 +375,125 @@ export async function mount(container, route) {
       </section>`);
   }
 
+  // ------------------------------------------------------------ typhoon from an article
+  function typhoonLabel(ty) {
+    const name = ty.storm?.name || t("typhoon.unnamed");
+    return ty.storm?.category ? t("typhoon.label", { category: ty.storm.category, name }) : name;
+  }
+
+  /** Article dates keep the year (an article may be from a past season); unparsed text is shown as written. */
+  function articleDate(value) {
+    const date = parseTime(value);
+    return date
+      ? date.toLocaleString("en-PH", { timeZone: PH_TZ, year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      : String(value);
+  }
+
+  function kmh(field) {
+    return field ? `${field.value} km/h` : t("common.notAvailable");
+  }
+
+  function selectTyphoon(ty = state.typhoon) {
+    if (!ty) return;
+    state.selected = null;
+    state.engine?.select(null);
+    const p = ty.position;
+    const rel = p?.relative;
+    let position = escapeHTML(t("common.notAvailable"));
+    if (p) {
+      const coords = `${num(p.latitude, 2)}°N, ${num(p.longitude, 2)}°E`;
+      const how = p.method === "coordinates"
+        ? t("typhoon.posCoords")
+        : t("typhoon.posRelative", {
+          km: num(rel.distance_km, 0), dir: rel.direction, place: rel.place,
+          match: [p.geocode?.name, p.geocode?.admin1].filter(Boolean).join(", "),
+        });
+      position = `<span class="num">${escapeHTML(coords)}</span><br><span class="subtle">${escapeHTML(how)}</span>`;
+    }
+    const m = ty.movement;
+    const movement = !m ? t("common.notAvailable")
+      : m.stationary ? t("typhoon.stationary")
+      : isNumber(m.speed_kmh) ? `${m.direction} · ${m.speed_kmh} km/h` : m.direction;
+    const radius = ty.radius_km ? `${num(ty.radius_km.value, 0)} km (${ty.radius_km.basis})` : t("typhoon.radiusNone");
+    const evidence = [
+      [t("typhoon.category"), ty.storm], [t("typhoon.position"), p], [t("typhoon.maxWind"), ty.max_wind_kmh],
+      [t("typhoon.gust"), ty.gust_kmh], [t("typhoon.movement"), m], [t("typhoon.radius"), ty.radius_km],
+      [t("typhoon.pressure"), ty.pressure_hpa], [t("typhoon.bulletinTime"), ty.bulletin_time],
+    ].filter(([, field]) => field?.evidence);
+    const seen = new Set();
+    const quotes = evidence.filter(([, field]) => !seen.has(field.evidence) && seen.add(field.evidence));
+    const article = ty.article || {};
+    const link = /^https?:\/\//.test(ty.final_url || "") ? ty.final_url : null;
+
+    openDrawer(
+      `<span class="eyebrow">${escapeHTML(t("typhoon.eyebrow"))}</span><h2>${escapeHTML(ty.storm?.name || t("typhoon.unnamed"))}</h2><span class="badge badge-warning">${escapeHTML(t("common.unverified"))}</span>`,
+      `<section class="detail-section">
+        <dl class="kv">
+          <dt>${escapeHTML(t("typhoon.category"))}</dt><dd>${escapeHTML(ty.storm?.category || t("common.notAvailable"))}${ty.storm?.international_name ? ` (${escapeHTML(ty.storm.international_name)})` : ""}</dd>
+          <dt>${escapeHTML(t("typhoon.position"))}</dt><dd>${position}</dd>
+          <dt>${escapeHTML(t("typhoon.maxWind"))}</dt><dd>${escapeHTML(kmh(ty.max_wind_kmh))}</dd>
+          <dt>${escapeHTML(t("typhoon.gust"))}</dt><dd>${escapeHTML(kmh(ty.gust_kmh))}</dd>
+          <dt>${escapeHTML(t("typhoon.movement"))}</dt><dd>${escapeHTML(movement)}</dd>
+          <dt>${escapeHTML(t("typhoon.radius"))}</dt><dd>${escapeHTML(radius)}</dd>
+          <dt>${escapeHTML(t("typhoon.pressure"))}</dt><dd>${escapeHTML(ty.pressure_hpa ? `${ty.pressure_hpa.value} hPa` : t("common.notAvailable"))}</dd>
+          <dt>${escapeHTML(t("typhoon.bulletinTime"))}</dt><dd>${escapeHTML(ty.bulletin_time?.text || t("common.notAvailable"))}</dd>
+        </dl>
+        ${!p && ty.position_note ? `<p class="subtle" style="margin-top:8px">${escapeHTML(ty.position_note)}</p>` : ""}
+        <div class="notice notice-warning" style="margin-top:12px">${icon("alert", { size: 18 })}<div>${escapeHTML(t("typhoon.warning"))}</div></div>
+      </section>
+      ${quotes.length ? `<section class="detail-section">
+        <h3>${escapeHTML(t("typhoon.evidence"))}</h3>
+        <ul class="typhoon-quotes">${quotes.map(([label, field]) => `<li><span class="subtle">${escapeHTML(label)}</span><blockquote>${escapeHTML(field.evidence)}</blockquote></li>`).join("")}</ul>
+      </section>` : ""}
+      <section class="detail-section">
+        <dl class="kv">
+          <dt>${escapeHTML(t("typhoon.article"))}</dt><dd>${link ? `<a href="${escapeHTML(link)}" target="_blank" rel="noopener noreferrer">${escapeHTML(article.title || article.site || link)}</a>` : escapeHTML(article.title || "—")}</dd>
+          ${article.published ? `<dt>${escapeHTML(t("typhoon.published"))}</dt><dd>${escapeHTML(articleDate(article.published))}</dd>` : ""}
+        </dl>
+        <p class="source-line" style="margin-top:12px">${escapeHTML(t("typhoon.source", { time: formatTime(ty.fetched_at) }))} · <a href="#/sources?s=typhoon-article">${escapeHTML(t("explain.details"))}</a></p>
+      </section>`);
+  }
+
+  ui.tyForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const url = ui.tyUrl.value.trim();
+    if (!/^https?:\/\/\S+\.\S+/i.test(url)) {
+      ui.tyStatus.textContent = t("typhoon.badUrl");
+      ui.tyUrl.focus();
+      return;
+    }
+    ui.tyRead.disabled = true;
+    ui.tyStatus.textContent = t("typhoon.reading");
+    try {
+      const data = await getJSON(`/api/typhoon/from-url?url=${encodeURIComponent(url)}`, { timeoutMs: 45000 });
+      if (!state.alive) return;
+      if (!data.found) {
+        ui.tyStatus.textContent = t("typhoon.notFound");
+        return;
+      }
+      state.typhoon = data;
+      ui.tyActions.hidden = false;
+      state.engine?.setTyphoon(data.position ? data : null, typhoonLabel(data));
+      ui.tyStatus.textContent = data.position
+        ? t("typhoon.shown", { name: typhoonLabel(data) })
+        : t("typhoon.noPosition", { note: data.position_note || "" });
+      selectTyphoon(data);
+    } catch (error) {
+      if (state.alive) ui.tyStatus.textContent = error.message;
+    } finally {
+      ui.tyRead.disabled = false;
+    }
+  });
+  ui.tyDetails.addEventListener("click", () => selectTyphoon());
+  ui.tyRemove.addEventListener("click", () => {
+    state.typhoon = null;
+    state.engine?.clearTyphoon();
+    ui.tyActions.hidden = true;
+    ui.tyStatus.textContent = "";
+    ui.tyUrl.value = "";
+    if (ui.drawerTitle.textContent.includes(t("typhoon.eyebrow"))) closeDrawer();
+  });
+
   // ------------------------------------------------------------ search
   function searchItems(query) {
     const q = query.trim().toLowerCase();
@@ -452,6 +587,7 @@ export async function mount(container, route) {
       onSelectMunicipality: (name) => selectMunicipality(name),
       onSelectCenter: selectCenter,
       onSelectReport: selectReport,
+      onSelectTyphoon: () => selectTyphoon(),
       onLayerState: (states) => state.alive && renderLayers(states),
     });
   } catch (error) {
