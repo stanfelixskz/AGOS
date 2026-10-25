@@ -130,7 +130,9 @@ const TEXT = {
       body: `<p>Paste a link to a news article or a PAGASA bulletin. AGOS reads the page text and picks out only what it states: name, category, position, winds, movement and size.</p>
         <p><strong>Position</strong> is either the coordinates written in the article, or a distance and direction from a named place (for example “320 km East of Virac”), located with the Open-Meteo geocoder. If neither is written, no symbol is drawn.</p>
         ${swatchList([["#dc2626", "Dashed circle", "wind-extent radius stated in the article"]])}
-        <p>The <strong>spiral</strong> is an illustration: it turns counter-clockwise like storms north of the equator. It is drawn to the stated wind extent; without one it has a fixed size and is not to scale. The small arrow shows the stated direction of movement, not a forecast track.</p>
+        <p>The <strong>storm symbol</strong> imitates enhanced infrared satellite images (red where cloud tops are coldest), but it is an illustration, <strong>not satellite data</strong>. It turns counter-clockwise like storms north of the equator.</p>
+        <p><strong>How strong it looks</strong> follows the stated maximum winds on the PAGASA scale: Tropical Depression (up to 61 km/h), Tropical Storm (62–88), Severe Tropical Storm (89–117), Typhoon (118–184), Super Typhoon (185 or more). Stronger storms get a redder core, and typhoons an eye.</p>
+        <p><strong>Its size on the map</strong> is the stated wind extent. Wind speed does not tell how wide a storm is, so AGOS does not estimate an area from it: without a stated extent the symbol has a fixed screen size by strength and is not to scale. The small arrow shows the stated direction of movement, not a forecast track.</p>
         <p>All of this is <strong>unverified and may be outdated</strong>. Follow PAGASA bulletins and your LGU.</p>
         ${sourceLink("Typhoon details from an article link", "typhoon-article")}`,
     }),
@@ -139,7 +141,9 @@ const TEXT = {
       body: `<p>Idikit ang link ng balita o PAGASA bulletin. Babasahin ng AGOS ang teksto ng pahina at kukunin lang ang nakasulat: pangalan, kategorya, lokasyon, hangin, galaw at laki.</p>
         <p>Ang <strong>lokasyon</strong> ay ang coordinates na nakasulat sa artikulo, o ang layo at direksyon mula sa isang lugar (halimbawa “320 km East of Virac”), na hinanap gamit ang Open-Meteo geocoder. Kung wala ang alinman, walang simbolong iguguhit.</p>
         ${swatchList([["#dc2626", "Putol-putol na bilog", "radius ng lawak ng hangin na nakasulat sa artikulo"]])}
-        <p>Ang <strong>spiral</strong> ay paglalarawan lang: umiikot ito pakaliwa gaya ng mga bagyo sa hilaga ng ekwador. Iginuguhit ito ayon sa nakasulat na lawak ng hangin; kung wala, nakapirmi ang laki at hindi ito ayon sa sukat. Ang maliit na arrow ay ang nakasulat na direksyon ng galaw, hindi forecast track.</p>
+        <p>Ginagaya ng <strong>simbolo ng bagyo</strong> ang enhanced infrared na satellite image (pula kung saan pinakamalamig ang tuktok ng ulap), pero paglalarawan lang ito, <strong>hindi satellite data</strong>. Umiikot ito pakaliwa gaya ng mga bagyo sa hilaga ng ekwador.</p>
+        <p><strong>Ang hitsura ng lakas</strong> ay batay sa nakasulat na pinakamalakas na hangin ayon sa sukatan ng PAGASA: Tropical Depression (hanggang 61 km/h), Tropical Storm (62–88), Severe Tropical Storm (89–117), Typhoon (118–184), Super Typhoon (185 pataas). Mas pula ang gitna ng mas malalakas na bagyo, at may mata ang typhoon.</p>
+        <p><strong>Ang laki nito sa mapa</strong> ay ang nakasulat na lawak ng hangin. Hindi sinasabi ng bilis ng hangin kung gaano kalapad ang bagyo, kaya hindi tinatantiya ng AGOS ang lawak mula rito: kung walang nakasulat na lawak, nakapirmi ang laki ng simbolo sa screen ayon sa lakas at hindi ito ayon sa sukat. Ang maliit na arrow ay ang nakasulat na direksyon ng galaw, hindi forecast track.</p>
         <p>Lahat ng ito ay <strong>hindi beripikado at maaaring luma na</strong>. Sundin ang PAGASA bulletin at ang inyong LGU.</p>
         ${sourceLink("Typhoon details from an article link", "typhoon-article")}`,
     }),

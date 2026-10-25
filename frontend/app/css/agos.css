@@ -737,14 +737,14 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .typhoon-marker { --size: 84px; width: var(--size); height: var(--size); display: grid; place-items: center; pointer-events: none; }
 .typhoon-spin {
   grid-area: 1 / 1; width: 100%; height: 100%;
-  filter: drop-shadow(0 0 3px rgba(15, 27, 45, .45));
+  opacity: .88;
+  will-change: transform; /* rotate the drawn layer instead of redrawing the cloud filter */
   animation: typhoon-spin 9s linear infinite;
 }
 /* Counter-clockwise north of the equator; mirrored and clockwise south of it. */
 @keyframes typhoon-spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 @keyframes typhoon-spin-south { from { transform: scaleX(-1) rotate(0deg); } to { transform: scaleX(-1) rotate(-360deg); } }
 .typhoon-marker.is-south .typhoon-spin { animation-name: typhoon-spin-south; }
-.typhoon-marker.is-unscaled .typhoon-spin { opacity: .92; }
 .typhoon-heading {
   grid-area: 1 / 1; width: 0; height: 0; position: relative;
   transform: rotate(var(--bearing));

@@ -13,6 +13,7 @@ import { effectiveTheme } from "../core/theme.js";
 import { EXPLAIN } from "../core/explain.js";
 import { buildHash } from "../core/router.js";
 import { createAgosMap } from "../map/engine.js";
+import { INTENSITY, intensityLevel } from "../map/typhoon.js";
 import { renderDetail, hydrateDetail } from "./parts/muni-detail.js";
 import { loadingState, errorState, onRetry } from "../core/ui.js";
 
@@ -415,6 +416,8 @@ export async function mount(container, route) {
       : m.stationary ? t("typhoon.stationary")
       : isNumber(m.speed_kmh) ? `${m.direction} · ${m.speed_kmh} km/h` : m.direction;
     const radius = ty.radius_km ? `${num(ty.radius_km.value, 0)} km (${ty.radius_km.basis})` : t("typhoon.radiusNone");
+    const level = intensityLevel(ty);
+    const strength = level === null ? t("common.notAvailable") : t(`typhoon.level.${INTENSITY[level].id}`);
     const evidence = [
       [t("typhoon.category"), ty.storm], [t("typhoon.position"), p], [t("typhoon.maxWind"), ty.max_wind_kmh],
       [t("typhoon.gust"), ty.gust_kmh], [t("typhoon.movement"), m], [t("typhoon.radius"), ty.radius_km],
@@ -430,6 +433,7 @@ export async function mount(container, route) {
       `<section class="detail-section">
         <dl class="kv">
           <dt>${escapeHTML(t("typhoon.category"))}</dt><dd>${escapeHTML(ty.storm?.category || t("common.notAvailable"))}${ty.storm?.international_name ? ` (${escapeHTML(ty.storm.international_name)})` : ""}</dd>
+          <dt>${escapeHTML(t("typhoon.strength"))}</dt><dd>${escapeHTML(strength)}</dd>
           <dt>${escapeHTML(t("typhoon.position"))}</dt><dd>${position}</dd>
           <dt>${escapeHTML(t("typhoon.maxWind"))}</dt><dd>${escapeHTML(kmh(ty.max_wind_kmh))}</dd>
           <dt>${escapeHTML(t("typhoon.gust"))}</dt><dd>${escapeHTML(kmh(ty.gust_kmh))}</dd>
