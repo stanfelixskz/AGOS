@@ -24,6 +24,10 @@ const LAYERS = [
   { id: "rain", group: "hazard", why: "rainLevels", always: false },
   { id: "mgb", group: "hazard", why: "mgb" },
   { id: "precip", group: "hazard", why: "precipitation" },
+  // Weather animation group: one checkbox per kind of weather. Add a layer here once AGOS stores its data.
+  { id: "rainfx", group: "fx", why: "rainAnim" },
+  { id: "windfx", group: "fx", why: "animPlanned", planned: true },
+  { id: "cloudfx", group: "fx", why: "animPlanned", planned: true },
   { id: "evacuation", group: "places", why: "evacuation" },
   { id: "reports", group: "places", why: "reports" },
   { id: "boundaries", group: "places", why: "boundaries" },
@@ -32,6 +36,9 @@ const LAYERS = [
 const LAYER_SWATCHES = {
   rain: () => LEVEL_IDS.filter((id) => id !== "nodata").map((id) => [LEVELS[id].color, `${levelLabel(id, getLang())} · ${levelRange(id, getLang())}`]),
   mgb: () => [["#002673", t("mgb.veryHigh")], ["#5900ff", t("mgb.high")], ["#b045ff", t("mgb.moderate")], ["#e3d1ff", t("mgb.low")]],
+  rainfx: () => [],
+  windfx: () => [],
+  cloudfx: () => [],
   precip: () => [],
   evacuation: () => [["#16a34a", t("map.swatch.center")]],
   reports: () => [["#7c3aed", t("map.swatch.report")]],
@@ -118,11 +125,13 @@ export async function mount(container, route) {
 
   // ------------------------------------------------------------ layers panel
   function renderLayers(states = state.engine?.layerStates() || {}) {
-    ui.layerList.innerHTML = LAYERS.map((layer) => {
+    ui.layerList.innerHTML = LAYERS.map((layer, index) => {
       const s = states[layer.id] || {};
       const unavailable = s.available === false;
       const swatches = LAYER_SWATCHES[layer.id]();
-      return `<div class="layer${unavailable ? " is-unavailable" : ""}">
+      const groupHead = layer.group === "fx" && LAYERS[index - 1]?.group !== "fx"
+        ? `<h4 class="layer-group">${escapeHTML(t("map.fxGroup"))}</h4>` : "";
+      return `${groupHead}<div class="layer${unavailable ? " is-unavailable" : ""}">
         <div class="layer-row">
           <label class="switch">
             <input type="checkbox" data-layer="${layer.id}" ${s.visible && !unavailable ? "checked" : ""} ${unavailable ? "disabled" : ""}>
@@ -131,9 +140,10 @@ export async function mount(container, route) {
           <button class="why" type="button" data-why="${layer.why}" aria-label="${escapeHTML(t("common.why"))}: ${escapeHTML(t(`map.layer.${layer.id}`))}">${icon("info", { size: 16 })}</button>
         </div>
         ${s.visible && swatches.length && !unavailable ? `<ul class="swatches">${swatches.map(([color, label]) => `<li><span class="swatch" style="background:${color}"></span>${escapeHTML(label)}</li>`).join("")}</ul>` : ""}
+        ${layer.id === "rainfx" && s.visible && !unavailable ? `<p class="subtle">${escapeHTML(t("map.rainfxNote"))}</p>` : ""}
         ${layer.id === "boundaries" && s.visible && state.engine?.boundarySource() === "psgc2023" ? `<p class="subtle">${escapeHTML(t("map.boundarySource"))} <a href="https://github.com/faeldon/philippines-json-maps" target="_blank" rel="noopener noreferrer">philippines-json-maps</a> (MIT) · <a href="#/sources?s=boundaries">${escapeHTML(t("explain.details"))}</a></p>` : ""}
         ${layer.id === "precip" && s.visible && !unavailable ? precipControls() : ""}
-        ${unavailable || s.message ? `<p class="subtle layer-msg">${icon(unavailable ? "alert" : "info", { size: 14 })} ${escapeHTML(s.message || t("common.notAvailable"))}</p>` : ""}
+        ${unavailable || s.message ? `<p class="subtle layer-msg">${icon(unavailable ? "alert" : "info", { size: 14 })} ${escapeHTML(layer.planned ? t(`map.${layer.id}NA`) : s.message || t("common.notAvailable"))}</p>` : ""}
       </div>`;
     }).join("");
   }
@@ -179,6 +189,7 @@ export async function mount(container, route) {
         const mm = p?.precipitation_mm;
         return {
           name: m.name, point: m.point, level: p?.level || "nodata",
+          animMm: p?.precipitation_mm,
           levelText: levelLabel(p?.level || "nodata", getLang()),
           modeText: hourLabel(p?.time, state.hour),
           valueText: isNumber(mm) ? `${num(mm, 1)} mm/h` : "—",
@@ -188,6 +199,7 @@ export async function mount(container, route) {
       const w = m.windows?.next_24h || {};
       return {
         name: m.name, point: m.point, level: m.level_24h,
+        animMm: m.series?.[0]?.precipitation_mm, // peak mode: the animation shows the current hour
         levelText: levelLabel(m.level_24h, getLang()),
         modeText: t("map.hoverPeak"),
         valueText: isNumber(w.peak_mm_h) ? `${num(w.peak_mm_h, 1)} mm/h` : "—",
@@ -491,6 +503,8 @@ export async function mount(container, route) {
   }
   ui.basemap.textContent = state.engine.basemap.name;
   await state.engine.ready;
+  // Moving rain is on by default, except for people who asked their device for less motion.
+  if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) state.engine.setLayer("rainfx", true);
   ui.loading.remove();
   await overviewPromise;
   updateRain();

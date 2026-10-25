@@ -9,6 +9,7 @@
 import { loadMapLibre } from "./loader.js";
 import { escapeHTML } from "../core/format.js";
 import { levelColor } from "../core/levels.js";
+import { createRainFx } from "./rainfx.js";
 
 export const BATAAN_BOUNDS = [[120.18, 14.33], [120.72, 15.01]];
 
@@ -104,8 +105,9 @@ export async function createAgosMap(container, options = {}) {
   }
 
   const state = {
-    visible: { boundaries: true, rain: true, evacuation: true, reports: true, mgb: false, precip: false },
-    available: { boundaries: null, rain: null, evacuation: null, reports: null, mgb: true, precip: true },
+    visible: { boundaries: true, rain: true, rainfx: false, windfx: false, cloudfx: false, evacuation: true, reports: true, mgb: false, precip: false },
+    // windfx and cloudfx are listed but not available: AGOS stores no wind direction, cloud cover or sun data yet.
+    available: { boundaries: null, rain: null, rainfx: null, windfx: false, cloudfx: false, evacuation: null, reports: null, mgb: true, precip: true },
     messages: {},
     boundaries: null,
     centers: [],
@@ -121,7 +123,10 @@ export async function createAgosMap(container, options = {}) {
     basemap,
   };
 
+  let rainfx = null;
   const emit = () => options.onLayerState?.(layerStates());
+
+  const rainfxRows = () => state.rainRows.map((row) => ({ name: row.name, mm: row.animMm }));
 
   function layerStates() {
     return Object.fromEntries(Object.keys(state.visible).map((id) => [id, {
@@ -425,6 +430,14 @@ export async function createAgosMap(container, options = {}) {
   const ready = new Promise((resolve) => {
     map.once("load", async () => {
       await loadBoundaries();
+      state.available.rainfx = Boolean(state.boundaries);
+      state.messages.rainfx = state.boundaries ? "" : "Needs the municipal boundaries.";
+      if (state.boundaries) {
+        rainfx = createRainFx(map, { theme: options.theme, nameOf: featureName });
+        rainfx.setGeometry(state.boundaries);
+        rainfx.setRates(rainfxRows());
+        rainfx.setEnabled(state.visible.rainfx);
+      }
       addAllOverlays();
       bindInteractions();
       renderRainMarkers();
@@ -476,6 +489,7 @@ export async function createAgosMap(container, options = {}) {
         if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", vis(state.visible[id]));
       }
       if (id === "precip" && visible) probePrecip(state.precip.url);
+      if (id === "rainfx") rainfx?.setEnabled(visible);
       if (id === "rain" || id === "boundaries") updateFillVisibility();
       if (id === "rain") {
         applyTint();
@@ -483,6 +497,11 @@ export async function createAgosMap(container, options = {}) {
         if (!visible) clearHover();
       }
       emit();
+    },
+
+    /** Streaks per town right now (for tests). */
+    rainfxCounts() {
+      return rainfx?.counts() || {};
     },
 
     precipTime() {
@@ -522,6 +541,7 @@ export async function createAgosMap(container, options = {}) {
       state.rainRows = rows;
       state.available.rain = available;
       state.messages.rain = message;
+      rainfx?.setRates(rainfxRows());
       applyTint();
       renderRainMarkers();
       emit();
@@ -574,6 +594,7 @@ export async function createAgosMap(container, options = {}) {
     },
 
     async setTheme(theme) {
+      rainfx?.setTheme(theme);
       const next = await resolveStyle(theme);
       if (next.name === controller.basemap.name) return;
       controller.basemap = next;
@@ -592,6 +613,7 @@ export async function createAgosMap(container, options = {}) {
       for (const marker of state.markers.values()) marker.remove();
       state.userMarker?.remove();
       hoverCard.remove();
+      rainfx?.destroy();
       map.remove();
     },
   };
