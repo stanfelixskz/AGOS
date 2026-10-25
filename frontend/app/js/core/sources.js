@@ -1,0 +1,112 @@
+/*
+ * Registry of every data source AGOS shows. The Sources page lists these,
+ * and "why / source" dialogs elsewhere link back to them by id.
+ * Text here is factual; nothing claims more accuracy than the source has.
+ */
+
+export const SOURCES = [
+  {
+    id: "open-meteo-forecast",
+    name: "Open-Meteo Forecast API",
+    url: "https://open-meteo.com/en/docs",
+    kind: "Weather model forecast",
+    what: "Hourly rain, rain probability, temperature, humidity, wind and soil moisture from global and regional weather models, for one reference point per municipality.",
+    usedFor: "Current weather, the 48-hour rain timeline, PAGASA-equivalent rain levels, saved forecast snapshots.",
+    limits: "Model output, not rain-gauge measurements. One point per municipality does not represent the whole town. Short, intense local storms can be missed.",
+    refresh: "AGOS caches responses for about 15 minutes.",
+  },
+  {
+    id: "open-meteo-archive",
+    name: "Open-Meteo Historical Weather API",
+    url: "https://open-meteo.com/en/docs/historical-weather-api",
+    kind: "Reanalysis (modeled past weather)",
+    what: "Daily rainfall and weather for past days, used as the 'what actually happened' reference.",
+    usedFor: "Analytics history and forecast-accuracy checks.",
+    limits: "Reanalysis is a model estimate of past weather, not a gauge reading. Recent days arrive with a delay of a few days.",
+    refresh: "Ingested by the AGOS scheduler when it is enabled.",
+  },
+  {
+    id: "glofas",
+    name: "Open-Meteo Flood API (GloFAS)",
+    url: "https://open-meteo.com/en/docs/flood-api",
+    kind: "Modeled river discharge",
+    what: "Daily simulated river discharge (m³/s) from the Global Flood Awareness System, for the river grid cell near each municipality point.",
+    usedFor: "River flow in municipality details and analytics.",
+    limits: "Simulated, not observed river levels. The grid cell may not be the river you expect. Discharge alone does not confirm flooding.",
+    refresh: "Daily.",
+  },
+  {
+    id: "pagasa-levels",
+    name: "PAGASA-equivalent rain levels (AGOS rule)",
+    url: "https://www.pagasa.dost.gov.ph/",
+    kind: "AGOS classification",
+    what: "AGOS colors the heaviest forecast hour with the PAGASA Heavy Rainfall Warning intensity criteria: Yellow 7.5–15 mm/h, Orange 15–30 mm/h, Red over 30 mm/h.",
+    usedFor: "Colors on the Overview and Map, alerts and briefings.",
+    limits: "Applied to model forecasts, so it is NOT an official PAGASA warning. The thresholds come from news explainers of PAGASA criteria and have not been confirmed on a PAGASA page.",
+    refresh: "Recomputed whenever the forecast refreshes.",
+  },
+  {
+    id: "mgb",
+    name: "DENR–MGB flood susceptibility",
+    url: "https://controlmap.mgb.gov.ph/arcgis/rest/services/GeospatialDataInventory_Public/GDI_Detailed_Flood_Susceptibility_Public/MapServer",
+    kind: "Official hazard map (static)",
+    what: "Mapped flood susceptibility classes from the Mines and Geosciences Bureau, shown as map tiles.",
+    usedFor: "The flood susceptibility map layer.",
+    limits: "Shows where flooding is possible in general, not whether it will flood now. AGOS displays the tiles; it does not extract values from them.",
+    refresh: "Static; served by MGB.",
+  },
+  {
+    id: "weatherapi-tiles",
+    name: "WeatherAPI.com precipitation tiles",
+    url: "https://www.weatherapi.com/",
+    kind: "Weather map tiles",
+    what: "Hourly precipitation map tiles drawn in the provider's own color scale.",
+    usedFor: "The optional precipitation tile layer on the map.",
+    limits: "Provider colors are not recolored by AGOS. Rain shown is not a flood observation.",
+    refresh: "Hourly.",
+  },
+  {
+    id: "basemap",
+    name: "OpenFreeMap / OpenStreetMap basemap",
+    url: "https://openfreemap.org/",
+    kind: "Basemap",
+    what: "Background map of roads, places and water from OpenStreetMap contributors.",
+    usedFor: "Map background only.",
+    limits: "Background reference, not hazard data. If it cannot load, AGOS falls back to OpenTopoMap tiles.",
+    refresh: "Served by the provider.",
+  },
+  {
+    id: "community-reports",
+    name: "AGOS community reports",
+    url: null,
+    kind: "Community submissions",
+    what: "Flood reports submitted by residents through the Report page, with optional photo and location.",
+    usedFor: "Report markers on the map and municipality details.",
+    limits: "Unverified until reviewed. Depth is the reporter's estimate.",
+    refresh: "Immediately after submission.",
+  },
+  {
+    id: "evacuation-centers",
+    name: "AGOS evacuation center list",
+    url: null,
+    kind: "Compiled list",
+    what: "Evacuation centers compiled by the AGOS team from public Google Maps listings.",
+    usedFor: "The Evacuate page and evacuation markers on the map.",
+    limits: "Capacity, availability and operating status are not verified. A listed center is not proof that it is open or safe. Confirm with your barangay or MDRRMO.",
+    refresh: "Updated by the AGOS team.",
+  },
+  {
+    id: "forecast-skill",
+    name: "AGOS forecast accuracy check",
+    url: null,
+    kind: "AGOS analysis",
+    what: "Compares forecasts AGOS saved before each day with the Open-Meteo archive rainfall for that day.",
+    usedFor: "Forecast accuracy % and bias on the Analytics page.",
+    limits: "The reference is reanalysis, not a rain gauge. Needs weeks of saved forecasts before results mean anything; AGOS says 'insufficient data' until then.",
+    refresh: "Computed on request from the AGOS database.",
+  },
+];
+
+export function sourceById(id) {
+  return SOURCES.find((source) => source.id === id) || null;
+}

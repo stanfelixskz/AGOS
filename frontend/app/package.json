@@ -1,0 +1,9 @@
+{
+  "name": "agos-frontend-app",
+  "private": true,
+  "type": "module",
+  "description": "AGOS frontend modules (no build step). This file only tells Node that these .js files are ES modules so the unit tests can import them.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
