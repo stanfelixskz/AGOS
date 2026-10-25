@@ -8,11 +8,10 @@ cell, what can be measured from public data:
   elevation_m            Copernicus DEM GLO-90 (90 m) via the Open-Meteo Elevation API
   slope_deg              from neighbouring cells' elevations (central differences)
   dist_river_m           straight-line distance to the nearest mapped waterway
-  height_above_river_m   EXPERIMENTAL - do not use yet. Cell elevation minus the DEM
-                         elevation at the nearest sampled waterway point. The first
-                         real run gave values from -391 m to +724 m (the nearest
-                         sample is often far up a slope), so it is not a reliable
-                         height above the river. To be reworked before any use.
+  height_above_river_m   cell elevation minus the lowest DEM elevation among sampled
+                         waterway points within 2 km (empty if none). A rough
+                         HAND-style value; a first version that used the single
+                         nearest point gave -391 m to +724 m and was replaced.
 
 Rules
 - Nothing is invented. A value that cannot be measured is stored as NULL.
@@ -446,17 +445,29 @@ class _SegmentIndex:
         return best
 
 
+HEIGHT_RADIUS_M = 2000.0
+HEIGHT_METHOD = (
+    "cell elevation minus the lowest DEM elevation among sampled waterway points within "
+    f"{HEIGHT_RADIUS_M:.0f} m; empty if there are none"
+)
+
+
 def apply_river_metrics(
     cells: list[dict[str, Any]],
     lines: Sequence[Line],
     river_points: Sequence[tuple[float, float]],
     river_elevations: Sequence[float | None],
+    radius_m: float = HEIGHT_RADIUS_M,
 ) -> None:
     """
-    Fill dist_river_m (to the nearest waterway line) and height_above_river_m
-    (cell elevation minus the DEM elevation at the nearest sampled waterway
-    point). The second one is a rough HAND-style number: the DEM is 90 m and
-    waterway elevations are themselves DEM values. Not clipped: it can be < 0.
+    Fill dist_river_m (to the nearest waterway line) and height_above_river_m.
+
+    height_above_river_m = cell elevation minus the LOWEST DEM elevation among the
+    sampled waterway points within `radius_m` (the nearest drainage downhill is
+    usually the lowest nearby one; the nearest point can sit far up a slope).
+    Empty when no sampled point is that close. Not clipped: a value below 0 means
+    the cell is lower than every waterway point nearby. Rough: the DEM is 90 m and
+    the waterway elevations are DEM values too.
     """
     for cell in cells:
         cell["dist_river_m"] = None
@@ -468,6 +479,10 @@ def apply_river_metrics(
     samples = [
         (*proj.xy(lon, lat), z) for (lat, lon), z in zip(river_points, river_elevations) if z is not None
     ]
+    buckets: dict[tuple[int, int], list[tuple[float, float, float]]] = {}
+    for sx, sy, sz in samples:
+        buckets.setdefault((int(sx // radius_m), int(sy // radius_m)), []).append((sx, sy, sz))
+    limit_sq = radius_m * radius_m
     for cell in cells:
         d = index.nearest(cell["longitude"], cell["latitude"])
         cell["dist_river_m"] = None if d is None else round(d, 1)
@@ -475,8 +490,15 @@ def apply_river_metrics(
         if z is None or not samples:
             continue
         x, y = proj.xy(cell["longitude"], cell["latitude"])
-        nearest = min(samples, key=lambda s: (s[0] - x) ** 2 + (s[1] - y) ** 2)
-        cell["height_above_river_m"] = round(z - nearest[2], 1)
+        ci, cj = int(x // radius_m), int(y // radius_m)
+        lowest: float | None = None
+        for i in range(ci - 1, ci + 2):
+            for j in range(cj - 1, cj + 2):
+                for sx, sy, sz in buckets.get((i, j), ()):
+                    if (sx - x) ** 2 + (sy - y) ** 2 <= limit_sq and (lowest is None or sz < lowest):
+                        lowest = sz
+        if lowest is not None:
+            cell["height_above_river_m"] = round(z - lowest, 1)
 
 
 # --------------------------------------------------------------------------
@@ -565,6 +587,7 @@ def build_terrain(
                 "river_source": (river_source or "waterways supplied by the user") if waterways else "none (river columns are empty)",
                 "summary": json.dumps({k: v for k, v in summary.items() if k != "errors"}),
                 "errors": json.dumps(summary["errors"]),
+                "height_method": HEIGHT_METHOD,
                 "limits": "Coarse screening layer: 90 m DEM, cells of spacing_km. Not a hazard map, not a flood forecast.",
             }
             connection.executemany(

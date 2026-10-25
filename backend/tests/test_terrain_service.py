@@ -104,6 +104,21 @@ class SlopeAndRiverTests(unittest.TestCase):
         self.assertAlmostEqual(cells[0]["dist_river_m"], 0.009 * 111320, delta=15)
         self.assertEqual(cells[0]["height_above_river_m"], 10.0)
 
+    def test_height_uses_lowest_nearby_not_nearest(self):
+        # nearest sample is high on a slope (50 m); a lower one (4 m) is 1.5 km away
+        river = [[(0.0, 0.0), (0.0, 0.05)]]
+        cells = [{"latitude": 0.02, "longitude": 0.001, "elevation_m": 10.0}]
+        points = [(0.02, 0.0), (0.0335, 0.0)]  # ~0 m and ~1.5 km north
+        ts.apply_river_metrics(cells, river, points, [50.0, 4.0])
+        self.assertEqual(cells[0]["height_above_river_m"], 6.0)
+
+    def test_height_empty_when_no_sample_within_radius(self):
+        river = [[(0.0, 0.0), (0.0, 0.05)]]
+        cells = [{"latitude": 0.02, "longitude": 0.001, "elevation_m": 10.0}]
+        ts.apply_river_metrics(cells, river, [(0.049, 0.0)], [1.0])  # ~3.2 km away
+        self.assertIsNone(cells[0]["height_above_river_m"])
+        self.assertIsNotNone(cells[0]["dist_river_m"])
+
     def test_no_waterways_leaves_none(self):
         cells = [{"latitude": 0.0, "longitude": 0.0, "elevation_m": 1.0}]
         ts.apply_river_metrics(cells, [], [], [])
