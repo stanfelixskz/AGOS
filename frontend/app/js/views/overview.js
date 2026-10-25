@@ -213,6 +213,8 @@ export async function mount(container) {
         name: m.name, point: m.point, level: m.level_24h,
         valueText: isNumber(m.windows?.next_24h?.peak_mm_h) ? `${num(m.windows.next_24h.peak_mm_h, 1)} mm/h` : "—",
         labelText: levelLabel(m.level_24h, getLang()),
+        levelText: levelLabel(m.level_24h, getLang()),
+        modeText: t("map.hoverPeak"),
       })));
     } catch (error) {
       if (alive) mapEl.innerHTML = `<div class="state">${icon("map", { size: 28 })}<span>${escapeHTML(error.message)}</span></div>`;

@@ -284,9 +284,14 @@ export async function createAgosMap(container, options = {}) {
     if (!row) return clearHover();
     hoverCard.innerHTML = `<strong>${escapeHTML(row.name)}</strong><span class="hc-level"><span class="hc-dot" style="background:${levelColor(row.level)}"></span>${escapeHTML(row.levelText || "")} · <span class="num">${escapeHTML(row.valueText)}</span></span><span class="hc-sub">${escapeHTML(row.modeText || "")}</span>`;
     hoverCard.hidden = false;
+    // Keep the card inside the map: flip to the left / above the pointer near the edges.
     const width = hoverCard.offsetWidth || 160;
-    const x = Math.min(event.point.x + 14, container.clientWidth - width - 8);
-    hoverCard.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, event.point.y + 14)}px)`;
+    const height = hoverCard.offsetHeight || 70;
+    let x = event.point.x + 14;
+    let y = event.point.y + 14;
+    if (x + width > container.clientWidth - 8) x = event.point.x - 14 - width;
+    if (y + height > container.clientHeight - 8) y = event.point.y - 14 - height;
+    hoverCard.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, y)}px)`;
   }
 
   async function loadBoundaries() {
