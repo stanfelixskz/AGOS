@@ -199,20 +199,33 @@ def _fetch_elevation_batch(lats: list[float], lons: list[float]) -> list[Any]:
     return values
 
 
+def _short(error: Exception) -> str:
+    """Error text without the (very long) request URL."""
+    text = str(error)
+    return text.split(" for url:")[0][:200]
+
+
 def fetch_elevations(
     points: Sequence[tuple[float, float]],
     fetch: Callable[[list[float], list[float]], list[Any]] | None = None,
-    pause_s: float = 0.25,
-    retries: int = 2,
+    pause_s: float = 15.0,
+    retries: int = 4,
+    rate_limit_wait_s: float = 65.0,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> tuple[list[float | None], list[str]]:
     """
-    Elevation for [(lat, lon), ...] in batches of 100. A failed batch leaves its
+    Elevation for [(lat, lon), ...] in batches of 100.
+
+    Open-Meteo counts every coordinate toward its free limits (about 600 per
+    minute), so batches are paced `pause_s` apart and an HTTP 429 waits
+    `rate_limit_wait_s` before retrying. A batch that still fails leaves its
     values as None (never 0) and is reported in the error list.
     """
     fetch = fetch or _fetch_elevation_batch
     values: list[float | None] = []
     errors: list[str] = []
-    for start in range(0, len(points), BATCH_SIZE):
+    total = len(points)
+    for start in range(0, total, BATCH_SIZE):
         chunk = points[start:start + BATCH_SIZE]
         lats = [p[0] for p in chunk]
         lons = [p[1] for p in chunk]
@@ -223,12 +236,14 @@ def fetch_elevations(
                 break
             except Exception as error:  # noqa: BLE001
                 if attempt == retries:
-                    errors.append(f"points {start}-{start + len(chunk) - 1}: {error}")
+                    errors.append(f"points {start}-{start + len(chunk) - 1}: {_short(error)}")
                 else:
-                    time.sleep(2 * (attempt + 1))
+                    limited = "429" in str(error) or "Too Many" in str(error)
+                    sleep(rate_limit_wait_s if limited else 3 * (attempt + 1))
         values.extend([_number(v) for v in result] if result is not None else [None] * len(chunk))
-        if pause_s and start + BATCH_SIZE < len(points):
-            time.sleep(pause_s)
+        print(f"  elevation {min(start + BATCH_SIZE, total)}/{total}", flush=True)
+        if pause_s and start + BATCH_SIZE < total:
+            sleep(pause_s)
     return values, errors
 
 
@@ -347,7 +362,7 @@ class _Projector:
         return ((lon - self.lon0) * self.kx, (lat - self.lat0) * M_PER_DEG_LAT)
 
 
-def sample_river_points(lines: Sequence[Line], step_m: float = 300.0, max_points: int = 3000) -> list[tuple[float, float]]:
+def sample_river_points(lines: Sequence[Line], step_m: float = 1000.0, max_points: int = 600) -> list[tuple[float, float]]:
     """
     Points (lat, lon) along the waterways about `step_m` apart. If that would
     exceed `max_points`, the step is widened so the elevation requests stay few.

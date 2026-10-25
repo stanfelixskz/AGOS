@@ -41,15 +41,42 @@ class ElevationTests(unittest.TestCase):
                 raise RuntimeError("boom")
             return [5.0] * len(lats)
 
-        values, errors = ts.fetch_elevations([(0, 0)] * 150, fetch=fetch, pause_s=0, retries=0)
+        values, errors = ts.fetch_elevations([(0, 0)] * 150, fetch=fetch, pause_s=0, retries=0, sleep=lambda s: None)
         self.assertEqual(calls, [100, 50])
         self.assertEqual(values[:100], [5.0] * 100)
         self.assertEqual(values[100:], [None] * 50)
         self.assertEqual(len(errors), 1)
 
     def test_non_numbers_become_none(self):
-        values, _ = ts.fetch_elevations([(0, 0)] * 3, fetch=lambda a, b: [1, None, "x"], pause_s=0)
+        values, _ = ts.fetch_elevations([(0, 0)] * 3, fetch=lambda a, b: [1, None, "x"], pause_s=0, sleep=lambda s: None)
         self.assertEqual(values, [1.0, None, None])
+
+
+class RateLimitTests(unittest.TestCase):
+    def test_429_waits_long_then_succeeds(self):
+        waits, calls = [], []
+
+        def fetch(lats, lons):
+            calls.append(1)
+            if len(calls) == 1:
+                raise RuntimeError("429 Client Error: Too Many Requests for url: https://x/?a=" + "9" * 500)
+            return [3.0] * len(lats)
+
+        values, errors = ts.fetch_elevations([(0, 0)] * 5, fetch=fetch, sleep=waits.append)
+        self.assertEqual(values, [3.0] * 5)
+        self.assertEqual(errors, [])
+        self.assertEqual(waits, [65.0])
+
+    def test_error_text_has_no_url(self):
+        def fetch(lats, lons):
+            raise RuntimeError("429 Client Error: Too Many Requests for url: https://x/?a=" + "9" * 500)
+
+        _, errors = ts.fetch_elevations([(0, 0)], fetch=fetch, retries=0, sleep=lambda s: None)
+        self.assertNotIn("https", errors[0])
+
+    def test_river_samples_capped(self):
+        line = [[(0.0, i * 0.001) for i in range(500)]]
+        self.assertLessEqual(len(ts.sample_river_points(line)), 700)
 
 
 class SlopeAndRiverTests(unittest.TestCase):
