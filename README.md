@@ -118,6 +118,68 @@ Some map layers may be missing. This is expected: the local GIS datasets
 missing data file is not a code error; the interface says when a layer is
 unavailable.
 
+## Keep AGOS Collecting Data Every Hour (Windows)
+
+AGOS can save a fresh weather forecast for all 12 towns every hour. These
+saved forecasts are what the forecast accuracy numbers and later analytics are
+built from, so every hour the backend is off is data that cannot be recovered.
+This is optional, and it only works while the backend is running.
+
+### 1. Turn it on in `backend/.env`
+
+Add these two lines (keep your existing lines, such as `WEATHERAPI_API_KEY`):
+
+```
+AGOS_SCHEDULER_ENABLED=true
+AGOS_INGEST_INTERVAL_HOURS=1
+```
+
+Never commit `backend/.env`.
+
+### 2. Run the backend in its own PowerShell window
+
+Do not run it inside VS Code: it stops when VS Code closes. Open PowerShell from
+the Start menu, then:
+
+```powershell
+cd "$HOME\OneDrive\Desktop\AGOS\backend"
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app
+```
+
+Use **no `--reload`** and a single worker, because the scheduler runs inside the
+backend process. Keep the window open (minimizing is fine). Do not click or
+select text inside it: in classic Windows consoles that pauses the server until
+you press Esc or Enter.
+
+### 3. Stop Windows from sleeping
+
+Collection stops while the PC sleeps or hibernates. Keep the laptop plugged in
+and run once in PowerShell:
+
+```powershell
+powercfg /change standby-timeout-ac 0
+powercfg /change hibernate-timeout-ac 0
+```
+
+Then set Control Panel, Power Options, "Choose what closing the lid does", "When
+I close the lid" to **Do nothing** (plugged in). Turning the display off is fine.
+On battery the laptop can still sleep.
+
+### 4. Check that it is working
+
+Open <http://127.0.0.1:8000/system/status>:
+
+- `scheduler.interval_hours` should be `1.0`.
+- `scheduler.last_finished_at` should be within the last hour.
+- `stored_forecasts.runs` should grow by 12 each hour (one snapshot per town).
+- Failures are listed under `scheduler.last_summary.errors`; they are never hidden.
+
+After a restart or shutdown, start the backend again by hand (step 2). Nothing
+starts it automatically. If the project folder is inside OneDrive and you ever
+see "database is locked", pause OneDrive sync for the `backend/data` folder.
+
 ## Run it locally
 
 You need **Python 3.10 or newer** and any static file server.
