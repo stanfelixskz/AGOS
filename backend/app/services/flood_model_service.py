@@ -41,7 +41,7 @@ from app.services.evidence_service import (
     load_daily_flow,
     percentile_of,
 )
-from app.services.climate_service import load_daily_rain
+from app.services.climate_service import load_daily_rain, rain_record
 
 THRESHOLDS = (90.0, 92.5, 95.0, 97.0, 98.0, 99.0)
 SLACK_AFTER = 1
@@ -260,13 +260,16 @@ def model_report(
         events = flood_events_service.events_report(connect=connect, municipalities=municipalities)["events"]
     connection = connect()
     try:
+        record = rain_record(connection)
         records = {
-            name: TownRecord(load_daily_rain(connection, p), load_daily_flow(connection, p))
+            name: TownRecord(load_daily_rain(connection, p, record["source"]), load_daily_flow(connection, p))
             for name, p in municipalities.items()
         }
     finally:
         connection.close()
     value = model_report_from(events, records)
+    value["rain_record"] = record
+    value["sources"]["rain"] = record["label"]
     if caller_connect is None:
         _cache.update(at=time.time(), value=value)
     return value

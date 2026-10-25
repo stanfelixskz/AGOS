@@ -202,6 +202,21 @@ hourly or daily limit is reached it stops and says so; run it again later. It
 shares that limit with the hourly collection, so do not run it together with a
 terrain build. The database lives in `backend/data/` and is never committed.
 
+**One model for all years (ERA5-only rain).** Open-Meteo's default archive model
+is ERA5 (about 25 km) up to 2016 and ECMWF IFS (9 km) from 2017, so the default
+rain record changes model in 2017. For ranks, return levels and trends, AGOS also
+stores ERA5-only rain (`open_meteo_era5`, rain only, about 5 days behind):
+
+```powershell
+python tools/backfill_history.py --dry-run --sources era5 --from-year 1990
+python tools/backfill_history.py --sources era5 --from-year 1990
+```
+
+Analytics switches to it automatically once it holds at least 90% of the default
+record's rain days; until then a notice says the record is mixed. The hourly
+collection keeps it up to date. `python tools/check_archive_models.py` shows which
+model is behind each year.
+
 ## Run it locally
 
 You need **Python 3.10 or newer** and any static file server.

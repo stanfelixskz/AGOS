@@ -209,6 +209,13 @@ export async function mount(container) {
     return `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t(titleKey, { town: state.town }))}</h2></div></div>${errorState(error)}</section>`;
   }
 
+  /** Shown while the statistics still use the mixed default record (ERA5 to 2016, IFS from 2017). */
+  function recordNotice() {
+    const records = [state.climate, state.evidence, state.model].map((x) => x?.data?.rain_record).filter(Boolean);
+    if (!records.some((r) => r.consistent === false)) return "";
+    return `<div class="notice notice-warning" style="margin-bottom:var(--space-4)">${icon("info", { size: 18 })}<div>${escapeHTML(t("resident.mixedRecord"))}</div></div>`;
+  }
+
   function residentSections() {
     const ev = state.events;
     const evid = state.evidence;
@@ -216,7 +223,7 @@ export async function mount(container) {
     const climate = state.climate;
     const rare = climate?.error ? sectionError("resident.rareTitle", climate.error) : renderRareRain(climate?.data, state.town);
     const season = climate?.error ? "" : renderSeason(climate?.data, ev?.data, state.town);
-    return floods + rare + season;
+    return recordNotice() + floods + rare + season;
   }
 
   function render() {

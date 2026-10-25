@@ -48,14 +48,52 @@ CACHE_SECONDS = 600
 # Loading
 # --------------------------------------------------------------------------
 
-def load_daily_rain(connection: sqlite3.Connection, point: Mapping[str, float]) -> dict[str, float]:
+ARCHIVE_SOURCE = "open_meteo_archive"
+ERA5_SOURCE = "open_meteo_era5"
+# The ERA5-only record is used once it holds at least this share of the default record's
+# rain days, so a half-finished backfill never replaces a complete record.
+ERA5_READY_SHARE = 0.9
+
+RAIN_LABELS = {
+    ERA5_SOURCE: "Open-Meteo Historical Weather API, ERA5 reanalysis only (one model for all years, about 25 km; modeled, not a rain gauge)",
+    ARCHIVE_SOURCE: "Open-Meteo Historical Weather API, default model: ERA5 (about 25 km) up to 2016 and ECMWF IFS (9 km) from 2017 (modeled, not a rain gauge)",
+}
+
+
+def _rain_count(connection: sqlite3.Connection, source: str) -> int:
+    return connection.execute(
+        "SELECT COUNT(*) FROM observations WHERE variable = 'precipitation_sum' AND source = ?", (source,)
+    ).fetchone()[0]
+
+
+def rain_record(connection: sqlite3.Connection) -> dict[str, Any]:
+    """Which stored rain record the statistics use, and whether it is one model throughout."""
+    era5 = _rain_count(connection, ERA5_SOURCE)
+    archive = _rain_count(connection, ARCHIVE_SOURCE)
+    use_era5 = era5 > 0 and era5 >= ERA5_READY_SHARE * archive
+    source = ERA5_SOURCE if use_era5 else ARCHIVE_SOURCE
+    return {
+        "source": source,
+        "consistent": use_era5,
+        "label": RAIN_LABELS[source],
+        "era5_records": era5,
+        "archive_records": archive,
+        "note": None if use_era5 else (
+            "Mixed record: the default archive model changes from ERA5 to ECMWF IFS in 2017, "
+            "so ranks, return levels and trends mix two models. Load ERA5-only rain "
+            "(backfill --sources era5) to fix this."
+        ),
+    }
+
+
+def load_daily_rain(connection: sqlite3.Connection, point: Mapping[str, float], source: str = ARCHIVE_SOURCE) -> dict[str, float]:
     """date (YYYY-MM-DD) -> mm. Suspect values and missing days are left out, never zero."""
     rows = connection.execute(
         "SELECT observed_at, value FROM observations "
-        "WHERE variable = 'precipitation_sum' AND source = 'open_meteo_archive' "
+        "WHERE variable = 'precipitation_sum' AND source = ? "
         "AND quality_flag = 'valid' "
         "AND ABS(latitude - ?) < ? AND ABS(longitude - ?) < ?",
-        (point["latitude"], TOLERANCE_DEG, point["longitude"], TOLERANCE_DEG),
+        (source, point["latitude"], TOLERANCE_DEG, point["longitude"], TOLERANCE_DEG),
     ).fetchall()
     return {str(r[0])[:10]: float(r[1]) for r in rows}
 
@@ -236,7 +274,8 @@ def town_report(name: str, point: Mapping[str, float], daily: Mapping[str, float
 
 
 def climate(connection: sqlite3.Connection, municipalities: Mapping[str, Mapping[str, float]]) -> dict[str, Any]:
-    towns = [town_report(name, point, load_daily_rain(connection, point)) for name, point in municipalities.items()]
+    record = rain_record(connection)
+    towns = [town_report(name, point, load_daily_rain(connection, point, record["source"])) for name, point in municipalities.items()]
     firsts = [t["years"][0]["year"] for t in towns if t["years"]]
     lasts = [t["years"][-1]["year"] for t in towns if t["years"]]
     return {
@@ -245,11 +284,13 @@ def climate(connection: sqlite3.Connection, municipalities: Mapping[str, Mapping
         "last_year": max(lasts) if lasts else None,
         "towns": towns,
         "thresholds": {"rain_day_mm": RAIN_DAY_MM, "heavy_day_mm": list(HEAVY_MM), "full_year_min_days": FULL_YEAR_MIN_DAYS},
-        "sources": {"rain": "Open-Meteo Historical Weather API (ERA5 reanalysis, modeled; not a rain gauge)"},
+        "rain_record": record,
+        "sources": {"rain": record["label"]},
         "notes": [
             "Only full years (at least 360 days of data) are used in trends, monthly averages and return levels. The current year is partial and shown only for reference.",
             "A short record gives wide ranges. Return levels are shown only up to twice the number of years available.",
-            "ERA5 daily values are smoothed over a grid cell of about 25 km, so they usually sit below rain-gauge extremes.",
+            "ERA5 daily values are smoothed over a grid cell of about 25 km, so they usually sit below rain-gauge extremes."
+            if record["consistent"] else record["note"],
             "These are statistics of the past at one reference point per town. They are not a forecast and not a flood probability.",
             "The 10, 50 and 100 mm day thresholds are AGOS display thresholds, not PAGASA categories.",
         ],

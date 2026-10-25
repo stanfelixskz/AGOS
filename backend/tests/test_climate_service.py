@@ -135,3 +135,36 @@ class DatabaseTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RainRecordTests(unittest.TestCase):
+    """Which stored rain record the statistics use (ERA5-only once it is complete)."""
+
+    def db(self, archive_days, era5_days):
+        import sqlite3
+        con = sqlite3.connect(":memory:")
+        con.execute("CREATE TABLE observations (source TEXT, variable TEXT, observed_at TEXT, latitude REAL, longitude REAL, value REAL, unit TEXT, quality_flag TEXT, fetched_at TEXT)")
+        for source, n, mm in (("open_meteo_archive", archive_days, 5.0), ("open_meteo_era5", era5_days, 3.0)):
+            for i in range(n):
+                con.execute("INSERT INTO observations VALUES (?, 'precipitation_sum', ?, 14.5, 120.5, ?, 'mm', 'valid', '')",
+                            (source, f"2020-01-{i + 1:02d}", mm))
+        return con
+
+    def test_mixed_until_era5_is_nearly_complete(self):
+        from app.services import climate_service as cs
+        rec = cs.rain_record(self.db(20, 0))
+        self.assertEqual(rec["source"], "open_meteo_archive")
+        self.assertFalse(rec["consistent"])
+        self.assertIn("2017", rec["note"])
+        self.assertEqual(cs.rain_record(self.db(20, 10))["source"], "open_meteo_archive")  # half-finished backfill
+        rec = cs.rain_record(self.db(20, 19))
+        self.assertEqual(rec["source"], "open_meteo_era5")
+        self.assertTrue(rec["consistent"])
+        self.assertIsNone(rec["note"])
+
+    def test_load_daily_rain_reads_the_chosen_source(self):
+        from app.services import climate_service as cs
+        con = self.db(3, 3)
+        point = {"latitude": 14.5, "longitude": 120.5}
+        self.assertEqual(set(cs.load_daily_rain(con, point).values()), {5.0})
+        self.assertEqual(set(cs.load_daily_rain(con, point, "open_meteo_era5").values()), {3.0})

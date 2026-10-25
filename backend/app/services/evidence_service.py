@@ -36,7 +36,7 @@ from datetime import date, timedelta
 from statistics import median
 from typing import Any, Callable, Iterable, Mapping
 
-from app.services.climate_service import TOLERANCE_DEG, load_daily_rain
+from app.services.climate_service import TOLERANCE_DEG, load_daily_rain, rain_record
 
 DAYS_BEFORE = 2
 TOP_PERCENT = 5.0
@@ -267,13 +267,16 @@ def evidence_report(
         events = flood_events_service.events_report(connect=connect, municipalities=municipalities)["events"]
     connection = connect()
     try:
+        record = rain_record(connection)
         records = {
-            name: TownRecord(load_daily_rain(connection, point), load_daily_flow(connection, point))
+            name: TownRecord(load_daily_rain(connection, point, record["source"]), load_daily_flow(connection, point))
             for name, point in municipalities.items()
         }
     finally:
         connection.close()
     value = evidence(events, records)
+    value["rain_record"] = record
+    value["sources"]["rain"] = record["label"]
     if caller_connect is None:
         _cache.update(at=time.time(), value=value)
     return value
