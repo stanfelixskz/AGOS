@@ -1,7 +1,9 @@
 /*
- * Analytics: what happened (history from the AGOS database) and how good the
- * forecast has been (accuracy from /skill/rain). No browser calls to
- * Open-Meteo; everything comes from the AGOS backend.
+ * Analytics, written for residents: pick your town, then see its past floods,
+ * how often heavy rain happens there and when flood season is. The method
+ * (alert reliability, all-Bataan evidence, forecast accuracy) and the raw data
+ * are folded away below. No browser calls to Open-Meteo; everything comes from
+ * the AGOS backend.
  */
 
 import { icon } from "../core/icons.js";
@@ -15,8 +17,10 @@ import { buildHash } from "../core/router.js";
 import { renderClimate, mountClimateCharts, explainClimate } from "./parts/climate.js";
 import { renderEvidence, explainEvidence } from "./parts/evidence.js";
 import { renderModel, explainModel, mountModel } from "./parts/model.js";
+import { renderTownFloods, renderRareRain, renderSeason, fold } from "./parts/resident.js";
 
 const PERIODS = [7, 30, 90];
+const TOWNS = ["Abucay", "Bagac", "Balanga", "Dinalupihan", "Hermosa", "Limay", "Mariveles", "Morong", "Orani", "Orion", "Pilar", "Samal"];
 const STORE_KEY = "agos.analytics";
 
 function readPrefs() {
@@ -63,13 +67,14 @@ export async function mount(container) {
   const state = {
     alive: true,
     days: PERIODS.includes(prefs.days) ? prefs.days : 30,
-    towns: Array.isArray(prefs.towns) && prefs.towns.length ? prefs.towns.slice(0, 3) : ["Balanga"],
+    town: TOWNS.includes(prefs.town) ? prefs.town : (TOWNS.includes(prefs.climateTown) ? prefs.climateTown : "Balanga"),
+    folds: prefs.folds && typeof prefs.folds === "object" ? prefs.folds : {},
     history: null,
+    events: null,
     skill: null,
     climate: null,
     evidence: null,
     model: null,
-    climateTown: typeof prefs.climateTown === "string" ? prefs.climateTown : "Balanga",
     cleanups: [],
   };
 
@@ -80,32 +85,33 @@ export async function mount(container) {
         <h1>${escapeHTML(t("title.analytics"))}</h1>
         <p>${escapeHTML(t("analytics.intro"))}</p>
       </div>
-      <div class="segmented" role="group" aria-label="${escapeHTML(t("analytics.period"))}">
-        ${PERIODS.map((d) => `<button type="button" data-days="${d}" aria-pressed="${d === state.days}">${escapeHTML(t("analytics.days", { n: d }))}</button>`).join("")}
-      </div>
+      <label class="field analytics-town"><span>${escapeHTML(t("resident.pickTown"))}</span>
+        <select class="select" id="analyticsTown">${TOWNS.map((n) => `<option ${n === state.town ? "selected" : ""}>${escapeHTML(n)}</option>`).join("")}</select>
+      </label>
     </div>
     <div id="analyticsBody">${loadingState()}</div>`;
 
   const body = container.querySelector("#analyticsBody");
 
-  container.querySelectorAll("[data-days]").forEach((button) => button.addEventListener("click", () => {
-    state.days = Number(button.dataset.days);
-    container.querySelectorAll("[data-days]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
-    savePrefs({ days: state.days, towns: state.towns, climateTown: state.climateTown });
-    load();
-  }));
+  const persist = () => savePrefs({ days: state.days, town: state.town, folds: state.folds });
+
+  container.querySelector("#analyticsTown").addEventListener("change", (event) => {
+    state.town = event.target.value;
+    persist();
+    if (state.history) render();
+  });
 
   function teardownCharts() {
     state.cleanups.splice(0).forEach((fn) => fn());
   }
 
-  function renderTownPicker(allTowns) {
-    return `<div class="row town-picker" role="group" aria-label="${escapeHTML(t("analytics.compare"))}">
-      ${allTowns.map((name) => `<button type="button" class="chip" data-town="${escapeHTML(name)}" aria-pressed="${state.towns.includes(name)}">${escapeHTML(name)}</button>`).join("")}
-    </div>
-    <p class="subtle">${escapeHTML(t("analytics.compareHint"))}</p>`;
+  function periodPicker() {
+    return `<div class="segmented" role="group" aria-label="${escapeHTML(t("analytics.period"))}">
+      ${PERIODS.map((d) => `<button type="button" data-days="${d}" aria-pressed="${d === state.days}">${escapeHTML(t("analytics.days", { n: d }))}</button>`).join("")}
+    </div>`;
   }
 
+  /** Daily rain and river flow for the chosen town (inside the data explorer). */
   function historySection() {
     const h = state.history;
     if (h.error) return `<section class="card">${errorState(h.error)}</section>`;
@@ -116,49 +122,23 @@ export async function mount(container) {
         <span>${escapeHTML(t("analytics.noHistoryBody"))}</span>
         <code class="num subtle">AGOS_SCHEDULER_ENABLED=true</code></div></section>`;
     }
-    const selected = data.towns.filter((town) => state.towns.includes(town.name));
-    const ranked = [...data.towns].sort((a, b) => (b.total_rain_mm ?? -1) - (a.total_rain_mm ?? -1));
+    const town = data.towns.find((tw) => tw.name === state.town);
     return `
       <section class="card">
         <div class="card-head">
           <div><h2>${escapeHTML(t("analytics.rainHistory"))}</h2><p>${escapeHTML(t("analytics.rainHistorySub", { start: formatDate(data.period.start), end: formatDate(data.period.end) }))}</p></div>
           <button class="why" type="button" data-explain="history" aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button>
         </div>
-        ${renderTownPicker(data.towns.map((town) => town.name))}
-        <div class="stack" style="margin-top:var(--space-4)">
-          ${selected.map((town) => `
-            <div class="multiple">
-              <div class="row" style="justify-content:space-between">
-                <a href="${buildHash("municipality", [town.name])}"><strong>${escapeHTML(town.name)}</strong></a>
-                <span class="subtle num">${escapeHTML(t("analytics.townSummary", { total: num(town.total_rain_mm, 1), days: town.rain_days_with_data, all: data.period.days }))}</span>
-              </div>
-              <div class="detail-chart" data-rain="${escapeHTML(town.name)}"></div>
-              ${town.flow_days_with_data ? `<div class="detail-chart" data-flow="${escapeHTML(town.name)}"></div>` : ""}
-            </div>`).join("")}
-        </div>
+        ${periodPicker()}
+        ${town ? `<div class="stack" style="margin-top:var(--space-4)">
+            <div class="row" style="justify-content:space-between">
+              <a href="${buildHash("municipality", [town.name])}"><strong>${escapeHTML(town.name)}</strong></a>
+              <span class="subtle num">${escapeHTML(t("analytics.townSummary", { total: num(town.total_rain_mm, 1), days: town.rain_days_with_data, all: data.period.days }))}</span>
+            </div>
+            <div class="detail-chart" data-rain="${escapeHTML(town.name)}"></div>
+            ${town.flow_days_with_data ? `<div class="detail-chart" data-flow="${escapeHTML(town.name)}"></div>` : `<p class="subtle">${escapeHTML(t("resident.noFlow"))}</p>`}
+          </div>` : ""}
         <p class="card-foot">${escapeHTML(t("analytics.historyFoot"))}</p>
-      </section>
-
-      <section class="card" style="margin-top:var(--space-4)">
-        <div class="card-head"><div><h2>${escapeHTML(t("analytics.ranking"))}</h2><p>${escapeHTML(t("analytics.rankingSub"))}</p></div></div>
-        <div class="table-wrap"><table class="table">
-          <thead><tr>
-            <th scope="col">${escapeHTML(t("common.municipality"))}</th>
-            <th scope="col" class="num">${escapeHTML(t("analytics.totalRain"))}</th>
-            <th scope="col" class="num">${escapeHTML(t("analytics.wettest"))}</th>
-            <th scope="col" class="num hide-sm">${escapeHTML(t("analytics.days10"))}</th>
-            <th scope="col" class="num hide-sm">${escapeHTML(t("analytics.peakFlow"))}</th>
-            <th scope="col" class="num hide-sm">${escapeHTML(t("analytics.coverage"))}</th>
-          </tr></thead>
-          <tbody>${ranked.map((town) => `<tr>
-            <th scope="row"><a href="${buildHash("municipality", [town.name])}">${escapeHTML(town.name)}</a></th>
-            <td class="num">${isNumber(town.total_rain_mm) ? `${escapeHTML(num(town.total_rain_mm, 1))} mm` : "—"}</td>
-            <td class="num">${town.wettest_day ? `${escapeHTML(num(town.wettest_day.precipitation_mm, 1))} mm<div class="subtle">${escapeHTML(shortDate(town.wettest_day.date))}</div>` : "—"}</td>
-            <td class="num hide-sm">${town.rain_days_with_data ? escapeHTML(String(town.days_with_10mm_or_more)) : "—"}</td>
-            <td class="num hide-sm">${town.highest_flow_day ? `${escapeHTML(num(town.highest_flow_day.river_discharge_m3s, 1))} m³/s` : "—"}</td>
-            <td class="num hide-sm">${escapeHTML(`${town.rain_days_with_data}/${data.period.days}`)}</td>
-          </tr>`).join("")}</tbody>
-        </table></div>
       </section>`;
   }
 
@@ -166,7 +146,7 @@ export async function mount(container) {
     const c = state.climate;
     if (!c) return "";
     if (c.error) return `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("climate.title"))}</h2></div></div>${errorState(c.error)}</section>`;
-    return renderClimate(c.data, state.climateTown);
+    return renderClimate(c.data, state.town, { picker: false, monthly: false });
   }
 
   function evidenceSection() {
@@ -225,26 +205,36 @@ export async function mount(container) {
       </section>`;
   }
 
+  function sectionError(titleKey, error) {
+    return `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t(titleKey, { town: state.town }))}</h2></div></div>${errorState(error)}</section>`;
+  }
+
+  function residentSections() {
+    const ev = state.events;
+    const evid = state.evidence;
+    const floods = ev?.error ? sectionError("resident.floodsTitle", ev.error) : renderTownFloods(ev?.data, evid?.data, state.town);
+    const climate = state.climate;
+    const rare = climate?.error ? sectionError("resident.rareTitle", climate.error) : renderRareRain(climate?.data, state.town);
+    const season = climate?.error ? "" : renderSeason(climate?.data, ev?.data, state.town);
+    return floods + rare + season;
+  }
+
   function render() {
     teardownCharts();
-    body.innerHTML = historySection() + climateSection() + evidenceSection() + modelSection() + skillSection();
+    body.innerHTML = residentSections()
+      + fold("trust", t("resident.trustTitle"), t("resident.trustSub"), modelSection() + evidenceSection() + skillSection(), Boolean(state.folds.trust))
+      + fold("explore", t("resident.exploreTitle"), t("resident.exploreSub"), historySection() + climateSection(), Boolean(state.folds.explore));
 
-    body.querySelectorAll("[data-town]").forEach((chip) => chip.addEventListener("click", () => {
-      const name = chip.dataset.town;
-      if (state.towns.includes(name)) {
-        if (state.towns.length > 1) state.towns = state.towns.filter((n) => n !== name);
-      } else {
-        state.towns = [...state.towns, name].slice(-3);
-      }
-      savePrefs({ days: state.days, towns: state.towns, climateTown: state.climateTown });
-      render();
+    body.querySelectorAll("[data-days]").forEach((button) => button.addEventListener("click", () => {
+      state.days = Number(button.dataset.days);
+      persist();
+      load();
     }));
-    body.querySelectorAll("[data-ctown]").forEach((chip) => chip.addEventListener("click", () => {
-      state.climateTown = chip.dataset.ctown;
-      savePrefs({ days: state.days, towns: state.towns, climateTown: state.climateTown });
-      render();
+    body.querySelectorAll("[data-fold]").forEach((el) => el.addEventListener("toggle", () => {
+      state.folds = { ...state.folds, [el.dataset.fold]: el.open };
+      persist();
     }));
-    if (state.climate?.data) state.cleanups.push(...mountClimateCharts(body, state.climate.data, state.climateTown));
+    if (state.climate?.data) state.cleanups.push(...mountClimateCharts(body, state.climate.data, state.town));
     if (state.model?.data) mountModel(body, state.model.data);
     body.querySelectorAll("[data-explain]").forEach((button) => button.addEventListener("click", () => explain(button.dataset.explain)));
 
@@ -294,14 +284,16 @@ export async function mount(container) {
   async function load() {
     teardownCharts();
     body.innerHTML = loadingState();
-    const [historyResult, skillResult, climateResult, evidenceResult, modelResult] = await Promise.allSettled([
+    const [historyResult, skillResult, climateResult, evidenceResult, modelResult, eventsResult] = await Promise.allSettled([
       getJSON(`/api/history?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON(`/skill/rain?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON("/api/climate", { ttlMs: 30 * 60 * 1000, timeoutMs: 30000 }),
       getJSON("/api/flood-evidence", { ttlMs: 30 * 60 * 1000, timeoutMs: 45000 }),
       getJSON("/api/flood-model", { ttlMs: 30 * 60 * 1000, timeoutMs: 60000 }),
+      getJSON("/api/flood-events", { ttlMs: 30 * 60 * 1000, timeoutMs: 30000 }),
     ]);
     if (!state.alive) return;
+    state.events = eventsResult.status === "fulfilled" ? { data: eventsResult.value } : { error: eventsResult.reason };
     state.history = historyResult.status === "fulfilled" ? { data: historyResult.value } : { error: historyResult.reason };
     state.evidence = evidenceResult.status === "fulfilled" ? { data: evidenceResult.value } : { error: evidenceResult.reason };
     state.model = modelResult.status === "fulfilled" ? { data: modelResult.value } : { error: modelResult.reason };

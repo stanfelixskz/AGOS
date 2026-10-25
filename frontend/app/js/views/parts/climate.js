@@ -73,8 +73,12 @@ function returnTables(rl) {
     <p class="subtle">${escapeHTML(t("climate.returnFoot", { n: rl.n_years, max: num(rl.observed_max_mm, 0) }))}</p>`;
 }
 
-/** HTML for the section. `selected` is the town name; `data` is the /api/climate payload. */
-export function renderClimate(data, selected) {
+/**
+ * HTML for the section. `selected` is the town name; `data` is the /api/climate payload.
+ * Options: `picker` (own town chips) and `monthly` (monthly chart) can be turned off when
+ * the page shows them elsewhere.
+ */
+export function renderClimate(data, selected, { picker = true, monthly = true } = {}) {
   if (!data?.any_data) {
     return `<section class="card" style="margin-top:var(--space-4)"><div class="state">${icon("database", { size: 30 })}
       <strong>${escapeHTML(t("climate.noData"))}</strong>
@@ -91,9 +95,9 @@ export function renderClimate(data, selected) {
           <p>${escapeHTML(t("climate.sub", { first: data.first_year, last: data.last_year, n: town.full_years }))}</p></div>
         <button class="why" type="button" data-explain="climate" aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button>
       </div>
-      <div class="row town-picker" role="group" aria-label="${escapeHTML(t("climate.pick"))}">
+      ${picker ? `<div class="row town-picker" role="group" aria-label="${escapeHTML(t("climate.pick"))}">
         ${data.towns.map((tw) => `<button type="button" class="chip" data-ctown="${escapeHTML(tw.name)}" aria-pressed="${tw.name === town.name}">${escapeHTML(tw.name)}</button>`).join("")}
-      </div>
+      </div>` : ""}
 
       <div class="grid grid-3" style="margin:var(--space-4) 0">
         <div class="stat"><span class="stat-label">${escapeHTML(t("climate.fullYears"))}</span><span class="stat-value num">${escapeHTML(String(town.full_years))}</span></div>
@@ -103,9 +107,9 @@ export function renderClimate(data, selected) {
 
       <h3>${escapeHTML(t("climate.yearly"))}</h3>
       <div class="detail-chart" data-climate-year="${escapeHTML(town.name)}"></div>
-      <h3 style="margin-top:var(--space-4)">${escapeHTML(t("climate.monthly"))}</h3>
+      ${monthly ? `<h3 style="margin-top:var(--space-4)">${escapeHTML(t("climate.monthly"))}</h3>
       <p class="subtle">${escapeHTML(t("climate.monthlySub"))}</p>
-      <div class="detail-chart" data-climate-month="${escapeHTML(town.name)}"></div>
+      <div class="detail-chart" data-climate-month="${escapeHTML(town.name)}"></div>` : ""}
       <h3 style="margin-top:var(--space-4)">${escapeHTML(t("climate.returnHeading"))}</h3>
       ${returnTables(town.return_levels)}
       <p class="card-foot">${escapeHTML(t("climate.foot"))}</p>

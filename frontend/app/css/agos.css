@@ -683,6 +683,22 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .detail-fold[open] .fold-chevron { transform: rotate(180deg); }
 .drawer-grip { cursor: grab; touch-action: none; }
 
+/* Analytics for residents: town chooser, town flood list, folded method/data groups. */
+.analytics-town { min-width: 180px; }
+.town-floods, .plain-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.town-flood { display: flex; flex-direction: column; gap: 4px; padding: var(--space-3) 0; border-top: 1px solid var(--border); }
+.town-flood:first-child { border-top: 0; }
+.plain-list li { line-height: 1.45; }
+.town-floods-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--brand); font-weight: 600; }
+.analytics-fold { margin-top: var(--space-5); }
+.analytics-fold > summary { list-style: none; cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.analytics-fold > summary::-webkit-details-marker { display: none; }
+.analytics-fold > summary > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.analytics-fold-title { font-weight: 650; font-size: var(--text-md); }
+.analytics-fold > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.analytics-fold[open] .fold-chevron { transform: rotate(180deg); }
+.analytics-fold-body { margin-top: var(--space-3); }
+
 /* Evacuation center detail (map drawer and Evacuate page). */
 .center-detail { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) 0; }
 .center-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
