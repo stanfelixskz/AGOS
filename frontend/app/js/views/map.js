@@ -14,6 +14,7 @@ import { EXPLAIN } from "../core/explain.js";
 import { buildHash } from "../core/router.js";
 import { createAgosMap } from "../map/engine.js";
 import { renderDetail, hydrateDetail } from "./parts/muni-detail.js";
+import { renderCenterDetail, hydrateCenterDetail } from "./parts/center-detail.js";
 import { loadingState, errorState, onRetry } from "../core/ui.js";
 
 export const layout = "flush";
@@ -119,7 +120,7 @@ export async function mount(container, route) {
   };
 
   const state = {
-    alive: true, engine: null, overview: null, overviewError: null, centers: [], reports: [],
+    alive: true, engine: null, here: null, overview: null, overviewError: null, centers: [], reports: [],
     mode: "peak", hour: 0, playTimer: null, selected: null, drawerCleanup: null, refreshTimer: null, detailToken: 0,
   };
 
@@ -246,6 +247,12 @@ export async function mount(container, route) {
       const data = await getJSON("/api/evacuation-centers", { ttlMs: OVERVIEW_TTL });
       state.centers = data.centers || [];
       state.engine?.setCenters(state.centers, true, data.note ? "" : "");
+      // Shared link to one center (#/map?c=EC-001): open it once the list is here.
+      const linked = route.query.c && !state.linkedCenterOpened ? state.centers.find((c) => c.id === route.query.c) : null;
+      if (linked) {
+        state.linkedCenterOpened = true;
+        selectCenter(linked);
+      }
     } catch (error) {
       state.engine?.setCenters([], false, error.message);
     }
@@ -311,6 +318,7 @@ export async function mount(container, route) {
     ui.view.classList.remove("has-drawer");
     state.selected = null;
     state.engine?.select(null);
+    state.engine?.selectCenter(null);
     history.replaceState(null, "", buildHash("map"));
   }
   ui.drawerClose.addEventListener("click", closeDrawer);
@@ -364,19 +372,19 @@ export async function mount(container, route) {
   function selectCenter(center) {
     state.selected = null;
     state.engine?.select(null);
+    state.engine?.selectCenter(center.id);
     if (center.has_coordinates) state.engine?.flyTo(center.longitude, center.latitude, 12.5);
+    history.replaceState(null, "", buildHash("map", [], { c: center.id }));
     openDrawer(
       `<span class="eyebrow">${escapeHTML(t("detail.center"))}</span><h2>${escapeHTML(center.name)}</h2><span class="badge badge-warning">${escapeHTML(t("common.unverified"))}</span>`,
-      `<section class="detail-section">
-        <dl class="kv">
-          <dt>${escapeHTML(t("common.municipality"))}</dt><dd>${escapeHTML(center.municipality || "—")}</dd>
-          <dt>${escapeHTML(t("detail.capacity"))}</dt><dd>${escapeHTML(isNumber(center.capacity) ? String(center.capacity) : t("common.notAvailable"))}</dd>
-          <dt>${escapeHTML(t("detail.status"))}</dt><dd>${escapeHTML(center.operating_status || t("common.notAvailable"))}</dd>
-        </dl>
-        <div class="notice notice-warning" style="margin-top:12px">${icon("alert", { size: 18 })}<div>${escapeHTML(t("detail.centerWarning"))}</div></div>
-        ${center.google_maps_url ? `<a class="btn btn-primary btn-block" style="margin-top:12px" href="${escapeHTML(center.google_maps_url)}" target="_blank" rel="noopener noreferrer">${icon("navigation", { size: 16 })} ${escapeHTML(t("detail.directions"))}</a>` : ""}
-        <p class="source-line" style="margin-top:12px">${escapeHTML(t("detail.centerSource"))}</p>
-      </section>`);
+      renderCenterDetail(center, { all: state.centers, here: state.here }));
+    state.drawerCleanup = null;
+    hydrateCenterDetail(ui.drawerBody, {
+      onPick: (id) => {
+        const next = state.centers.find((c) => c.id === id);
+        if (next) selectCenter(next);
+      },
+    });
   }
 
   function selectReport(report) {
@@ -447,6 +455,7 @@ export async function mount(container, route) {
     navigator.geolocation.getCurrentPosition((pos) => {
       ui.locate.disabled = false;
       const here = [pos.coords.longitude, pos.coords.latitude];
+      state.here = here;
       state.engine?.showUser(here[0], here[1]);
       const munis = state.overview?.municipalities || [];
       const nearest = munis.filter((m) => m.point).map((m) => ({ m, km: distanceKm(here, [m.point.longitude, m.point.latitude]) })).sort((a, b) => a.km - b.km)[0];

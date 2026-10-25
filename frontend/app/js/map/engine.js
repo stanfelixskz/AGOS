@@ -10,6 +10,7 @@ import { loadMapLibre } from "./loader.js";
 import { escapeHTML } from "../core/format.js";
 import { levelColor } from "../core/levels.js";
 import { createRainFx } from "./rainfx.js";
+import { addPinImages, PIN_ID, PIN_SELECTED_ID } from "./pins.js";
 
 export const BATAAN_BOUNDS = [[120.18, 14.33], [120.72, 15.01]];
 
@@ -115,6 +116,7 @@ export async function createAgosMap(container, options = {}) {
     rainRows: [],
     markers: new Map(),
     selected: null,
+    selectedCenter: null,
     userMarker: null,
     precip: precipTileUrl(),
     precipDate: null,       // null = the current hour
@@ -199,7 +201,7 @@ export async function createAgosMap(container, options = {}) {
       features: state.centers.filter((c) => c.has_coordinates).map((c) => ({
         type: "Feature", id: c.id,
         geometry: { type: "Point", coordinates: [c.longitude, c.latitude] },
-        properties: { id: c.id, name: c.name },
+        properties: { id: c.id, name: c.name, selected: c.id === state.selectedCenter ? 1 : 0 },
       })),
     };
   }
@@ -217,10 +219,20 @@ export async function createAgosMap(container, options = {}) {
 
   function addPointLayers() {
     if (!map.getSource("agos-centers")) map.addSource("agos-centers", { type: "geojson", data: centersGeoJSON() });
+    addPinImages(map);
     if (!map.getLayer("agos-centers")) {
+      // Shelter pins (canvas-drawn icons, no glyphs needed). The selected pin is larger and drawn on top.
       map.addLayer({
-        id: "agos-centers", type: "circle", source: "agos-centers", layout: { visibility: vis(state.visible.evacuation) },
-        paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 4.5, 13, 8], "circle-color": "#16a34a", "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 },
+        id: "agos-centers", type: "symbol", source: "agos-centers",
+        layout: {
+          visibility: vis(state.visible.evacuation),
+          "icon-image": ["case", ["==", ["get", "selected"], 1], PIN_SELECTED_ID, PIN_ID],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.62, 13, 0.95],
+          "icon-anchor": "bottom",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+          "symbol-sort-key": ["case", ["==", ["get", "selected"], 1], 1, 0],
+        },
       });
     }
     if (!map.getSource("agos-reports")) map.addSource("agos-reports", { type: "geojson", data: reportsGeoJSON() });
@@ -363,7 +375,10 @@ export async function createAgosMap(container, options = {}) {
     map.on("click", "agos-centers", (event) => {
       const id = event.features?.[0]?.properties?.id;
       const center = state.centers.find((c) => c.id === id);
-      if (center) options.onSelectCenter?.(center);
+      if (center) {
+        controller.selectCenter(center.id);
+        options.onSelectCenter?.(center);
+      }
     });
     map.on("click", "agos-reports", (event) => {
       const id = event.features?.[0]?.properties?.id;
@@ -563,8 +578,15 @@ export async function createAgosMap(container, options = {}) {
       emit();
     },
 
+    /** Highlight one evacuation pin (null clears it). */
+    selectCenter(id) {
+      state.selectedCenter = id || null;
+      map.getSource("agos-centers")?.setData(centersGeoJSON());
+    },
+
     select(name) {
       state.selected = name;
+      if (name && state.selectedCenter) controller.selectCenter(null);
       renderRainMarkers();
       if (state.boundaries && map.getSource("agos-boundaries")) {
         state.boundaries.features.forEach((f) => {
