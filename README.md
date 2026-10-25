@@ -180,6 +180,28 @@ After a restart or shutdown, start the backend again by hand (step 2). Nothing
 starts it automatically. If the project folder is inside OneDrive and you ever
 see "database is locked", pause OneDrive sync for the `backend/data` folder.
 
+## Fill In Past Years of Data (backfill)
+
+The hourly collector only keeps recent days. To give Analytics years of history,
+run the backfill once (the backend can stay running). It fetches daily rain,
+temperature and wind (Open-Meteo / ERA5 reanalysis, from 1940) and modeled river
+discharge (GloFAS, from 1984) for the 12 towns, one request per town, source and
+year, newest years first. These are gridded model values, not gauge readings.
+
+```powershell
+cd "$HOME\OneDrive\Desktop\AGOS\backend"
+.\.venv\Scripts\Activate.ps1
+python tools/backfill_history.py --dry-run --from-year 2015   # plan and estimate, no requests
+python tools/backfill_history.py --from-year 2015             # first stage (about 1 hour)
+python tools/backfill_history.py --from-year 1990             # later: the older years
+python tools/backfill_history.py --status                     # what the database holds
+```
+
+It is safe to run again and again: finished years are skipped. If Open-Meteo's
+hourly or daily limit is reached it stops and says so; run it again later. It
+shares that limit with the hourly collection, so do not run it together with a
+terrain build. The database lives in `backend/data/` and is never committed.
+
 ## Run it locally
 
 You need **Python 3.10 or newer** and any static file server.
