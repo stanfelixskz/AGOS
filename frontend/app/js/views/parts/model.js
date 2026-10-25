@@ -21,8 +21,71 @@ export function unlistedShare(row) {
   return 1 - row.hit_episodes / row.episodes;
 }
 
+/** Index of the alert level the year-by-year test chose most often (falls back to the middle). */
+export function defaultLevel(data) {
+  const rows = data?.rain?.table || [];
+  const chosen = Object.values(data?.rain?.leave_one_year_out?.chosen_by_year || {});
+  if (!rows.length) return 0;
+  if (!chosen.length) return Math.floor(rows.length / 2);
+  const counts = new Map();
+  chosen.forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
+  const best = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+  const i = rows.findIndex((r) => r.threshold === best);
+  return i >= 0 ? i : Math.floor(rows.length / 2);
+}
+
+/** Alerts per town per year for one table row (alerts divided by town-years of record). */
+export function alertsPerTownYear(row, townYears) {
+  return row && townYears > 0 ? row.episodes / townYears : null;
+}
+
+function readout(row, s) {
+  if (!row) return "";
+  const per = alertsPerTownYear(row, s.town_years);
+  return t("model.readout", {
+    p: num(100 - row.threshold, 1),
+    caught: row.caught,
+    cases: row.cases,
+    range: pctRange(row.recall, row.recall_range),
+    alerts: row.episodes,
+    per: isNumber(per) ? num(per, 1) : "—",
+    hit: row.hit_episodes,
+  });
+}
+
+function slider(data, index) {
+  const rows = data.rain.table;
+  return `<div class="model-slider" style="margin:var(--space-3) 0">
+      <label for="modelLevel"><strong>${escapeHTML(t("model.sliderLabel"))}</strong></label>
+      <input type="range" id="modelLevel" min="0" max="${rows.length - 1}" step="1" value="${index}" data-model-level aria-valuetext="${escapeHTML(t("model.level", { p: num(100 - rows[index].threshold, 1) }))}">
+      <div class="subtle" style="display:flex;justify-content:space-between"><span>${escapeHTML(t("model.sliderLoose"))}</span><span>${escapeHTML(t("model.sliderStrict"))}</span></div>
+      <p data-model-readout aria-live="polite">${escapeHTML(readout(rows[index], data.summary))}</p>
+      <p class="subtle">${escapeHTML(t("model.sliderNote"))}</p>
+    </div>`;
+}
+
+/** Wire the slider: update the sentence and highlight the matching table row without re-rendering. */
+export function mountModel(root, data) {
+  const input = root.querySelector("[data-model-level]");
+  if (!input || !data?.rain?.table) return;
+  const apply = () => {
+    const i = Number(input.value);
+    const row = data.rain.table[i];
+    if (!row) return;
+    const out = root.querySelector("[data-model-readout]");
+    if (out) out.textContent = readout(row, data.summary);
+    input.setAttribute("aria-valuetext", t("model.level", { p: num(100 - row.threshold, 1) }));
+    root.querySelectorAll("[data-level-row]").forEach((tr) => {
+      const on = Number(tr.dataset.levelRow) === i;
+      tr.style.background = on ? "var(--brand-soft)" : "";
+    });
+  };
+  input.addEventListener("input", apply);
+  apply();
+}
+
 function tableRows(rows) {
-  return rows.map((r) => `<tr>
+  return rows.map((r, i) => `<tr data-level-row="${i}">
     <th scope="row">${escapeHTML(t("model.level", { p: num(100 - r.threshold, 1) }))}</th>
     <td class="num">${escapeHTML(`${r.caught} / ${r.cases}`)}<div class="subtle">${escapeHTML(pctRange(r.recall, r.recall_range))}</div></td>
     <td class="num">${escapeHTML(String(r.episodes))}</td>
@@ -71,6 +134,7 @@ export function renderModel(data) {
   return `<section class="card" style="margin-top:var(--space-4)" aria-labelledby="modelTitle">${head}
     ${tiles}
     <div class="notice notice-warning">${icon("info", { size: 18 })}<div>${escapeHTML(t("model.caution"))}</div></div>
+    ${slider(data, defaultLevel(data))}
     <h3 style="margin-top:var(--space-3)">${escapeHTML(t("model.tableTitle"))}</h3>
     ${table(data.rain.table)}
     ${flowBlock}
