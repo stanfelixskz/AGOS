@@ -12,8 +12,23 @@ import { barChart, lineChart, mountChart } from "../../core/charts.js";
 import { EXPLAIN } from "../../core/explain.js";
 import { buildHash } from "../../core/router.js";
 
+const LEVEL_KEYS = new Set(["nodata", "little", "rain", "yellow", "orange", "red"]);
+
 function sectionHead(title, why) {
   return `<div class="detail-head"><h3>${escapeHTML(title)}</h3>${why ? `<button class="why" type="button" data-why="${why}" aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button>` : ""}</div>`;
+}
+
+/* Set by renderDetail for the duration of one synchronous render. */
+let FOLD = false;
+
+/** One detail section: plain, or a collapsible <details> in the map drawer. */
+function wrap(title, why, inner, open = true) {
+  if (!FOLD) return `<section class="detail-section">${sectionHead(title, why)}${inner}</section>`;
+  const whyBtn = why ? `<button class="why" type="button" data-why="${why}" aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button>` : "";
+  return `<details class="detail-section detail-fold"${open ? " open" : ""}>
+    <summary class="detail-head"><h3>${escapeHTML(title)}</h3><span class="row" style="gap:4px">${whyBtn}<span class="fold-chevron">${icon("chevronDown", { size: 18 })}</span></span></summary>
+    <div class="detail-fold-body">${inner}</div>
+  </details>`;
 }
 
 function unavailable(section) {
@@ -34,7 +49,7 @@ export function levelPill(level, text) {
 }
 
 function rainSection(section) {
-  if (section?.status !== "ok") return `<section class="detail-section">${sectionHead(t("detail.rain"), "rainLevels")}${unavailable(section)}</section>`;
+  if (section?.status !== "ok") return wrap(t("detail.rain"), "rainLevels", unavailable(section));
   const rain = section.data;
   const w24 = rain.windows?.next_24h || {};
   const w6 = rain.windows?.next_6h || {};
@@ -42,23 +57,35 @@ function rainSection(section) {
   const peakText = isNumber(w24.peak_mm_h)
     ? t("detail.peakAt", { mm: num(w24.peak_mm_h, 1), time: formatTime(w24.peak_time) })
     : t("common.notAvailable");
-  return `<section class="detail-section">
-    ${sectionHead(t("detail.rain"), "rainLevels")}
-    <div class="row" style="justify-content:space-between;align-items:flex-start">
+  return wrap(t("detail.rain"), "rainLevels", `
+    ${FOLD ? "" : `<div class="row" style="justify-content:space-between;align-items:flex-start">
       <div>${levelPill(rain.level_24h)}<p class="subtle" style="margin-top:6px">${escapeHTML(t("detail.next24"))} · ${escapeHTML(peakText)}</p></div>
-    </div>
+    </div>`}
     <div class="grid grid-3 detail-stats">
       <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total6"))}</span><span class="stat-value num">${escapeHTML(num(w6.total_mm, 1))}<span class="unit">mm</span></span></div>
       <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total24"))}</span><span class="stat-value num">${escapeHTML(num(w24.total_mm, 1))}<span class="unit">mm</span></span></div>
       <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total48"))}</span><span class="stat-value num">${escapeHTML(num(w48.total_mm, 1))}<span class="unit">mm</span></span></div>
     </div>
     <div class="detail-chart" data-chart="rain" aria-label="${escapeHTML(t("detail.rainChart"))}"></div>
-    <p class="source-line">${icon("clock", { size: 14 })} Open-Meteo forecast · ${escapeHTML(formatTime(rain.generated_at))} · ${escapeHTML(t("common.notOfficial"))}</p>
-  </section>`;
+    <p class="source-line">${icon("clock", { size: 14 })} Open-Meteo forecast · ${escapeHTML(formatTime(rain.generated_at))} · ${escapeHTML(t("common.notOfficial"))}</p>`);
+}
+
+/** Level banner at the top of the map drawer: level, peak, plain meaning. */
+function bannerSection(section) {
+  if (section?.status !== "ok") return "";
+  const rain = section.data;
+  const w24 = rain.windows?.next_24h || {};
+  const level = rain.level_24h || "nodata";
+  const peak = isNumber(w24.peak_mm_h) ? t("detail.peakAt", { mm: num(w24.peak_mm_h, 1), time: formatTime(w24.peak_time) }) : "";
+  return `<div class="level-banner" data-level="${escapeHTML(level)}" style="--lvl:${levelColor(level)}">
+    <div class="level-banner-top">${levelPill(level)}<span class="subtle">${escapeHTML(t("detail.next24"))}${peak ? ` · ${escapeHTML(peak)}` : ""}</span></div>
+    <p class="level-banner-text">${escapeHTML(t(`detail.mean.${LEVEL_KEYS.has(level) ? level : "nodata"}`))}</p>
+    <p class="source-line">${escapeHTML(t("common.notOfficial"))}</p>
+  </div>`;
 }
 
 function weatherSection(section) {
-  if (section?.status !== "ok") return `<section class="detail-section">${sectionHead(t("detail.weather"))}${unavailable(section)}</section>`;
+  if (section?.status !== "ok") return wrap(t("detail.weather"), "", unavailable(section));
   const w = section.data;
   const cells = [
     ["temperature", t("detail.temp"), isNumber(w.temperature_c) ? `${num(w.temperature_c, 1)}<span class="unit">°C</span>` : "—"],
@@ -66,39 +93,31 @@ function weatherSection(section) {
     ["rain", t("detail.rainNow"), isNumber(w.precipitation_mm) ? `${num(w.precipitation_mm, 1)}<span class="unit">mm</span>` : "—"],
     ["wind", t("detail.wind"), isNumber(w.wind_speed_kmh) ? `${num(w.wind_speed_kmh, 0)}<span class="unit">km/h</span>` : "—"],
   ];
-  return `<section class="detail-section">
-    ${sectionHead(t("detail.weather"))}
+  return wrap(t("detail.weather"), "", `
     <div class="grid grid-4 detail-stats detail-weather">${cells.map(([ic, label, value]) => `
       <div class="stat"><span class="stat-label">${icon(ic, { size: 14 })} ${escapeHTML(label)}</span><span class="stat-value num">${value}</span></div>`).join("")}
     </div>
-    <p class="source-line">${icon("clock", { size: 14 })} Open-Meteo · ${escapeHTML(formatTime(w.updated_at))} · ${escapeHTML(t("detail.modelNote"))}</p>
-  </section>`;
+    <p class="source-line">${icon("clock", { size: 14 })} Open-Meteo · ${escapeHTML(formatTime(w.updated_at))} · ${escapeHTML(t("detail.modelNote"))}</p>`);
 }
 
 function dischargeSection(section) {
-  if (section?.status !== "ok") return `<section class="detail-section">${sectionHead(t("detail.river"), "discharge")}${unavailable(section)}</section>`;
+  if (section?.status !== "ok") return wrap(t("detail.river"), "discharge", unavailable(section), false);
   const d = section.data;
   const has = d.daily?.some((day) => isNumber(day.river_discharge));
-  return `<section class="detail-section">
-    ${sectionHead(t("detail.river"), "discharge")}
+  return wrap(t("detail.river"), "discharge", `
     ${has ? `<div class="detail-chart" data-chart="river"></div>` : `<div class="notice">${icon("info", { size: 18 })}<div>${escapeHTML(t("detail.riverNoData"))}</div></div>`}
-    <p class="source-line">${icon("clock", { size: 14 })} GloFAS (modeled) · ${escapeHTML(formatTime(d.generated_at))}</p>
-  </section>`;
+    <p class="source-line">${icon("clock", { size: 14 })} GloFAS (modeled) · ${escapeHTML(formatTime(d.generated_at))}</p>`, false);
 }
 
 function susceptibilitySection() {
-  return `<section class="detail-section">
-    ${sectionHead(t("detail.susceptibility"), "mgb")}
-    <div class="notice">${icon("info", { size: 18 })}<div>${escapeHTML(t("detail.susceptibilityNA"))}</div></div>
-  </section>`;
+  return wrap(t("detail.susceptibility"), "mgb", `<div class="notice">${icon("info", { size: 18 })}<div>${escapeHTML(t("detail.susceptibilityNA"))}</div></div>`, false);
 }
 
 function centersSection(section) {
-  if (section?.status !== "ok") return `<section class="detail-section">${sectionHead(t("detail.centers"), "evacuation")}${unavailable(section)}</section>`;
+  if (section?.status !== "ok") return wrap(t("detail.centers"), "evacuation", unavailable(section));
   const centers = section.data.centers || [];
-  if (!centers.length) return `<section class="detail-section">${sectionHead(t("detail.centers"), "evacuation")}<p class="muted">${escapeHTML(t("detail.noCenters"))}</p></section>`;
-  return `<section class="detail-section">
-    ${sectionHead(t("detail.centers"), "evacuation")}
+  if (!centers.length) return wrap(t("detail.centers"), "evacuation", `<p class="muted">${escapeHTML(t("detail.noCenters"))}</p>`);
+  return wrap(t("detail.centers"), "evacuation", `
     <ul class="list">${centers.map((c) => `
       <li class="center-row">
         <div>
@@ -110,27 +129,34 @@ function centersSection(section) {
           ${c.google_maps_url ? `<a class="btn btn-sm btn-icon" href="${escapeHTML(c.google_maps_url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHTML(t("detail.directions"))}: ${escapeHTML(c.name)}">${icon("navigation", { size: 16 })}</a>` : ""}
         </div>
       </li>`).join("")}
-    </ul>
-  </section>`;
+    </ul>`);
 }
 
 function reportsSection(reports) {
   if (!reports) return "";
-  if (reports.status !== "ok") return `<section class="detail-section">${sectionHead(t("detail.reports"), "reports")}${unavailable(reports)}</section>`;
+  if (reports.status !== "ok") return wrap(t("detail.reports"), "reports", unavailable(reports));
   const rows = reports.data || [];
-  return `<section class="detail-section">
-    ${sectionHead(t("detail.reports"), "reports")}
+  return wrap(t("detail.reports"), "reports", `
     ${rows.length ? `<ul class="list">${rows.slice(0, 5).map((r) => `
       <li>
         <div class="row" style="justify-content:space-between"><strong>${escapeHTML(r.barangay || r.location || "")}</strong><span class="badge">${escapeHTML(r.severity || "")}</span></div>
         <div class="subtle">${escapeHTML(formatTime(r.reported_at))} (${escapeHTML(relativeTime(r.reported_at))}) · ${escapeHTML(t("common.unverified"))}</div>
-      </li>`).join("")}</ul>` : `<p class="muted">${escapeHTML(t("detail.noReports"))}</p>`}
-  </section>`;
+      </li>`).join("")}</ul>` : `<p class="muted">${escapeHTML(t("detail.noReports"))}</p>`}`, rows.length > 0);
 }
 
 /** Return HTML for the full detail. */
-export function renderDetail(data, { reports = null, showOpenPage = true } = {}) {
+export function renderDetail(data, { reports = null, showOpenPage = true, collapsible = false, banner = false } = {}) {
+  FOLD = collapsible;
+  try {
+    return renderParts(data, reports, showOpenPage, banner);
+  } finally {
+    FOLD = false;
+  }
+}
+
+function renderParts(data, reports, showOpenPage, banner) {
   return `
+    ${banner ? bannerSection(data.rain) : ""}
     ${rainSection(data.rain)}
     ${weatherSection(data.current_weather)}
     ${dischargeSection(data.river_discharge)}
@@ -144,7 +170,10 @@ export function renderDetail(data, { reports = null, showOpenPage = true } = {})
 export function hydrateDetail(root, data) {
   const cleanups = [];
   root.querySelectorAll("[data-why]").forEach((button) => {
-    button.addEventListener("click", () => EXPLAIN[button.dataset.why]?.());
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      EXPLAIN[button.dataset.why]?.();
+    });
   });
 
   const rainEl = root.querySelector('[data-chart="rain"]');

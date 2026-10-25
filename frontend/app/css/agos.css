@@ -621,31 +621,66 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
   padding: 0; border: 0; background: none; cursor: pointer; font: inherit;
 }
 .rain-marker-dot {
-  width: 18px; height: 18px; border-radius: 50%; flex: none;
+  width: 14px; height: 14px; border-radius: 50%; flex: none;
   background: var(--lvl); border: 2.5px solid #fff;
   box-shadow: 0 1px 4px rgba(15, 27, 45, .35);
   transition: transform .15s var(--ease);
 }
-.rain-marker[data-level="yellow"] .rain-marker-dot { width: 22px; height: 22px; }
-.rain-marker[data-level="orange"] .rain-marker-dot { width: 26px; height: 26px; }
-.rain-marker[data-level="red"] .rain-marker-dot { width: 30px; height: 30px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--level-red) 25%, transparent), 0 1px 4px rgba(15,27,45,.35); }
+.rain-marker[data-level="yellow"] .rain-marker-dot { width: 16px; height: 16px; }
+.rain-marker[data-level="orange"] .rain-marker-dot { width: 18px; height: 18px; }
+.rain-marker[data-level="red"] .rain-marker-dot { width: 20px; height: 20px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--level-red) 25%, transparent), 0 1px 4px rgba(15,27,45,.35); }
 .rain-marker-label {
   position: absolute; left: calc(100% + 4px); top: 50%; transform: translateY(-50%);
-  display: none; flex-direction: column; line-height: 1.15; white-space: nowrap;
-  padding: 4px 8px; border-radius: 8px; background: var(--surface); color: var(--text);
+  display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap;
+  padding: 3px 7px; border-radius: 8px; background: var(--surface); color: var(--text);
   box-shadow: var(--shadow-2); font-size: 12px; text-align: left;
 }
 .rain-marker-label .num { color: var(--text-2); font-size: 11px; }
-.map-show-labels .rain-marker-label,
-.rain-marker:hover .rain-marker-label,
-.rain-marker:focus-visible .rain-marker-label,
-.rain-marker.is-selected .rain-marker-label { display: flex; }
+/* Province view: just the value. The town name joins it when zoomed in, hovered or selected. */
+.rain-marker-label strong { display: none; }
+.map-show-labels .rain-marker-label strong,
+.rain-marker:hover .rain-marker-label strong,
+.rain-marker:focus-visible .rain-marker-label strong,
+.rain-marker.is-selected .rain-marker-label strong { display: block; }
+.rain-marker:hover, .rain-marker:focus-visible, .rain-marker.is-selected { z-index: 3; }
 .rain-marker:hover .rain-marker-dot, .rain-marker.is-selected .rain-marker-dot { transform: scale(1.12); }
 .rain-marker.is-selected .rain-marker-dot { outline: 3px solid var(--brand); outline-offset: 2px; }
 .rain-marker:focus-visible { outline: none; }
 
 .map-zoomed .rain-marker { opacity: .45; pointer-events: none; }
 .map-zoomed .rain-marker .rain-marker-label { display: none; }
+
+/* Hover card over a town shape (desktop with a mouse only). */
+.map-hovercard {
+  position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none;
+  display: flex; flex-direction: column; gap: 2px; min-width: 150px; max-width: 240px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-2);
+  font-size: 12px; line-height: 1.3;
+}
+.map-hovercard[hidden] { display: none; }
+.map-hovercard strong { font-size: 13px; }
+.hc-level { display: flex; align-items: center; gap: 6px; }
+.hc-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.hc-sub { color: var(--text-3); }
+
+/* Drawer: level banner and collapsible sections. */
+.level-banner {
+  margin-top: var(--space-4); padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm); border-left: 5px solid var(--lvl, var(--level-nodata));
+  background: color-mix(in srgb, var(--lvl, var(--level-nodata)) 14%, var(--surface));
+  display: flex; flex-direction: column; gap: 6px;
+}
+.level-banner-top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--space-3); }
+.level-banner-text { font-weight: 600; font-size: var(--text-md); line-height: 1.35; }
+.detail-fold { gap: 0; padding: 0; }
+.detail-fold > summary { list-style: none; cursor: pointer; min-height: 44px; padding: var(--space-3) 0; }
+.detail-fold > summary::-webkit-details-marker { display: none; }
+.detail-fold > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.detail-fold-body { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-4); }
+.fold-chevron { display: inline-flex; color: var(--text-3); transition: transform .15s var(--ease); }
+.detail-fold[open] .fold-chevron { transform: rotate(180deg); }
+.drawer-grip { cursor: grab; touch-action: none; }
 
 .user-marker { width: 16px; height: 16px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(37, 99, 235, .25); }
 
@@ -679,7 +714,8 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
     width: 100%; padding: 10px var(--space-4) 12px; border: 0; background: none; text-align: left; cursor: pointer;
   }
   .sheet-grip { grid-column: 1 / -1; justify-self: center; width: 40px; height: 4px; border-radius: 99px; background: var(--border-strong); margin-bottom: 4px; }
-  .map-drawer { z-index: 12; max-height: 82%; }
+  .map-drawer { z-index: 12; max-height: 54%; transition: max-height .2s var(--ease); }
+  .map-drawer.is-expanded { max-height: 88%; }
   .mapview.has-drawer .map-panel-left { display: none; }
 }
 
