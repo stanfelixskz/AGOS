@@ -31,10 +31,18 @@ def system_status():
     except Exception as error:  # noqa: BLE001
         forecasts = {"status": "error", "detail": str(error)}
 
+    try:
+        from app.services.terrain_service import terrain_summary
+
+        terrain = terrain_summary()
+    except Exception as error:  # noqa: BLE001
+        terrain = {"status": "error", "detail": str(error)}
+
     return {
         "api": {"status": "running"},
         "scheduler": scheduler.status(),
         "database": database,
         "stored_forecasts": forecasts,
+        "terrain": terrain,
         "weatherapi_key_configured": bool(WEATHERAPI_API_KEY),
     }
