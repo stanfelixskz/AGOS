@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { destination, circlePolygon, kmToPixels, typhoonSVG } from "../js/map/typhoon.js";
+import { destination, circlePolygon, kmToPixels, typhoonSVG, intensityLevel, unscaledSize } from "../js/map/typhoon.js";
 
 test("destination: 111.195 km due east at the equator is about 1 degree", () => {
   const [lon, lat] = destination([120, 0], 90, 111.195);
@@ -24,8 +24,28 @@ test("kmToPixels doubles with each zoom level", () => {
   assert.ok(a > 0);
 });
 
-test("typhoonSVG has four spiral arms and an eye", () => {
-  const svg = typhoonSVG();
-  assert.equal((svg.match(/fill="url\(#ty-band\)"/g) || []).length, 4);
-  assert.match(svg, /viewBox="-100 -100 200 200"/);
+test("intensityLevel follows the PAGASA scale, winds first, then category", () => {
+  const level = (kmh) => intensityLevel({ max_wind_kmh: { value: kmh } });
+  assert.deepEqual([61, 62, 88, 89, 117, 118, 184, 185].map(level), [0, 1, 1, 2, 2, 3, 3, 4]);
+  assert.equal(intensityLevel({ storm: { category: "Super Typhoon" } }), 4);
+  assert.equal(intensityLevel({ storm: { category: "Severe Tropical Storm" } }), 2);
+  assert.equal(intensityLevel({ storm: { category: "Tropical cyclone (Filipino: Bagyong)" } }), null);
+  assert.equal(intensityLevel({ max_wind_kmh: { value: 195 }, storm: { category: "Tropical Storm" } }), 4);
+});
+
+test("stronger storms get a bigger unscaled symbol", () => {
+  const sizes = [0, 1, 2, 3, 4].map(unscaledSize);
+  assert.deepEqual([...sizes].sort((a, b) => a - b), sizes);
+  assert.equal(unscaledSize(null), unscaledSize(2));
+});
+
+test("typhoonSVG: colder layers and an eye only for strong storms", () => {
+  const layers = (svg) => (svg.match(/<g fill="#/g) || []).length;
+  assert.equal(layers(typhoonSVG(0)), 4);
+  assert.equal(layers(typhoonSVG(4)), 7);
+  assert.doesNotMatch(typhoonSVG(1), /#ff2200/);
+  assert.match(typhoonSVG(4), /#ff2200/);
+  assert.doesNotMatch(typhoonSVG(2), /fill="#2b2f36"/);
+  assert.match(typhoonSVG(3), /fill="#2b2f36"/);
+  assert.match(typhoonSVG(3), /viewBox="-100 -100 200 200"/);
 });

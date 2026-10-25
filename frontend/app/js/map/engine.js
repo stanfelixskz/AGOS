@@ -11,12 +11,10 @@ import { escapeHTML } from "../core/format.js";
 import { levelColor } from "../core/levels.js";
 import { createRainFx } from "./rainfx.js";
 import { addPinImages, PIN_ID, PIN_SELECTED_ID } from "./pins.js";
-import { circlePolygon, destination, kmToPixels, typhoonSVG } from "./typhoon.js";
+import { circlePolygon, destination, intensityLevel, kmToPixels, typhoonSVG, unscaledSize } from "./typhoon.js";
 
 export const BATAAN_BOUNDS = [[120.18, 14.33], [120.72, 15.01]];
 const MAX_BOUNDS = [[119.6, 13.9], [121.3, 15.45]];
-// Size of the typhoon symbol when the article gives no wind extent.
-const TYPHOON_UNSCALED_PX = 84;
 
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles";
 const MGB_TILES = "https://controlmap.mgb.gov.ph/arcgis/rest/services/GeospatialDataInventory_Public/GDI_Detailed_Flood_Susceptibility_Public/MapServer/tile/{z}/{y}/{x}";
@@ -274,7 +272,8 @@ export async function createAgosMap(container, options = {}) {
     const el = state.typhoonMarker?.getElement();
     if (!ty || !el) return;
     const radius = ty.radius_km?.value;
-    const px = radius ? 2 * kmToPixels(radius, ty.position.latitude, map.getZoom()) : TYPHOON_UNSCALED_PX;
+    // Stated wind extent: true size on the map. Otherwise a fixed screen size by strength.
+    const px = radius ? 2 * kmToPixels(radius, ty.position.latitude, map.getZoom()) : unscaledSize(intensityLevel(ty));
     el.style.setProperty("--size", `${Math.round(Math.min(4000, Math.max(28, px)))}px`);
   }
 
@@ -287,7 +286,7 @@ export async function createAgosMap(container, options = {}) {
     el.className = `typhoon-marker${ty.position.latitude < 0 ? " is-south" : ""}${ty.radius_km ? "" : " is-unscaled"}`;
     const bearing = ty.movement?.bearing_deg;
     el.innerHTML = `
-      <div class="typhoon-spin">${typhoonSVG()}</div>
+      <div class="typhoon-spin">${typhoonSVG(intensityLevel(ty))}</div>
       ${Number.isFinite(bearing) ? `<span class="typhoon-heading" style="--bearing:${bearing}deg" aria-hidden="true"></span>` : ""}
       <button type="button" class="typhoon-label">${escapeHTML(label)}</button>`;
     el.querySelector(".typhoon-label").addEventListener("click", (event) => {
