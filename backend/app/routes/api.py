@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
+from app.services.climate_service import climate_report
 from app.services.history_service import history_report
 from app.services import flood_events_service
 from app.services import typhoon_service
@@ -75,6 +76,12 @@ def flood_events():
         return flood_events_service.events_report()
     except ValueError as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
+
+
+@router.get("/climate")
+def rainfall_climate():
+    """Yearly totals, monthly pattern, trend and return levels per town, from the AGOS database only."""
+    return climate_report()
 
 
 @router.get("/typhoon/from-url")

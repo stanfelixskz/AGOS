@@ -22,10 +22,10 @@ export const SOURCES = [
     url: "https://open-meteo.com/en/docs/historical-weather-api",
     kind: "Reanalysis (modeled past weather)",
     what: "Daily rainfall and weather for past days, used as the 'what actually happened' reference.",
-    usedFor: "Analytics history and forecast-accuracy checks.",
+    usedFor: "Analytics history, yearly and seasonal rain statistics, and forecast-accuracy checks.",
     limits: "Reanalysis is a model estimate of past weather, not a gauge reading. Recent days arrive with a delay of a few days.",
     refresh: "Ingested by the AGOS scheduler when it is enabled.",
-    fil: {"kind": "Reanalysis (modeled na nakaraang panahon)", "what": "Ulan at panahon bawat araw sa nakaraan, ginagamit bilang batayan ng 'ano talaga ang nangyari'.", "usedFor": "Kasaysayan sa Analytics at pagsuri ng katumpakan ng forecast.", "limits": "Model estimate ang reanalysis, hindi sukat ng gauge. Ilang araw ang pagkaantala bago dumating ang mga bagong araw.", "refresh": "Kinukuha ng AGOS scheduler kapag naka-on."},
+    fil: {"kind": "Reanalysis (modeled na nakaraang panahon)", "what": "Ulan at panahon bawat araw sa nakaraan, ginagamit bilang batayan ng 'ano talaga ang nangyari'.", "usedFor": "Kasaysayan sa Analytics, estadistika ng ulan bawat taon at panahon, at pagsuri ng katumpakan ng forecast.", "limits": "Model estimate ang reanalysis, hindi sukat ng gauge. Ilang araw ang pagkaantala bago dumating ang mga bagong araw.", "refresh": "Kinukuha ng AGOS scheduler kapag naka-on."},
   },
   {
     id: "glofas",
