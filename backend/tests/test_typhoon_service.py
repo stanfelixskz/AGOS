@@ -156,6 +156,16 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(Session.calls, 1)
 
+    def test_place_name_stops_at_line_end_and_period(self):
+        seen = []
+
+        def geocode(place):
+            seen.append(place)
+            return fake_geocode(place)
+
+        ts.extract_typhoon("Tropical Storm Testg was 180 km North Northeast of Virac, Catanduanes.\nSignal No. 2 is raised.", geocode=geocode)
+        self.assertEqual(seen, ["Virac, Catanduanes"])
+
     def test_text_without_storm_details(self):
         r = ts.extract_typhoon("The city council approved a new budget today.", geocode=fake_geocode)
         self.assertIsNone(r["storm"])
