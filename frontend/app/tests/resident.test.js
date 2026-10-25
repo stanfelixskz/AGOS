@@ -72,3 +72,9 @@ test("long flood lists show the newest 5 and fold the rest", () => {
   assert.equal((firstList.match(/class="town-flood"/g) || []).length, 5);
   assert.match(firstList, /Aug 1, 2017/);
 });
+
+test("missing rain check says why: not loaded vs not a flooded town", () => {
+  assert.match(renderTownFloods(events, null, "Hermosa"), /did not load/);
+  assert.doesNotMatch(renderTownFloods(events, null, "Hermosa"), /not named as flooded/);
+  assert.match(renderTownFloods(events, evidence, "Hermosa"), /not named as flooded/); // the "road" entry
+});
