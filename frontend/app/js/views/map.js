@@ -130,6 +130,7 @@ export async function mount(container, route) {
           <button class="why" type="button" data-why="${layer.why}" aria-label="${escapeHTML(t("common.why"))}: ${escapeHTML(t(`map.layer.${layer.id}`))}">${icon("info", { size: 16 })}</button>
         </div>
         ${s.visible && swatches.length && !unavailable ? `<ul class="swatches">${swatches.map(([color, label]) => `<li><span class="swatch" style="background:${color}"></span>${escapeHTML(label)}</li>`).join("")}</ul>` : ""}
+        ${layer.id === "boundaries" && s.visible && state.engine?.boundarySource() === "psgc2023" ? `<p class="subtle">${escapeHTML(t("map.boundarySource"))} <a href="https://github.com/faeldon/philippines-json-maps" target="_blank" rel="noopener noreferrer">philippines-json-maps</a> (MIT) · <a href="#/sources?s=boundaries">${escapeHTML(t("explain.details"))}</a></p>` : ""}
         ${layer.id === "precip" && s.visible ? `<p class="subtle">${escapeHTML(t("map.precipTime"))}: ${escapeHTML(state.engine?.precipTime() || "")}</p>` : ""}
         ${unavailable || s.message ? `<p class="subtle layer-msg">${icon(unavailable ? "alert" : "info", { size: 14 })} ${escapeHTML(s.message || t("common.notAvailable"))}</p>` : ""}
       </div>`;

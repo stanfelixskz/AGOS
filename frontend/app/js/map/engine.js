@@ -15,7 +15,13 @@ export const BATAAN_BOUNDS = [[120.18, 14.33], [120.72, 15.01]];
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles";
 const MGB_TILES = "https://controlmap.mgb.gov.ph/arcgis/rest/services/GeospatialDataInventory_Public/GDI_Detailed_Flood_Susceptibility_Public/MapServer/tile/{z}/{y}/{x}";
 const PRECIP_TILES = "https://weathermaps.weatherapi.com/precip/tiles/{date}{hour}/{z}/{x}/{y}.png";
-const BOUNDARY_FILES = ["data/bataan-municipalities.geojson", "data/bataan_province_boundary.geojson"];
+// First: PSGC 2023 boundaries kept in the repo (see app/data/). Then local
+// files some machines have, so older setups keep working.
+const BOUNDARY_FILES = [
+  "app/data/bataan-municipalities-psgc2023.geojson",
+  "data/bataan-municipalities.geojson",
+  "data/bataan_province_boundary.geojson",
+];
 
 const RASTER_FALLBACK = {
   version: 8,
@@ -64,7 +70,7 @@ export function precipTileUrl(date = new Date()) {
 
 function featureName(feature) {
   const p = feature?.properties || {};
-  return p.MUNICIPALITY ?? p.municipality ?? p.NAME_2 ?? p.name ?? p.name_2 ?? p.ADM3_EN ?? null;
+  return p.name ?? p.MUNICIPALITY ?? p.municipality ?? p.NAME_2 ?? p.name_2 ?? p.adm3_en ?? p.ADM3_EN ?? null;
 }
 
 /**
@@ -146,7 +152,9 @@ export async function createAgosMap(container, options = {}) {
 
   function addBoundaryLayers() {
     if (!state.boundaries) return;
-    if (!map.getSource("agos-boundaries")) map.addSource("agos-boundaries", { type: "geojson", data: state.boundaries });
+    if (!map.getSource("agos-boundaries")) {
+      map.addSource("agos-boundaries", { type: "geojson", data: state.boundaries, attribution: state.boundaryAttribution || undefined });
+    }
     if (!map.getLayer("agos-boundary-fill")) {
       map.addLayer({ id: "agos-boundary-fill", type: "fill", source: "agos-boundaries", layout: { visibility: vis(state.visible.boundaries) }, paint: { "fill-color": "#0b63c4", "fill-opacity": ["case", ["boolean", ["feature-state", "selected"], false], 0.12, 0.025] } });
     }
@@ -209,6 +217,9 @@ export async function createAgosMap(container, options = {}) {
         if (data?.type === "FeatureCollection" && Array.isArray(data.features)) {
           data.features.forEach((f, i) => { f.id = i; });
           state.boundaries = data;
+          state.boundaryAttribution = file.includes("psgc2023")
+            ? 'Boundaries: PSA PSGC 2023 via <a href="https://github.com/faeldon/philippines-json-maps" target="_blank" rel="noopener noreferrer">philippines-json-maps</a> (MIT)'
+            : "";
           state.available.boundaries = true;
           state.messages.boundaries = file.includes("province") ? "Only the province outline is available on this computer." : "";
           return;
@@ -321,6 +332,10 @@ export async function createAgosMap(container, options = {}) {
     basemap,
 
     layerStates,
+
+    boundarySource() {
+      return state.boundaryAttribution ? "psgc2023" : state.available.boundaries ? "local" : null;
+    },
 
     setLayer(id, visible) {
       if (!(id in state.visible)) return;

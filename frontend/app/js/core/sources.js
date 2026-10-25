@@ -83,6 +83,17 @@ export const SOURCES = [
     fil: {"kind": "Basemap", "what": "Background na mapa ng kalsada, lugar at tubig mula sa mga kontribyutor ng OpenStreetMap.", "usedFor": "Background ng mapa lamang.", "limits": "Sanggunian lang, hindi hazard data. Kapag hindi ito ma-load, OpenTopoMap tiles ang gagamitin ng AGOS.", "refresh": "Mula sa provider."},
   },
   {
+    id: "boundaries",
+    name: "Municipal boundaries (PSGC 2023)",
+    url: "https://github.com/faeldon/philippines-json-maps",
+    kind: "Administrative boundaries",
+    what: "Outlines of Bataan's 12 municipalities with PSA PSGC codes as of 31 December 2023, from faeldon/philippines-json-maps (MIT licence), built from altcoder/philippines-psgc-shapefiles.",
+    usedFor: "The municipal boundaries layer and clicking a town on the map.",
+    limits: "Simplified for display. Not an official survey boundary; for legal or planning use, refer to NAMRIA/PSA boundary data.",
+    refresh: "Static file in the AGOS repository (frontend/app/data/).",
+    fil: {"kind":"Hangganan ng mga bayan","what":"Balangkas ng 12 bayan ng Bataan na may PSGC code ng PSA hanggang 31 Disyembre 2023, mula sa faeldon/philippines-json-maps (MIT licence), na binuo mula sa altcoder/philippines-psgc-shapefiles.","usedFor":"Ang layer ng hangganan ng mga bayan at pagpindot sa bayan sa mapa.","limits":"Pinasimple para sa display. Hindi opisyal na survey boundary; para sa legal o pagpaplano, gamitin ang datos ng NAMRIA/PSA.","refresh":"Hindi nagbabagong file sa repository ng AGOS (frontend/app/data/)."},
+  },
+  {
     id: "community-reports",
     name: "AGOS community reports",
     url: null,

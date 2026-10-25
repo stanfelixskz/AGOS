@@ -56,6 +56,7 @@ frontend/
                          explain ("why" dialogs), sources registry, router, ui
   app/js/map/            MapLibre loader + map engine (HTML markers, no glyphs)
   app/js/views/          one module per page; parts/muni-detail.js is shared
+  app/data/              Bataan municipal boundaries (PSGC 2023) + licence
   app/tests/             node tests (run from frontend/app)
   vendor/                Inter font, MapLibre (see vendor/README.md)
   tools/vendor_maplibre.py  downloads MapLibre into vendor/
@@ -79,7 +80,9 @@ Windows PowerShell: activate the venv with `.\.venv\Scripts\Activate.ps1`
 
 ## Not in the repo (intentional)
 
-- `frontend/data/`: municipality and province GeoJSON (boundary layer).
+- `frontend/data/` (local GIS files on the owner's laptop). Municipal boundaries are now in
+  the repo: `frontend/app/data/bataan-municipalities-psgc2023.geojson` (PSGC 2023, from
+  faeldon/philippines-json-maps, MIT).
 - Sentinel/SAR/DEM processing outputs and scripts, `.tif`, `.qgz`.
 - `backend/.env`, `backend/data/` (reports, photos, SQLite).
 
