@@ -38,6 +38,22 @@ const TEXT = {
         ${sourceLink("PAGASA-equivalent levels", "pagasa-levels")}`,
     }),
   },
+  rainAnim: {
+    en: () => ({
+      title: "Rain animation",
+      body: `<p>Moving streaks inside each town show how hard the <strong>model forecast</strong> says it is raining in the hour shown: more and faster streaks mean heavier rain. Below 0.1 mm per hour there are no streaks.</p>
+        <p>In "Next 24 h peak" mode the animation shows the <strong>current hour</strong>, not the peak. In "Hour by hour" mode it follows the slider.</p>
+        <p>The streaks fall at a fixed slant. AGOS has no wind direction data, so the slant does not show wind. It is Open-Meteo model output, not radar or a rain gauge reading.</p>
+        ${sourceLink("Open-Meteo forecast", "open-meteo-forecast")}`,
+    }),
+    fil: () => ({
+      title: "Animasyon ng ulan",
+      body: `<p>Ipinapakita ng mga gumagalaw na guhit sa loob ng bawat bayan kung gaano kalakas ang ulan ayon sa <strong>model forecast</strong> sa oras na ipinapakita: mas marami at mas mabilis na guhit, mas malakas ang ulan. Kapag mababa sa 0.1 mm bawat oras, walang guhit.</p>
+        <p>Sa "Pinakamalakas sa 24 oras" ipinapakita nito ang <strong>kasalukuyang oras</strong>, hindi ang peak. Sa "Bawat oras" sumusunod ito sa slider.</p>
+        <p>Pirmi ang hilig ng pagbagsak ng mga guhit. Walang datos ng direksyon ng hangin ang AGOS, kaya hindi ito nagpapakita ng hangin. Output ito ng Open-Meteo model, hindi radar o sukat ng rain gauge.</p>
+        ${sourceLink("Open-Meteo forecast", "open-meteo-forecast")}`,
+    }),
+  },
   mgb: {
     en: () => ({
       title: "Flood susceptibility (MGB)",

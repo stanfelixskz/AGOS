@@ -682,6 +682,9 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .detail-fold[open] .fold-chevron { transform: rotate(180deg); }
 .drawer-grip { cursor: grab; touch-action: none; }
 
+/* Rain animation canvas: above the map and town shapes, under the markers, never takes clicks. */
+.rainfx-canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
+
 .user-marker { width: 16px; height: 16px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(37, 99, 235, .25); }
 
 /* MapLibre controls in the AGOS style */
