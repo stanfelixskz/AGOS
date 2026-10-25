@@ -366,6 +366,10 @@ table.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm);
 .table th { font-size: var(--text-xs); font-weight: 600; color: var(--text-3); background: var(--surface-2); }
 .table tr:last-child td { border-bottom: 0; }
 .table td.num, .table th.num { text-align: right; }
+.table th.num { font-family: var(--font-sans); letter-spacing: 0; }
+.table th[scope="row"] { background: transparent; color: var(--text); font-size: var(--text-sm); font-weight: 600; }
+.table th[scope="row"] a { color: var(--text); text-decoration: none; }
+.table th[scope="row"] a:hover { color: var(--brand); text-decoration: underline; }
 
 /* ------------------------------------------------------------------ */
 /* Badges, levels, notices                                             */

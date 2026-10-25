@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
+from app.services.history_service import history_report
 from app.services.weather_service import (
     get_bataan_flood_outlook,
     get_bataan_rainfall_outlook,
@@ -57,3 +58,9 @@ def evacuation_centers():
         return overview.load_evacuation_centers()
     except (OSError, ValueError) as error:
         raise HTTPException(status_code=500, detail=f"Evacuation list could not be read: {error}") from error
+
+
+@router.get("/history")
+def daily_history(days: int = Query(30, ge=7, le=365)):
+    """Daily rain and river flow per town, from the AGOS database only."""
+    return history_report(days=days)
