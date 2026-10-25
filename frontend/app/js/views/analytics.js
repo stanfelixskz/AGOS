@@ -14,7 +14,7 @@ import { loadingState, errorState, onRetry, openDialog } from "../core/ui.js";
 import { buildHash } from "../core/router.js";
 import { renderClimate, mountClimateCharts, explainClimate } from "./parts/climate.js";
 import { renderEvidence, explainEvidence } from "./parts/evidence.js";
-import { renderModel, explainModel } from "./parts/model.js";
+import { renderModel, explainModel, mountModel } from "./parts/model.js";
 
 const PERIODS = [7, 30, 90];
 const STORE_KEY = "agos.analytics";
@@ -245,6 +245,7 @@ export async function mount(container) {
       render();
     }));
     if (state.climate?.data) state.cleanups.push(...mountClimateCharts(body, state.climate.data, state.climateTown));
+    if (state.model?.data) mountModel(body, state.model.data);
     body.querySelectorAll("[data-explain]").forEach((button) => button.addEventListener("click", () => explain(button.dataset.explain)));
 
     const data = state.history?.data;
