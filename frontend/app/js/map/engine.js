@@ -15,7 +15,13 @@ export const BATAAN_BOUNDS = [[120.18, 14.33], [120.72, 15.01]];
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles";
 const MGB_TILES = "https://controlmap.mgb.gov.ph/arcgis/rest/services/GeospatialDataInventory_Public/GDI_Detailed_Flood_Susceptibility_Public/MapServer/tile/{z}/{y}/{x}";
 const PRECIP_TILES = "https://weathermaps.weatherapi.com/precip/tiles/{date}{hour}/{z}/{x}/{y}.png";
-const BOUNDARY_FILES = ["data/bataan-municipalities.geojson", "data/bataan_province_boundary.geojson"];
+// First: PSGC 2023 boundaries kept in the repo (see app/data/). Then local
+// files some machines have, so older setups keep working.
+const BOUNDARY_FILES = [
+  "app/data/bataan-municipalities-psgc2023.geojson",
+  "data/bataan-municipalities.geojson",
+  "data/bataan_province_boundary.geojson",
+];
 
 const RASTER_FALLBACK = {
   version: 8,
@@ -64,7 +70,7 @@ export function precipTileUrl(date = new Date()) {
 
 function featureName(feature) {
   const p = feature?.properties || {};
-  return p.MUNICIPALITY ?? p.municipality ?? p.NAME_2 ?? p.name ?? p.name_2 ?? p.ADM3_EN ?? null;
+  return p.name ?? p.MUNICIPALITY ?? p.municipality ?? p.NAME_2 ?? p.name_2 ?? p.adm3_en ?? p.ADM3_EN ?? null;
 }
 
 /**

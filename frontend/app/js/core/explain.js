@@ -85,13 +85,15 @@ const TEXT = {
   boundaries: {
     en: () => ({
       title: "Municipal boundaries",
-      body: `<p>Outlines of the 12 municipalities of Bataan from the AGOS boundary file. The faint fill only separates towns; it does not mean water.</p>
-        <p>Not an official survey boundary. If the boundary file is not on this computer, the layer says so instead of drawing anything.</p>`,
+      body: `<p>Outlines of the 12 municipalities of Bataan (PSA PSGC codes, 31 December 2023). The faint fill only separates towns; it does not mean water.</p>
+        <p>Simplified for display and not an official survey boundary.</p>
+        ${sourceLink("Municipal boundaries (PSGC 2023)", "boundaries")}`,
     }),
     fil: () => ({
       title: "Hangganan ng mga bayan",
-      body: `<p>Balangkas ng 12 bayan ng Bataan mula sa boundary file ng AGOS. Panghiwalay lang ng bayan ang mapusyaw na kulay; hindi ito tubig.</p>
-        <p>Hindi ito opisyal na survey boundary. Kung wala ang boundary file sa computer na ito, sasabihin ito ng layer sa halip na gumuhit.</p>`,
+      body: `<p>Balangkas ng 12 bayan ng Bataan (PSGC code ng PSA, 31 Disyembre 2023). Panghiwalay lang ng bayan ang mapusyaw na kulay; hindi ito tubig.</p>
+        <p>Pinasimple para sa display at hindi opisyal na survey boundary.</p>
+        ${sourceLink("Hangganan ng mga bayan (PSGC 2023)", "boundaries")}`,
     }),
   },
   reports: {

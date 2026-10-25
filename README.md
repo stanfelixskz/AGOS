@@ -136,8 +136,16 @@ AGOS never invents data. When a source is unavailable the interface says so.
 Some GIS datasets and research files are intentionally excluded. The map
 expects these under `frontend/data/` and reports them as unavailable when absent:
 
-- `bataan-municipalities.geojson`, `bataan_province_boundary.geojson` (municipal
-  boundary layer; the map works without them and says the layer is unavailable)
+- Local GIS working files (DEM, rasters, research outputs).
+
+Municipal boundaries are included in the repository:
+`frontend/app/data/bataan-municipalities-psgc2023.geojson` — the 12 Bataan
+municipalities with PSA PSGC codes as of 31 December 2023, from
+[faeldon/philippines-json-maps](https://github.com/faeldon/philippines-json-maps)
+(MIT licence, `frontend/app/data/LICENSE-philippines-json-maps.txt`), built from
+altcoder/philippines-psgc-shapefiles. Simplified for display; not an official
+survey boundary. A local `frontend/data/bataan-municipalities.geojson` is only
+used if the repository file is missing.
 
 The evacuation center list now lives in the repository at
 `backend/app/data/evacuation_centers.json` (one list for the map and the
