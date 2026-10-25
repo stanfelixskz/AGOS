@@ -39,6 +39,85 @@ frontend/   Static site (HTML, CSS, vanilla JS, MapLibre GL). No build step.
 | `#/report` | Submit a flood report; recent reports |
 | `#/sources` | Every data source, live system status, method and limits |
 
+## How to Start AGOS (Windows PowerShell)
+
+AGOS needs **two PowerShell windows open at the same time**: one for the
+backend (Terminal 1) and one for the frontend (Terminal 2). If you only
+start one, the website will not work properly.
+
+### Step 1 — Start the Backend (Terminal 1)
+
+Open PowerShell, then run:
+
+1. Go to the backend folder:
+
+```powershell
+cd "$HOME\OneDrive\Desktop\AGOS\backend"
+```
+
+2. Activate the virtual environment. If PowerShell blocks script execution,
+   first run this (it only affects the current window):
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Then activate:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+The prompt should now start with `(.venv)`. If it does not, the environment is
+not active; run the activate command again.
+
+3. Start FastAPI:
+
+```powershell
+python -m uvicorn app.main:app --reload
+```
+
+The backend runs at <http://127.0.0.1:8000> and the API documentation is at
+<http://127.0.0.1:8000/docs>.
+
+**Keep this terminal open.** To stop the backend, click this window and press
+`Ctrl+C`.
+
+### Step 2 — Start the Frontend (Terminal 2)
+
+Open a **second** PowerShell window. Do not close or stop Terminal 1.
+
+1. Go to the frontend folder:
+
+```powershell
+cd "$HOME\OneDrive\Desktop\AGOS\frontend"
+```
+
+2. Start the frontend server:
+
+```powershell
+python -m http.server 5500
+```
+
+Open <http://localhost:5500> in your browser. The frontend and the backend must
+run at the same time, each in its own terminal. To stop the frontend, click
+Terminal 2 and press `Ctrl+C`.
+
+### Step 3 — Verify AGOS
+
+- [ ] The backend starts without errors (Terminal 1 shows "Uvicorn running").
+- [ ] The API documentation opens at <http://127.0.0.1:8000/docs>.
+- [ ] The frontend website loads at <http://localhost:5500>.
+- [ ] **Overview** opens (`#/overview`).
+- [ ] **Map** opens (`#/map`).
+- [ ] **Report** opens (`#/report`).
+- [ ] **Evacuate** opens (`#/evacuate`).
+
+Some map layers may be missing. This is expected: the local GIS datasets
+(`frontend/data/`) are intentionally not included in the GitHub repository. A
+missing data file is not a code error; the interface says when a layer is
+unavailable.
+
 ## Run it locally
 
 You need **Python 3.10 or newer** and any static file server.
