@@ -14,6 +14,7 @@ test("percent never shows a bare zero for a small chance", () => {
   assert.equal(percent(0.004), "<1%");
   assert.equal(percent(0.2), "20%");
   assert.equal(percent(null), "—");
+  assert.equal(percent(0.9996), ">99%");
 });
 
 test("a range of two tiny chances is not shown as <1%–<1%", () => {

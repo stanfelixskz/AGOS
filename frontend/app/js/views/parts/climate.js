@@ -23,7 +23,9 @@ export function percentRange(low, high) {
 export function percent(p) {
   if (!isNumber(p)) return "—";
   const v = p * 100;
-  return v < 1 ? "<1%" : `${num(v, v < 10 ? 1 : 0)}%`;
+  if (v < 1) return "<1%";
+  if (v > 99) return ">99%"; // a fitted curve never makes anything certain
+  return `${num(v, v < 10 ? 1 : 0)}%`;
 }
 
 function trendText(trend) {
