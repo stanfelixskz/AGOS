@@ -21,6 +21,7 @@ export function watchBadge(level) {
 export function topShare(p) {
   if (!isNumber(p)) return "—";
   if (p >= 100) return t("watch.aboveRecord");
+  if (p < 90) return t("watch.ordinary"); // exact ranks only matter for unusual rain
   const share = 100 - p;
   return t("watch.top", { p: num(share, share < 10 ? 1 : 0) });
 }
@@ -78,6 +79,79 @@ export function renderWatchTown(data, name) {
   </section>`;
 }
 
+/**
+ * Bar position for a town: its wettest 3 days against its own Watch / Warning /
+ * High warning amounts. The track ends a little past the High warning amount so
+ * every mark is visible; bigger rain fills the whole bar.
+ */
+export function barScale(town) {
+  const th = town.thresholds_mm || {};
+  const top = isNumber(th.high_warning) && th.high_warning > 0 ? th.high_warning * 1.25 : null;
+  if (!top) return null;
+  const at = (mm) => Math.max(0, Math.min(100, (100 * mm) / top));
+  return {
+    fill: isNumber(town.peak?.mm) ? at(town.peak.mm) : 0,
+    marks: ["watch", "warning", "high_warning"].filter((k) => isNumber(th[k])).map((k) => ({ level: k, mm: th[k], at: at(th[k]) })),
+  };
+}
+
+function chartRow(town, data) {
+  const sc = barScale(town);
+  const fillTone = { high_warning: "danger", warning: "danger", watch: "warning" }[town.level] || "normal";
+  const need = town.thresholds_mm?.warning;
+  const sub = town.peak
+    ? t("watch.barSub", { mm: num(town.peak.mm, 0), need: isNumber(need) ? num(need, 0) : "—" })
+    : t("watch.noData");
+  return `<li>
+    <button type="button" class="watch-row" data-watch-pick="${escapeHTML(town.name)}" aria-expanded="false" aria-controls="watchDetail">
+      <span class="watch-row-name"><strong>${escapeHTML(town.name)}</strong>${watchBadge(town.level)}</span>
+      <span class="watch-track" aria-hidden="true">
+        ${sc ? `<span class="watch-fill watch-fill-${fillTone}" style="width:${sc.fill.toFixed(1)}%"></span>
+        ${sc.marks.map((m) => `<span class="watch-mark watch-mark-${m.level}" style="left:${m.at.toFixed(1)}%" title="${escapeHTML(`${t(`watch.level.${m.level}`)}: ${num(m.mm, 0)} mm`)}"></span>`).join("")}` : ""}
+      </span>
+      <span class="watch-row-sub subtle">${escapeHTML(sub)}</span>
+    </button>
+  </li>`;
+}
+
+/** Detail for one town, shown under the chart when a bar is tapped. */
+export function renderWatchDetail(data, name) {
+  const town = data?.towns?.find((x) => x.name === name);
+  if (!town) return "";
+  const level = town.level;
+  const th = town.thresholds_mm || {};
+  return `<div class="watch-detail-inner">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h3>${escapeHTML(town.name)}</h3>${watchBadge(level)}
+    </div>
+    <p>${escapeHTML(reasonLine(town))}</p>
+    ${level !== "normal" && level !== "no_data" ? `<p>${escapeHTML(backingLine(data, level))}</p>` : ""}
+    ${level === "normal" ? `<p class="subtle">${escapeHTML(t("watch.normalNote"))}</p>` : ""}
+    ${dayStrip({ ...town, today: data.today })}
+    ${isNumber(th.warning) ? `<p class="subtle">${escapeHTML(t("watch.amounts", { watch: num(th.watch, 0), warning: num(th.warning, 0), high: num(th.high_warning, 0) }))}</p>` : ""}
+    <p>${escapeHTML(floodsLine(town))}</p>
+    <a class="btn" href="#/analytics" data-watch-town="${escapeHTML(town.name)}">${escapeHTML(t("watch.openTown", { town: town.name }))}</a>
+  </div>`;
+}
+
+/** Wire the chart: tapping a bar shows that town's detail below. */
+export function mountWatchChart(root, data, onOpenTown) {
+  const detail = root.querySelector("#watchDetail");
+  if (!detail) return;
+  const rows = [...root.querySelectorAll("[data-watch-pick]")];
+  const pick = (name) => {
+    rows.forEach((b) => {
+      const on = b.dataset.watchPick === name;
+      b.setAttribute("aria-expanded", String(on));
+      b.classList.toggle("is-picked", on);
+    });
+    detail.innerHTML = renderWatchDetail(data, name);
+    detail.querySelector("[data-watch-town]")?.addEventListener("click", (e) => onOpenTown?.(e.currentTarget.dataset.watchTown));
+  };
+  rows.forEach((b) => b.addEventListener("click", () => pick(b.dataset.watchPick)));
+  if (data.towns?.length) pick(data.towns[0].name); // most serious town first
+}
+
 /** All towns, most serious first (Overview). */
 export function renderWatchList(data) {
   if (!data?.towns?.length) return "";
@@ -90,22 +164,15 @@ export function renderWatchList(data) {
       <div><h2 id="watchListTitle">${escapeHTML(t("watch.listTitle"))}</h2><p>${escapeHTML(head)}</p></div>
       <button class="why" type="button" data-watch-why aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button>
     </div>
-    <div class="table-wrap"><table class="table">
-      <thead><tr>
-        <th scope="col">${escapeHTML(t("common.municipality"))}</th>
-        <th scope="col">${escapeHTML(t("watch.colSign"))}</th>
-        <th scope="col" class="num">${escapeHTML(t("watch.col3day"))}</th>
-        <th scope="col" class="num hide-sm">${escapeHTML(t("watch.colRank"))}</th>
-        <th scope="col" class="num hide-sm">${escapeHTML(t("watch.colListed"))}</th>
-      </tr></thead>
-      <tbody>${data.towns.map((x) => `<tr>
-        <th scope="row"><a href="#/analytics" data-watch-town="${escapeHTML(x.name)}">${escapeHTML(x.name)}</a></th>
-        <td>${watchBadge(x.level)}</td>
-        <td class="num">${x.peak ? `${escapeHTML(num(x.peak.mm, 0))} mm<div class="subtle">${escapeHTML(dateRange(x.peak.start, x.peak.end))}</div>` : "—"}</td>
-        <td class="num hide-sm">${x.peak ? escapeHTML(topShare(x.peak.percentile)) : "—"}</td>
-        <td class="num hide-sm">${escapeHTML(String(x.listed_floods ?? 0))}</td>
-      </tr>`).join("")}</tbody>
-    </table></div>
+    <div class="watch-legend subtle" aria-hidden="true">
+      <span><i class="watch-mark watch-mark-watch"></i>${escapeHTML(t("watch.level.watch"))}</span>
+      <span><i class="watch-mark watch-mark-warning"></i>${escapeHTML(t("watch.level.warning"))}</span>
+      <span><i class="watch-mark watch-mark-high_warning"></i>${escapeHTML(t("watch.level.high_warning"))}</span>
+    </div>
+    <ul class="watch-chart">${data.towns.map((x) => chartRow(x, data)).join("")}</ul>
+    <div id="watchDetail" class="watch-detail" aria-live="polite">
+      <p class="subtle">${escapeHTML(t("watch.tapHint"))}</p>
+    </div>
     ${disclaimer(data)}
   </section>`;
 }

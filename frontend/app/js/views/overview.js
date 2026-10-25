@@ -14,7 +14,7 @@ import { EXPLAIN } from "../core/explain.js";
 import { buildHash } from "../core/router.js";
 import { effectiveTheme } from "../core/theme.js";
 import { loadingState, errorState, onRetry, openDialog } from "../core/ui.js";
-import { renderWatchList, explainWatch } from "./parts/watch.js";
+import { renderWatchList, explainWatch, mountWatchChart } from "./parts/watch.js";
 import { levelPill } from "./parts/muni-detail.js";
 
 const TTL = 10 * 60 * 1000;
@@ -177,12 +177,12 @@ export async function mount(container) {
       if (!slot) return;
       slot.innerHTML = renderWatchList(watch);
       slot.querySelector("[data-watch-why]")?.addEventListener("click", () => openDialog(t("watch.listTitle"), explainWatch(getLang() === "fil")));
-      slot.querySelectorAll("[data-watch-town]").forEach((a) => a.addEventListener("click", () => {
+      mountWatchChart(slot, watch, (town) => {
         try {
           const prefs = JSON.parse(localStorage.getItem("agos.analytics") || "{}");
-          localStorage.setItem("agos.analytics", JSON.stringify({ ...prefs, town: a.dataset.watchTown }));
+          localStorage.setItem("agos.analytics", JSON.stringify({ ...prefs, town }));
         } catch { /* storage blocked: Analytics opens on its last town */ }
-      }));
+      });
     }).catch((error) => {
       const slot = alive && container.querySelector("#watchSlot");
       if (slot) slot.innerHTML = `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("watch.listTitle"))}</h2></div></div>${errorState(error)}</section>`;

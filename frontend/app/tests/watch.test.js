@@ -16,7 +16,7 @@ const data = {
 
 test("top share wording", () => {
   assert.equal(topShare(98.4), "top 1.6%");
-  assert.equal(topShare(80), "top 20%");
+  assert.equal(topShare(80), "ordinary");
   assert.equal(topShare(100), "above every 3-day total on record");
   assert.equal(topShare(null), "—");
 });
@@ -41,4 +41,28 @@ test("normal town says floods can still happen; list counts raised towns", () =>
   assert.match(renderWatchTown(data, "Limay"), /high tide/);
   assert.match(renderWatchList(data), /1 town\(s\)/);
   assert.equal(renderWatchTown(data, "Nowhere"), "");
+});
+
+import { barScale, renderWatchDetail } from "../js/views/parts/watch.js";
+
+test("ordinary rain is called ordinary, not 'top 50%'", () => {
+  assert.equal(topShare(50), "ordinary");
+  assert.equal(topShare(91), "top 9.0%");
+});
+
+test("bar scale puts the town's own marks in order and caps the fill", () => {
+  const sc = barScale({ peak: { mm: 500 }, thresholds_mm: { watch: 60, warning: 80, high_warning: 100 } });
+  assert.deepEqual(sc.marks.map((m) => m.at), [48, 64, 80]);
+  assert.equal(sc.fill, 100);
+  assert.equal(barScale({ thresholds_mm: {} }), null);
+});
+
+test("chart has a clickable row per town and the detail explains one", () => {
+  const withTh = { ...data, towns: data.towns.map((x) => ({ ...x, thresholds_mm: { watch: 60, warning: 80, high_warning: 100 } })) };
+  const html = renderWatchList(withTh);
+  assert.equal((html.match(/data-watch-pick=/g) || []).length, 2);
+  assert.match(html, /warning sign at 80 mm/);
+  const detail = renderWatchDetail(withTh, "Hermosa");
+  assert.match(detail, /Warning sign from 80 mm/);
+  assert.match(detail, /Open Hermosa(&#39;|')s flood history/);
 });
