@@ -686,6 +686,13 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 /* Rain animation canvas: above the map and town shapes, under the markers, never takes clicks. */
 .rainfx-canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
 
+/* Precipitation tile controls inside the layers panel. */
+.precip-controls { display: flex; flex-direction: column; gap: var(--space-2); margin: 8px 0 0 48px; }
+.precip-controls .chip-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); font-size: var(--text-xs); font-weight: 600; }
+.precip-opacity { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--text-2); }
+.precip-opacity input { width: 100%; min-width: 0; }
+
 .user-marker { width: 16px; height: 16px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(37, 99, 235, .25); }
 
 /* MapLibre controls in the AGOS style */

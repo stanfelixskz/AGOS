@@ -117,6 +117,9 @@ export async function createAgosMap(container, options = {}) {
     selected: null,
     userMarker: null,
     precip: precipTileUrl(),
+    precipDate: null,       // null = the current hour
+    precipOpacity: 0.7,
+    precipStatus: "ok",     // ok | partial (some tiles failed) | missing (404: no tile for this hour)
     basemap,
   };
 
@@ -138,7 +141,10 @@ export async function createAgosMap(container, options = {}) {
   }
 
   function firstOverlayLayerId() {
-    // Put rasters under AGOS vectors but above the basemap.
+    // Rasters go above the basemap fills but under its labels (first symbol layer),
+    // so place names stay readable. Without a vector basemap, under the AGOS shapes.
+    const symbol = map.getStyle()?.layers?.find((l) => l.type === "symbol" && !l.id.startsWith("agos-"));
+    if (symbol) return symbol.id;
     return map.getLayer("agos-boundary-fill") ? "agos-boundary-fill" : undefined;
   }
 
@@ -156,7 +162,7 @@ export async function createAgosMap(container, options = {}) {
       map.addSource("agos-precip", { type: "raster", tiles: [state.precip.url], tileSize: 256, attribution: 'Precipitation © <a href="https://www.weatherapi.com/">WeatherAPI.com</a>' });
     }
     if (!map.getLayer("agos-precip")) {
-      map.addLayer({ id: "agos-precip", type: "raster", source: "agos-precip", layout: { visibility: vis(state.visible.precip) }, paint: { "raster-opacity": 0.7 } }, firstOverlayLayerId());
+      map.addLayer({ id: "agos-precip", type: "raster", source: "agos-precip", layout: { visibility: vis(state.visible.precip) }, paint: { "raster-opacity": state.precipOpacity } }, firstOverlayLayerId());
     }
   }
 
@@ -323,6 +329,35 @@ export async function createAgosMap(container, options = {}) {
     state.messages.boundaries = "Boundary file not found (frontend/data/bataan-municipalities.geojson is kept outside the repository).";
   }
 
+  /** Point the precipitation tiles at the chosen hour (only while the layer is on). */
+  function applyPrecipTime() {
+    const fresh = precipTileUrl(state.precipDate || new Date());
+    if (fresh.url === state.precip.url) return false;
+    state.precip = fresh;
+    state.precipStatus = "ok";
+    map.getSource("agos-precip")?.setTiles([fresh.url]);
+    probePrecip(fresh.url);
+    return true;
+  }
+
+  // MapLibre treats a 404 tile as "no data" and fires no error, so check one tile
+  // over the middle of Bataan ourselves to tell the user when an hour has no tiles.
+  let probeToken = 0;
+  function probePrecip(templateUrl) {
+    const token = ++probeToken;
+    const z = 8;
+    const lon = 120.45;
+    const lat = 14.67;
+    const n = 2 ** z;
+    const x = Math.floor(((lon + 180) / 360) * n);
+    const rad = (lat * Math.PI) / 180;
+    const y = Math.floor(((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n);
+    const img = new Image();
+    img.onload = () => { if (token === probeToken && state.precipStatus === "missing") { state.precipStatus = "ok"; emit(); } };
+    img.onerror = () => { if (token === probeToken && state.visible.precip) { state.precipStatus = "missing"; emit(); } };
+    img.src = templateUrl.replace("{z}", z).replace("{x}", x).replace("{y}", y);
+  }
+
   // ---------------- interaction ----------------
   function bindInteractions() {
     map.on("click", "agos-centers", (event) => {
@@ -424,8 +459,10 @@ export async function createAgosMap(container, options = {}) {
       emit();
     }
     if (sourceId === "agos-precip" && state.visible.precip) {
-      state.messages.precip = "Some precipitation tiles did not load.";
-      emit();
+      if (state.precipStatus === "ok") {
+        state.precipStatus = "partial";
+        emit();
+      }
     }
   });
 
@@ -443,6 +480,7 @@ export async function createAgosMap(container, options = {}) {
     setLayer(id, visible) {
       if (!(id in state.visible)) return;
       state.visible[id] = Boolean(visible);
+      if (id === "precip" && visible) applyPrecipTime(); // point at the right hour before tiles start loading
       const layerIds = {
         boundaries: ["agos-boundary-line"],
         mgb: ["agos-mgb"], precip: ["agos-precip"], evacuation: ["agos-centers"], reports: ["agos-reports"],
@@ -450,13 +488,7 @@ export async function createAgosMap(container, options = {}) {
       for (const layerId of layerIds) {
         if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", vis(state.visible[id]));
       }
-      if (id === "precip" && visible) {
-        const fresh = precipTileUrl();
-        if (fresh.url !== state.precip.url) {
-          state.precip = fresh;
-          map.getSource("agos-precip")?.setTiles([fresh.url]);
-        }
-      }
+      if (id === "precip" && visible) probePrecip(state.precip.url);
       if (id === "rainfx") rainfx?.setEnabled(visible);
       if (id === "rain" || id === "boundaries") updateFillVisibility();
       if (id === "rain") {
@@ -474,6 +506,34 @@ export async function createAgosMap(container, options = {}) {
 
     precipTime() {
       return state.precip.utcHour;
+    },
+
+    /** The hour the tiles show (a Date). */
+    precipDate() {
+      const date = new Date(state.precipDate || Date.now());
+      date.setUTCMinutes(0, 0, 0);
+      return date;
+    },
+
+    /** Show tiles for this Date, or the current hour when null. Cheap while the layer is off. */
+    setPrecipTime(date) {
+      state.precipDate = date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+      // While the layer is off only the date is remembered; the tiles update when it is switched on.
+      if (state.visible.precip && applyPrecipTime()) emit();
+    },
+
+    precipOpacity() {
+      return state.precipOpacity;
+    },
+
+    /** 0.1 to 1. Does not emit (the slider is being dragged). */
+    setPrecipOpacity(value) {
+      state.precipOpacity = Math.min(1, Math.max(0.1, Number(value) || 0.7));
+      if (map.getLayer("agos-precip")) map.setPaintProperty("agos-precip", "raster-opacity", state.precipOpacity);
+    },
+
+    precipStatus() {
+      return state.precipStatus;
     },
 
     /** rows: [{ name, point:{latitude,longitude}, level, valueText, labelText }] */
