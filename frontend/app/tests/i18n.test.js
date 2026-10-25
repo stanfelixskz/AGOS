@@ -20,3 +20,12 @@ test("t fills placeholders and falls back to the key", () => {
   assert.equal(t("nav.map", {}, "fil"), "Mapa");
   assert.equal(t("no.such.key"), "no.such.key");
 });
+
+test("every 'why' dialog and data source has Filipino text", async () => {
+  const { SOURCES } = await import("../js/core/sources.js");
+  for (const source of SOURCES) {
+    for (const field of ["kind", "what", "usedFor", "limits", "refresh"]) {
+      assert.ok(source.fil?.[field]?.trim(), `${source.id}.fil.${field}`);
+    }
+  }
+});

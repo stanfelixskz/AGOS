@@ -243,7 +243,11 @@ export async function createAgosMap(container, options = {}) {
       map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
     }
-    const updateLabels = () => container.classList.toggle("map-show-labels", map.getZoom() >= 10.2);
+    const updateLabels = () => {
+      container.classList.toggle("map-show-labels", map.getZoom() >= 10.2);
+      // Zoomed in, town circles would cover nearby reports and centers.
+      container.classList.toggle("map-zoomed", map.getZoom() >= 12);
+    };
     map.on("zoom", updateLabels);
     updateLabels();
   }
@@ -291,6 +295,12 @@ export async function createAgosMap(container, options = {}) {
       emit();
       resolve();
     });
+  });
+
+  // Some basemap styles reference sprite icons they do not ship (e.g. "circle-11").
+  // Add an empty image so MapLibre stops warning; AGOS layers do not use them.
+  map.on("styleimagemissing", (event) => {
+    if (!map.hasImage(event.id)) map.addImage(event.id, { width: 1, height: 1, data: new Uint8Array(4) });
   });
 
   map.on("error", (event) => {

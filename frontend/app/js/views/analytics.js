@@ -5,7 +5,7 @@
  */
 
 import { icon } from "../core/icons.js";
-import { t } from "../core/i18n.js";
+import { t, getLang } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
 import { escapeHTML, num, isNumber, formatDate, parseTime } from "../core/format.js";
 import { barChart, lineChart, mountChart } from "../core/charts.js";
@@ -193,7 +193,7 @@ export async function mount(container) {
             <td class="num">${escapeHTML(String(row.days ?? 0))}</td>
           </tr>`).join("")}</tbody>
         </table></div>
-        <p class="card-foot">${escapeHTML(s.data.forecast_definition || "")} ${escapeHTML(s.data.observed_definition || "")}</p>
+        <p class="card-foot">${escapeHTML(t("analytics.skillFoot"))}</p>
       </section>`;
   }
 
@@ -228,13 +228,21 @@ export async function mount(container) {
   }
 
   function explain(kind) {
+    const fil = getLang() === "fil";
     if (kind === "history") {
-      openDialog(t("analytics.rainHistory"), `
+      openDialog(t("analytics.rainHistory"), fil ? `
+        <p>Ang ulan bawat araw ay mula sa <strong>archive reanalysis</strong> ng Open-Meteo sa reference point ng bawat bayan: model estimate ng bumagsak na ulan, hindi sukat ng rain gauge. Simulated na GloFAS discharge ang daloy ng ilog.</p>
+        <p>Ang mga araw lang na naipon na ng AGOS scheduler ang ipinapakita. Ang kulay-abong marka ay mga araw na hindi naipon — kulang, hindi zero.</p>
+        <p>Ang kulay ng bar ay display band ng AGOS para sa kabuuang ulan bawat araw (1, 10, 20 at 50 mm). Hindi ito kategorya ng PAGASA.</p>` : `
         <p>Daily rainfall is the Open-Meteo <strong>archive reanalysis</strong> at each town's reference point: a model estimate of what fell, not a rain-gauge reading. River flow is simulated GloFAS discharge.</p>
         <p>Only days already collected by the AGOS scheduler are shown. Gray marks are days that were never collected — they are missing, not zero.</p>
         <p>Bar colors are AGOS display bands for daily totals (1, 10, 20 and 50 mm). They are not PAGASA categories.</p>`);
     } else {
-      openDialog(t("analytics.accuracy"), `
+      openDialog(t("analytics.accuracy"), fil ? `
+        <p>Bawat oras, itinatabi ng AGOS ang forecast ng Open-Meteo. Para sa bawat nakaraang araw, ang <strong>day-ahead forecast</strong> (ang huling naitabi bago magsimula ang araw) ay ikinukumpara sa archive na ulan para sa araw na iyon.</p>
+        <p><strong>Tama ang ulan/walang ulan</strong>: bahagi ng mga araw na nagkasundo ang forecast at archive kung may bumagsak na kahit 1 mm. <strong>Nahuling ulan</strong>: sa mga maulang araw, ilan ang nahulaan ng forecast. <strong>Bias ×</strong>: kabuuang forecast hinati sa kabuuang aktwal (lampas 1 ay mas maraming ulan ang hinulaan kaysa bumagsak).</p>
+        <p>"Kulang ang datos" ang makikita sa isang bayan hangga't wala pang 14 na naikumparang araw na may 10 maulang araw. Model din ang batayan (reanalysis), hindi gauge, kaya pagkakasundo ng dalawang model ang sinusukat nito.</p>
+        <p class="subtle"><a href="#/sources?s=forecast-skill">Detalye ng pinagmulan</a></p>` : `
         <p>Every hour AGOS saves the Open-Meteo forecast. For each past day, the <strong>day-ahead forecast</strong> (the last one saved before that day began) is compared with the archive rainfall for that day.</p>
         <p><strong>Rain/no-rain correct</strong>: the share of days where the forecast and the archive agree on whether at least 1 mm fell. <strong>Rain detected</strong>: of the rainy days, how many the forecast caught. <strong>Bias ×</strong>: forecast total divided by observed total (above 1 means the forecast said more rain than fell).</p>
         <p>A town shows "insufficient data" until it has at least 14 compared days with 10 rainy days. The reference is itself a model (reanalysis), not a gauge, so this measures agreement between two models.</p>

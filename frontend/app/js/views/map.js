@@ -8,7 +8,7 @@ import { icon } from "../core/icons.js";
 import { t, getLang } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
 import { escapeHTML, num, formatTime, isNumber, distanceKm, relativeTime } from "../core/format.js";
-import { LEVELS, LEVEL_IDS, levelLabel } from "../core/levels.js";
+import { LEVELS, LEVEL_IDS, levelLabel, levelRange } from "../core/levels.js";
 import { effectiveTheme } from "../core/theme.js";
 import { EXPLAIN } from "../core/explain.js";
 import { buildHash } from "../core/router.js";
@@ -30,8 +30,8 @@ const LAYERS = [
 ];
 
 const LAYER_SWATCHES = {
-  rain: () => LEVEL_IDS.filter((id) => id !== "nodata").map((id) => [LEVELS[id].color, `${levelLabel(id, getLang())} · ${LEVELS[id].range}`]),
-  mgb: () => [["#002673", "Very high"], ["#5900ff", "High"], ["#b045ff", "Moderate"], ["#e3d1ff", "Low"]],
+  rain: () => LEVEL_IDS.filter((id) => id !== "nodata").map((id) => [LEVELS[id].color, `${levelLabel(id, getLang())} · ${levelRange(id, getLang())}`]),
+  mgb: () => [["#002673", t("mgb.veryHigh")], ["#5900ff", t("mgb.high")], ["#b045ff", t("mgb.moderate")], ["#e3d1ff", t("mgb.low")]],
   precip: () => [],
   evacuation: () => [["#16a34a", t("map.swatch.center")]],
   reports: () => [["#7c3aed", t("map.swatch.report")]],
