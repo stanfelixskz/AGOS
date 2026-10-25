@@ -1,0 +1,1879 @@
+{
+ "name": "AGOS Bataan past flood events",
+ "version": 2,
+ "compiled": "2026-10-25",
+ "method": "Built only from pages opened by AGOS's assistant; every place, number and date is copied from those pages. Dates: 'stated' = calendar date in the source; 'inferred' = weekday or 'yesterday' matched to the article date; 'article_date' = only the publication date is known; 'not_stated' = no date. Town evidence: 'flooded' = the source says the town or its barangays flooded; 'road' = roads impassable; 'evacuation', 'death', 'affected' = only that is stated. Depths and counts are as reported by reporters and officials, not measurements.",
+ "limits": [
+  "News covers big floods; small local floods are missing, so 'no event' does not mean 'no flood'.",
+  "Many dates are inferred from weekdays.",
+  "Figures from different sources often differ (different times and definitions); both are kept in 'impact'.",
+  "Several sources were opened in an earlier session and are marked so."
+ ],
+ "events": [
+  {
+   "id": "2011-06-09-dodong",
+   "start_date": "2011-06-09",
+   "end_date": "2011-06-09",
+   "date_basis": "inferred",
+   "date_note": "Article (2011-06-09) says 'Thursday'.",
+   "kind": "flood",
+   "cause": "Heavy rains from Tropical Depression Dodong",
+   "storm": "Dodong",
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "note": "seven villages under 1.5 m of water (NDRRMC)"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "note": "two villages"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "note": "one village"
+    }
+   ],
+   "impact": "Seven villages in Balanga under 1.5 m of flood water; two villages in Hermosa and one in Dinalupihan flooded. No casualties reported.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Floods reported in Bataan, Batangas; landslide in Aurora",
+     "url": "https://newsinfo.inquirer.net/13543/floods-reported-in-bataan-batangas-landslide-in-aurora",
+     "published": "2011-06-09"
+    }
+   ],
+   "period": "2011-06"
+  },
+  {
+   "id": "2012-08-07-habagat",
+   "start_date": "2012-08-06",
+   "end_date": "2012-08-08",
+   "date_basis": "inferred",
+   "date_note": "GMA (2012-08-07): rain Monday-Tuesday, province declared under state of calamity Tuesday. Inquirer (2012-08-08): deaths 'yesterday'. NDRRMC SitRep 14 covers incidents of 4-13 Aug 2012.",
+   "kind": "flood",
+   "cause": "Continuous heavy southwest monsoon (habagat) rains",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": true,
+   "towns": [
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Bagac",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Morong",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "flooded",
+     "note": "named by GMA among towns in 'particularly deep waters'"
+    },
+    {
+     "municipality": "Limay",
+     "evidence": "affected",
+     "note": "listed only in NDRRMC affected-population table"
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "affected",
+     "note": "listed only in NDRRMC affected-population table"
+    }
+   ],
+   "impact": "114 barangays under water (GMA); up to 4 ft of floodwater; Olongapo-Gapan Road and MacArthur Highway impassable. Police-reported rain: 391.2 mm (3 p.m. to midnight Monday) and 485.9 mm (1 a.m. to 2 p.m. Tuesday), as reported, not gauge-checked by AGOS. NDRRMC SitRep 14 (13 Aug 2012): 87,390 families / 390,137 persons affected in Bataan; 10 deaths listed (Dinalupihan 4, Orion 2, Hermosa 2, Pilar 2), mostly drowning; 5 houses totally damaged.",
+   "deaths": 10,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Bataan placed under state of calamity (story 268704)",
+     "url": "https://www.gmanetwork.com/news/story/268704",
+     "published": "2012-08-07"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "At least 6 dead as floods swamp Luzon provinces",
+     "url": "https://newsinfo.inquirer.net/245115/at-least-6-dead-as-floods-swamp-luzon-provinces",
+     "published": "2012-08-08"
+    },
+    {
+     "publisher": "NDRRMC (via ADRC)",
+     "title": "NDRRMC Update SitRep 14, Effects of Southwest Monsoon",
+     "url": "https://www.adrc.asia/documents/disaster_info/2012/08/NDRRMC_Update_Sit_Rep_14_Effects_of_Southwest_Monsoon.pdf",
+     "published": "2012-08-13"
+    }
+   ],
+   "period": "2012-08"
+  },
+  {
+   "id": "2013-08-20-maring",
+   "start_date": "2013-08-19",
+   "end_date": "2013-08-20",
+   "date_basis": "inferred",
+   "date_note": "Article (2013-08-21): drowning 'Monday', villages flooded and roads impassable 'Tuesday'.",
+   "kind": "flood",
+   "cause": "Southwest monsoon rains enhanced by Tropical Storm Maring",
+   "storm": "Maring",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "road",
+     "barangays": [
+      "Mandama",
+      "Cataning",
+      "Poblacion-Mabuco"
+     ],
+     "note": "road sections impassable to light vehicles"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "road",
+     "barangays": [
+      "Tabing Ilog"
+     ]
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "road",
+     "barangays": [
+      "Mulawin"
+     ]
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "road",
+     "barangays": [
+      "Sta. Lucia",
+      "Mabatang",
+      "Capitangan"
+     ]
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "death",
+     "barangays": [
+      "Alas-asin"
+     ],
+     "note": "a 3-year-old swept away by a river current"
+    }
+   ],
+   "impact": "RDRRMC: 25 barangays flooded in Bataan (not listed by town). Road sections impassable in Hermosa, Samal, Orani and Abucay; 'Layac and Tuyo along Mariveles Road' also listed (town not stated). Classes suspended province-wide; 7 evacuation centers. One death (Mariveles).",
+   "deaths": 1,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Floods split SCTEx, hit more than 200 villages in C. Luzon",
+     "url": "https://newsinfo.inquirer.net/470615/floods-split-sctex-hit-more-than-200-villages-in-c-luzon",
+     "published": "2013-08-21"
+    }
+   ],
+   "period": "2013-08"
+  },
+  {
+   "id": "2013-09-23-habagat",
+   "start_date": "2013-09-22",
+   "end_date": "2013-09-23",
+   "date_basis": "inferred",
+   "date_note": "Articles (2013-09-24): flooding 'since Sunday night', reported Monday.",
+   "kind": "flood",
+   "cause": "Enhanced southwest monsoon (habagat) pulled by Typhoon Pabuk",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "note": "three coastal villages, up to 3 ft; one death (heart attack while saving his house)"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Sta. Isabel",
+      "Magsaysay"
+     ],
+     "note": "Layac junction and Sta. Isabel road over 3 ft; a drowning in Magsaysay"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "note": "five villages under 4 ft"
+    }
+   ],
+   "impact": "Three Balanga coastal villages up to 3 ft; Dinalupihan roads over 3 ft and impassable; five Hermosa villages under 4 ft. Two deaths reported in Bataan. Classes suspended province-wide.",
+   "deaths": 2,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "At least 16 die in slides, floods",
+     "url": "https://newsinfo.inquirer.net/493603/at-least-16-die-in-slides-floods",
+     "published": "2013-09-24"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "'Habagat' death toll in Zambales, Bataan rises to 30",
+     "url": "https://newsinfo.inquirer.net/?p=494313",
+     "published": "2013-09-24"
+    }
+   ],
+   "period": "2013-09"
+  },
+  {
+   "id": "2014-08-05-jose",
+   "start_date": "2014-08-05",
+   "end_date": "2014-08-06",
+   "date_basis": "inferred",
+   "date_note": "Article (2014-08-06): heavy continuous rain 'Tuesday', floods receding 'Wednesday'.",
+   "kind": "flood",
+   "cause": "Monsoon rains induced by Typhoon Jose (Halong)",
+   "storm": "Jose",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen"
+     ],
+     "note": "up to 3 ft in Almacen; several villages"
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded",
+     "note": "several villages"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "evacuation",
+     "note": "evacuees returned home Tuesday noon"
+    }
+   ],
+   "impact": "Several villages in Hermosa and Mariveles submerged; Almacen still up to 3 ft on Wednesday.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Floods go down in parts of Bataan as monsoon rains abate",
+     "url": "https://newsinfo.inquirer.net/626778/floods-go-down-in-parts-of-bataan-as-monsoon-rains-abate-disaster-exec",
+     "published": "2014-08-06"
+    }
+   ],
+   "period": "2014-08"
+  },
+  {
+   "id": "2014-09-14-luis",
+   "start_date": "2014-09-14",
+   "end_date": "2014-09-17",
+   "date_basis": "inferred",
+   "date_note": "Mentioned in a 2014-09-20 article as earlier floods 'from Sunday night to Wednesday'. Single mention.",
+   "kind": "flood",
+   "cause": "Habagat strengthened by Typhoon Luis",
+   "storm": "Luis",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen"
+     ],
+     "note": "chest-deep"
+    }
+   ],
+   "impact": "Chest-deep floods in Almacen, Hermosa.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Heavy rains caused by Habagat flood 5 barangays in 3 Bataan towns",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/380110/heavy-rains-caused-by-habagat-flood-5-barangays-in-3-bataan-towns/story/",
+     "published": "2014-09-20"
+    }
+   ],
+   "period": "2014-09"
+  },
+  {
+   "id": "2014-09-19-mario",
+   "start_date": "2014-09-19",
+   "end_date": "2014-09-20",
+   "date_basis": "stated",
+   "date_note": "Photo caption: Friday, September 19; flooding reported Saturday 20.",
+   "kind": "flood",
+   "cause": "Southwest monsoon induced by Storm Mario",
+   "storm": "Mario",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen"
+     ],
+     "note": "knee- to waist-deep"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded",
+     "barangays": [
+      "Mabatang"
+     ],
+     "note": "knee-deep flash flood"
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded",
+     "barangays": [
+      "Balon Anito",
+      "Ipag",
+      "San Isidro"
+     ],
+     "note": "knee- to chest-deep; 47 families (about 235 people) in evacuation centers"
+    }
+   ],
+   "impact": "Five barangays in three towns flooded; 47 families evacuated in Mariveles.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Heavy rains caused by Habagat flood 5 barangays in 3 Bataan towns",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/380110/heavy-rains-caused-by-habagat-flood-5-barangays-in-3-bataan-towns/story/",
+     "published": "2014-09-20"
+    }
+   ],
+   "period": "2014-09"
+  },
+  {
+   "id": "2016-07-10-habagat",
+   "start_date": "2016-07-10",
+   "end_date": "2016-07-10",
+   "date_basis": "article_date",
+   "date_note": "Report from Sunday morning, 2016-07-10; the start of flooding is not stated.",
+   "kind": "flood",
+   "cause": "Intermittent heavy rain (southwest monsoon); in Orani a fallen tree blocked the river",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded",
+     "barangays": [
+      "Mulawin",
+      "Tugatog"
+     ],
+     "note": "more than 6 ft"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "flooded"
+    }
+   ],
+   "impact": "15 villages affected; depths 8 to 36 inches, over 6 ft in Mulawin and Tugatog (Orani).",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "3 Bataan towns remain flooded amid intermittent heavy rains",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/573088/3-bataan-towns-remain-flooded-amid-intermittent-heavy-rains/story/",
+     "published": "2016-07-10"
+    }
+   ],
+   "period": "2016-07"
+  },
+  {
+   "id": "2016-08-12-habagat",
+   "start_date": "2016-08-12",
+   "end_date": "2016-08-14",
+   "date_basis": "inferred",
+   "date_note": "GMA: Friday (article 2016-08-13); Inquirer: Saturday (article 2016-08-14); GMA: still flooded Sunday (2016-08-14).",
+   "kind": "flood",
+   "cause": "Enhanced southwest monsoon and a low-pressure area near Batanes",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Bayan-Bayanan"
+     ],
+     "note": "3 barangays"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "Pulo",
+      "Daungan"
+     ],
+     "note": "8 barangays; Almacen River overflowed, over 4 ft; 4 houses washed out in Daungan"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded",
+     "note": "4 barangays"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "flooded",
+     "note": "3 barangays"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded",
+     "note": "2 barangays"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "flooded",
+     "note": "4 barangays"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "evacuation",
+     "barangays": [
+      "Pio del Mar"
+     ]
+    }
+   ],
+   "impact": "Flash floods 1-3 ft in low-lying villages of six towns, over 4 ft along the Almacen River; 66 families (291 people) evacuated from Pio del Mar (Balanga) and Bayan-Bayanan (Dinalupihan); more than P1 million damage in Pulo.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Flash floods hit low-lying villages in 6 Bataan towns",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/577483/flash-floods-hit-low-lying-villages-in-6-bataan-towns/story/",
+     "published": "2016-08-13"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Villagers in 5 provinces suffer from flooding",
+     "url": "https://newsinfo.inquirer.net/?p=805909",
+     "published": "2016-08-14"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "Pampanga, Bataan remain flooded",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/577591/pampanga-bataan-remain-flooded/story/",
+     "published": "2016-08-14"
+    }
+   ],
+   "period": "2016-08"
+  },
+  {
+   "id": "2017-07-26-gorio",
+   "start_date": "2017-07-26",
+   "end_date": "2017-07-26",
+   "date_basis": "article_date",
+   "date_note": "Article published Wednesday 2017-07-26; flood day not separately stated.",
+   "kind": "flood",
+   "cause": "High tide during habagat rains pulled by Tropical Storm Gorio",
+   "storm": "Gorio",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "note": "seaside villages; transport disrupted"
+    }
+   ],
+   "impact": "Severe flooding in seaside villages of Balanga City attributed to high tide.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Habagat rains pulled by Gorio cause floods throughout PHL",
+     "url": "https://www.gmanetwork.com/news/topstories/nation/619634/habagat-rains-pulled-by-gorio-cause-floods-throughout-phl/story/",
+     "published": "2017-07-26"
+    }
+   ],
+   "period": "2017-07"
+  },
+  {
+   "id": "2018-06-14-rain",
+   "start_date": "2018-06-14",
+   "end_date": "2018-06-16",
+   "date_basis": "inferred",
+   "date_note": "Inquirer 1000898 says 'Thursday (June 14)' with no year on the page (year from the page's '8 years ago' and the weekday match); Inquirer 1001397 (2018-06-16) reports Saturday.",
+   "kind": "flood",
+   "cause": "Continuous heavy rain; high tide in low-lying areas; mountain runoff in Dinalupihan",
+   "storm": null,
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded",
+     "barangays": [
+      "Del Rosario",
+      "Balut II"
+     ]
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "Daungan",
+      "Pulo"
+     ],
+     "note": "Almacen 4-4.5 ft; waist-high"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Pita",
+      "Sapang Balas",
+      "Mabini Extension",
+      "Padre Dandan",
+      "Santa Isabel"
+     ],
+     "note": "up to 3 ft"
+    }
+   ],
+   "impact": "Floods up to 4 ft; MacArthur Highway passable only to large vehicles; no evacuees or injuries reported.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Bataan villages flooded due to strong rains",
+     "url": "https://newsinfo.inquirer.net/1000898/bataan-villages-flooded-due-to-strong-rains/amp",
+     "published": null,
+     "note": "page shows no publication date"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Heavy rains flood Dinalupihan and Hermosa towns in Bataan",
+     "url": "https://newsinfo.inquirer.net/1001397/dinalupihan-hermosa-bataan-flooding",
+     "published": "2018-06-16"
+    }
+   ],
+   "period": "2018-06"
+  },
+  {
+   "id": "2018-07-17-henry",
+   "start_date": "2018-07-17",
+   "end_date": "2018-07-17",
+   "date_basis": "inferred",
+   "date_note": "Article (2018-07-17) says 'this morning'.",
+   "kind": "flood",
+   "cause": "Southwest monsoon and Tropical Storm Henry",
+   "storm": "Henry",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Limay",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Morong",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded",
+     "note": "deepest; neck-deep per residents"
+    }
+   ],
+   "impact": "46 villages in nine towns and Balanga flooded, 1-4 ft.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine News Agency",
+     "title": "46 Bataan villages submerged in flood",
+     "url": "https://www.pna.gov.ph/articles/1041743",
+     "published": "2018-07-17",
+     "note": "opened in an earlier session; PNA refused fetches in this one"
+    }
+   ],
+   "period": "2018-07"
+  },
+  {
+   "id": "2018-07-21-josie",
+   "start_date": "2018-07-21",
+   "end_date": "2018-07-23",
+   "date_basis": "stated",
+   "date_note": "SunStar: provincial resolution passed July 21; Philstar/GMA: Balanga and Dinalupihan declared 'Sunday' July 22; Radyo Inquirer: flooding 'over the weekend', still flooded Monday July 23. PNA says the provincial resolution was passed 'Sunday afternoon' (conflicts with SunStar's July 21).",
+   "kind": "flood",
+   "cause": "Rains from Tropical Depression Josie enhancing the southwest monsoon",
+   "storm": "Josie",
+   "habagat": true,
+   "province_calamity": true,
+   "towns": [
+    {
+     "municipality": "Samal",
+     "evidence": "flooded",
+     "barangays": [
+      "Ibaba",
+      "Santa Lucia",
+      "Daan Bago East",
+      "Daan Bago West",
+      "San Juan",
+      "San Roque",
+      "Tabing-Ilog",
+      "Sapa",
+      "East Calaguiman",
+      "West Calaguiman"
+     ],
+     "note": "deep floodwaters"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "note": "Plaza Mayor commercial district and nearby villages; 2 deaths when a wall collapsed during the flooding"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "A. Rivera",
+      "Culis",
+      "Saba",
+      "Mandama",
+      "Daungan",
+      "Pulo",
+      "Cataning",
+      "Mabuco",
+      "Bamban",
+      "Mabiga",
+      "Burgos",
+      "Palihan",
+      "Balsik"
+     ],
+     "note": "2 to over 6 ft; Almacen 7-10 ft (Radyo Inquirer)"
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded",
+     "note": "three barangays, 0.5-3 ft"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Mabini Extension",
+      "Sta. Isabel",
+      "Daang Bago"
+     ],
+     "note": "Pita and Sapang Balas SCTEX tunnels also flooded"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "evacuation",
+     "note": "42 families (178 people), pre-emptive"
+    },
+    {
+     "municipality": "Morong",
+     "evidence": "evacuation",
+     "barangays": [
+      "Sabang",
+      "Poblacion",
+      "Mabayo"
+     ],
+     "note": "56 families, pre-emptive"
+    }
+   ],
+   "impact": "Province-wide state of calamity; Balanga and Dinalupihan also declared. MacArthur and Roman highways impassable to all vehicles; red rainfall warning 1 p.m. Sunday. Two deaths in Balanga.",
+   "deaths": 2,
+   "sources": [
+    {
+     "publisher": "SunStar Pampanga",
+     "title": "Bataan under state of calamity",
+     "url": "https://www.sunstar.com.ph/pampanga/local-news/bataan-under-state-of-calamity",
+     "published": "2018-07-23"
+    },
+    {
+     "publisher": "The Philippine Star",
+     "title": "Marikina City, 2 Bataan towns under state of calamity",
+     "url": "https://www.philstar.com/headlines/2018/07/22/1835796/headlines",
+     "published": "2018-07-22"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "Balanga, Dinalupihan in Bataan placed under state of calamity",
+     "url": "https://www.gmanetwork.com/news/story/661349",
+     "published": "2018-07-22"
+    },
+    {
+     "publisher": "Philippine News Agency",
+     "title": "Bataan placed under state of calamity",
+     "url": "https://www.pna.gov.ph/articles/1042268",
+     "published": null,
+     "note": "page shows no date"
+    },
+    {
+     "publisher": "Radyo Inquirer",
+     "title": "2 patay sa pagbaha sa Bataan",
+     "url": "https://radyo.inquirer.net/129738/2-patay-sa-pagbaha-sa-bataan",
+     "published": "2018-07-23"
+    }
+   ],
+   "period": "2018-07"
+  },
+  {
+   "id": "2018-08-11-karding",
+   "start_date": "2018-08-11",
+   "end_date": "2018-08-15",
+   "date_basis": "inferred",
+   "date_note": "PTV (2018-08-17): flooding started 'Saturday' in Hermosa, still flooded at a 'Wednesday' briefing; SunStar (2018-08-13): PDRRMO spoke 'Monday'.",
+   "kind": "flood",
+   "cause": "Heavy monsoon rains (Tropical Depression Karding period) and dike breaches in Hermosa and Dinalupihan; PAGASA orange rainfall warning",
+   "storm": "Karding",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "Daungan",
+      "Parayray",
+      "Pulo",
+      "Saba",
+      "Mandama",
+      "Balsik"
+     ],
+     "note": "over 4 ft, up to 6 ft; neck-deep in places"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Luakan",
+      "Mabini Extension",
+      "Saguing",
+      "San Ramon",
+      "Sta. Isabel",
+      "Layac"
+     ],
+     "note": "Luakan dike collapsed; 47 families (186 people) evacuated"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded",
+     "barangays": [
+      "Balut 2",
+      "Wawa"
+     ]
+    }
+   ],
+   "impact": "At least 16 barangays under 1-4 ft (SunStar); dike breaches at Pulo (130 m) and Saba (110 m); P15 million agricultural damage (PTV).",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "SunStar Pampanga",
+     "title": "16 villages in Bataan under water",
+     "url": "https://www.sunstar.com.ph/pampanga/local-news/16-villages-in-bataan-under-water",
+     "published": "2018-08-13"
+    },
+    {
+     "publisher": "PTV News",
+     "title": "Damaged dikes worsen flood in Bataan town",
+     "url": "https://ptvnews.ph/damaged-dikes-worsen-flood-bataan-town/",
+     "published": "2018-08-17"
+    }
+   ],
+   "period": "2018-08"
+  },
+  {
+   "id": "2018-09-ompong",
+   "start_date": null,
+   "end_date": null,
+   "period": "2018-09",
+   "date_basis": "not_stated",
+   "date_note": "Article mentions only 'Saturday'; its publication date was not pinned down. Typhoon Ompong (Mangkhut) crossed northern Luzon in mid-September 2018.",
+   "kind": "flood",
+   "cause": "Typhoon Ompong",
+   "storm": "Ompong",
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Abucay",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Limay",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Morong",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "evacuation"
+    }
+   ],
+   "impact": "279 families / 1,286 persons in evacuation centers; flooded areas mentioned without detail.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine News Agency",
+     "title": "Over 1k people evacuated as 'Ompong' batters Bataan",
+     "url": "https://www.pna.gov.ph/articles/1048109",
+     "published": null,
+     "note": "opened in an earlier session; date to be pinned down"
+    }
+   ]
+  },
+  {
+   "id": "2019-08-02-flash",
+   "start_date": "2019-08-02",
+   "end_date": "2019-08-03",
+   "date_basis": "inferred",
+   "date_note": "Inquirer (2019-08-02): 'Friday afternoon'; PTV (2019-08-04): flash floods 'Saturday', a 'two-day flood'.",
+   "kind": "flood",
+   "cause": "Continuous heavy rains (flash floods); debris clogging the Sibacan River",
+   "storm": null,
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "Daungan",
+      "Pulo",
+      "San Pedro"
+     ],
+     "note": "11 barangays; 3-5 ft still on Sunday"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "note": "5 barangays"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded",
+     "note": "3 barangays"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded",
+     "note": "2 barangays"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "note": "1 barangay; temporary bridge over Sibacan River collapsed"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "flooded",
+     "note": "1 barangay"
+    },
+    {
+     "municipality": "Morong",
+     "evidence": "flooded",
+     "note": "1 barangay"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded",
+     "note": "named by Inquirer"
+    }
+   ],
+   "impact": "Floods 2-5 ft (Inquirer) or 1-5 ft (PTV); 7,650 families affected (PDRRMO); 40 families in evacuation centers for a day; no deaths.",
+   "deaths": 0,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Floods submerge 6 Bataan towns",
+     "url": "https://newsinfo.inquirer.net/1149311/floods-submerge-6-bataan-towns",
+     "published": "2019-08-02"
+    },
+    {
+     "publisher": "PTV News",
+     "title": "Flash floods affect nearly 8K residents in Bataan",
+     "url": "https://ptvnews.ph/?p=128430",
+     "published": "2019-08-04"
+    },
+    {
+     "publisher": "PressOne.PH",
+     "title": "About 8K Bataan residents suffer from flash floods",
+     "url": "https://pressone.ph/?p=3859",
+     "published": "2019-08-05"
+    }
+   ],
+   "period": "2019-08"
+  },
+  {
+   "id": "2019-09-09-habagat",
+   "start_date": "2019-09-09",
+   "end_date": "2019-09-10",
+   "date_basis": "inferred",
+   "date_note": "Inquirer (2019-09-09): 'Monday'; GMA (2019-09-10): two Hermosa barangays remain flooded.",
+   "kind": "flood",
+   "cause": "Incessant southwest monsoon (habagat) rains",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "Polo",
+      "San Pedro"
+     ],
+     "note": "waist-deep"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "San Ramon"
+     ],
+     "note": "3 ft; rice fields and fishponds"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded",
+     "note": "low-lying areas, 3 ft"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "barangays": [
+      "Puerto Rivas Itaas",
+      "Puerto Rivas Ibaba"
+     ]
+    }
+   ],
+   "impact": "Waist-deep floods in Hermosa; classes suspended in Hermosa, Dinalupihan and Orani.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Bataan villages submerged in waist-deep flood",
+     "url": "https://newsinfo.inquirer.net/?p=1162628",
+     "published": "2019-09-09"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "Two barangays in Hermosa, Bataan remain flooded after monsoon rains",
+     "url": "https://gmanetwork.com/news/topstories/regions/707509/two-barangays-in-hermosa-bataan-remain-flooded-after-monsoon-rains/story",
+     "published": "2019-09-10"
+    }
+   ],
+   "period": "2019-09"
+  },
+  {
+   "id": "2021-07-29-habagat",
+   "start_date": "2021-07-29",
+   "end_date": "2021-07-30",
+   "date_basis": "inferred",
+   "date_note": "Peak flooding 'Thursday' (2021-07-29) per Inquirer, Manila Bulletin and Rappler; subsiding Friday morning. Inquirer 1466467 shows no date on the page (image file dated 072921).",
+   "kind": "flood",
+   "cause": "Non-stop southwest monsoon (habagat) rains; Almacen River swelling and high tide in Hermosa",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Tenejero",
+      "Cataning",
+      "Central",
+      "Almacen",
+      "San Pedro",
+      "Pulo",
+      "Daungan",
+      "A. Rivera",
+      "Culis",
+      "Palihan"
+     ],
+     "note": "12 of 23 barangays; waist- to chest-deep, up to rooftops; state of calamity"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "barangays": [
+      "Puerto Rivas"
+     ],
+     "note": "at least 12 villages, up to 6 ft; state of calamity"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "note": "26 of 46 villages severely flooded; state of calamity"
+    },
+    {
+     "municipality": "Bagac",
+     "evidence": "flooded",
+     "barangays": [
+      "Pag-asa"
+     ],
+     "note": "floodwater to roofs; over 70 residents rescued"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded",
+     "barangays": [
+      "Tala"
+     ],
+     "note": "part of a shrine collapsed from continuous flooding"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "flooded",
+     "note": "5-6 ft (Manila Bulletin)"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded",
+     "note": "5-6 ft (Manila Bulletin)"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "evacuation"
+    },
+    {
+     "municipality": "Morong",
+     "evidence": "evacuation",
+     "barangays": [
+      "Poblacion"
+     ]
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "evacuation"
+    }
+   ],
+   "impact": "About 12,227 families brought to evacuation centers (Manila Bulletin, PDRRMO); GMA reported 1,599 families (6,613 people) in centers across 47 barangays; figures differ by source and time. Crop damage about P86 million (MB). No deaths reported.",
+   "deaths": 0,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Flood hits Bataan villages due to torrential rains",
+     "url": "https://newsinfo.inquirer.net/1466467/flood-hits-bataan-villages-due-to-torrential-rains/amp",
+     "published": null,
+     "note": "page shows no date"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "'State of calamity' declared in 3 Bataan areas due to floods",
+     "url": "https://newsinfo.inquirer.net/1466968/state-of-calamity-declared-in-3-bataan-areas-due-to-floods/amp",
+     "published": null,
+     "note": "page shows no date"
+    },
+    {
+     "publisher": "Manila Bulletin",
+     "title": "Floods put two Bataan towns under state of calamity",
+     "url": "https://mb.com.ph/2021/07/30/floods-put-two-bataan-towns-under-state-of-calamity/",
+     "published": "2021-07-30"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "Residents use makeshift floaters, boats to wade through flood in provinces",
+     "url": "https://gmanetwork.com/news/topstories/regions/797401/residents-use-makeshift-floaters-boats-to-wade-through-flood-in-provinces/story",
+     "published": "2021-07-29"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "Hermosa, Bataan under state of calamity due to floods",
+     "url": "https://gmanetwork.com/news/topstories/regions/797445/hermosa-bataan-under-state-of-calamity-due-to-floods/story",
+     "published": "2021-07-30"
+    },
+    {
+     "publisher": "Rappler",
+     "title": "Bataan floods (story 1178942)",
+     "url": "https://www.rappler.com/?p=1178942",
+     "published": null,
+     "note": "page text was an AI-generated summary; check the full article"
+    }
+   ],
+   "period": "2021-07"
+  },
+  {
+   "id": "2022-07-11-hightide",
+   "start_date": "2022-07-11",
+   "end_date": "2022-07-14",
+   "date_basis": "inferred",
+   "date_note": "Article (2022-07-15): floods 'since Monday', reported Thursday.",
+   "kind": "flood",
+   "cause": "High tide and heavy rains enhanced by the southwest monsoon",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Samal",
+     "evidence": "flooded",
+     "note": "rivers and fishponds overflowed"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "flooded"
+    }
+   ],
+   "impact": "Foot-high floods in low-lying villages and rice paddies.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "High tide, floods swamp low-lying areas in Central, North Luzon",
+     "url": "https://newsinfo.inquirer.net/1628309/high-tide-floods-swamp-low-lying-areas-in-central-north-luzon",
+     "published": "2022-07-15"
+    }
+   ],
+   "period": "2022-07"
+  },
+  {
+   "id": "2022-09-03-henry",
+   "start_date": "2022-09-03",
+   "end_date": "2022-09-03",
+   "date_basis": "inferred",
+   "date_note": "GMA (2022-09-03) reported 'Saturday'; Inquirer page undated (embedded tweet 2022-09-03).",
+   "kind": "flood",
+   "cause": "Rain from Typhoon Henry enhancing the southwest monsoon; nearby creek",
+   "storm": "Henry",
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded",
+     "barangays": [
+      "Ipag"
+     ],
+     "note": "thigh-high, Purok 4"
+    }
+   ],
+   "impact": "Flooding in several areas of Mariveles.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Inclement conditions cause flooding in Bataan areas",
+     "url": "https://gmanetwork.com/news/topstories/regions/843679/inclement-conditions-cause-flooding-in-bataan-areas/story",
+     "published": "2022-09-03"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Typhoon Henry, southwest monsoon bring flood to Bataan",
+     "url": "https://newsinfo.inquirer.net/1657949/typhoon-henry-southwest-monsoon-bring-flood-to-bataan/amp",
+     "published": null,
+     "note": "page shows no date"
+    }
+   ],
+   "period": "2022-09"
+  },
+  {
+   "id": "2023-07-29-egay",
+   "start_date": "2023-07-29",
+   "end_date": "2023-07-29",
+   "date_basis": "inferred",
+   "date_note": "GMA (2023-07-29): 'Saturday'; DZRH: governor declared the province under a state of calamity on July 29.",
+   "kind": "flood",
+   "cause": "Habagat enhanced by Typhoon Egay (Doksuri) and Tropical Storm Falcon",
+   "storm": "Egay",
+   "habagat": true,
+   "province_calamity": true,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen"
+     ],
+     "note": "residents evacuated"
+    }
+   ],
+   "impact": "Province-wide state of calamity (Resolution 321) citing widespread flooding in low-lying areas; 639 families (2,357 people) in evacuation sites; agricultural losses P22.4 million.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Some residents of Bataan village evacuate due to flooding",
+     "url": "https://gmanetwork.com/news/topstories/regions/877301/some-residents-of-bataan-village-evacuate-due-to-flooding/story",
+     "published": "2023-07-29"
+    },
+    {
+     "publisher": "DZRH News",
+     "title": "Bataan under state of calamity",
+     "url": "https://www.dzrh.com.ph/post/bataan-under-state-of-calamity",
+     "published": "2023-07-30"
+    }
+   ],
+   "period": "2023-07"
+  },
+  {
+   "id": "2024-07-22-carina",
+   "start_date": "2024-07-22",
+   "end_date": "2024-07-24",
+   "date_basis": "stated",
+   "date_note": "NDRRMC SitRep 17 lists each flooded barangay with date and time (22 and 24 July 2024). Manila Times: rain 'Tuesday night and Wednesday'.",
+   "kind": "flood",
+   "cause": "Southwest monsoon enhanced by Typhoon Carina (Gaemi), with high tide",
+   "storm": "Carina",
+   "habagat": true,
+   "province_calamity": true,
+   "towns": [
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded",
+     "barangays": [
+      "Balon Anito",
+      "Yakal",
+      "Kamagong",
+      "Acacia",
+      "Cabcaben",
+      "Ipag",
+      "San Isidro"
+     ],
+     "note": "about 1-1.6 ft; names as written in the sitrep"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "barangays": [
+      "Ibayo"
+     ],
+     "note": "2 ft"
+    },
+    {
+     "municipality": "Bagac",
+     "evidence": "flooded",
+     "barangays": [
+      "Ibis"
+     ],
+     "note": "3.75 ft"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded",
+     "barangays": [
+      "Capitangan"
+     ],
+     "note": "1.08 ft"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded",
+     "barangays": [
+      "Balut Dos",
+      "Wakas South",
+      "Wawa"
+     ],
+     "note": "1 ft"
+    }
+   ],
+   "impact": "RDRRMC: 134 flooded barangays in Bataan (Inquirer); five of 11 towns and the city reported flooding (Manila Times, PDRRMO). Province under a state of calamity (Inquirer; declaration date not stated).",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "NDRRMC (via AHA Centre)",
+     "title": "SitRep No. 17, Combined Effects of Southwest Monsoon, TC Butchoy and TC Carina",
+     "url": "https://adinet.ahacentre.org/assets/uploads/supported_doc/20240727-SitRep_No_17_for_the_Combined_Effects_of_Southwest_Monsoon_TC_BUTCHOY_2024_and_TC_CARINA_2024.pdf",
+     "published": "2024-07-26"
+    },
+    {
+     "publisher": "The Manila Times",
+     "title": "5 Bataan towns suffer massive flooding",
+     "url": "https://manilatimes.net/2024/07/26/regions/5-bataan-towns-suffer-massive-flooding/1959880/amp",
+     "published": "2024-07-26",
+     "note": "date from the URL"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Central Luzon bears brunt of Carina",
+     "url": "https://NEWSINFO.inquirer.net/1966260/central-luzon-bears-brunt-of-carina/amp",
+     "published": null,
+     "note": "page shows no date"
+    }
+   ],
+   "period": "2024-07"
+  },
+  {
+   "id": "2024-09-04-enteng",
+   "start_date": "2024-09-04",
+   "end_date": "2024-09-05",
+   "date_basis": "inferred",
+   "date_note": "Article (2024-09-05): residents say 'yesterday' and 'today'; floods followed Severe Tropical Storm Enteng.",
+   "kind": "flood",
+   "cause": "Rains after Severe Tropical Storm Enteng; residents blame clogged drainage",
+   "storm": "Enteng",
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen"
+     ],
+     "note": "school and chapel submerged"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Sto. Niño"
+     ],
+     "note": "nine barangays remained flooded; knee- to chest-deep"
+    }
+   ],
+   "impact": "Chest-deep floods; nine Dinalupihan barangays still flooded.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Residents blame drainage clogging for Bataan flood",
+     "url": "https://gmanetwork.com/news/topstories/regions/919486/residents-blame-drainage-clogging-for-bataan-flood/story",
+     "published": "2024-09-05"
+    }
+   ],
+   "period": "2024-09"
+  },
+  {
+   "id": "2025-07-23-habagat",
+   "start_date": "2025-07-23",
+   "end_date": "2025-07-24",
+   "date_basis": "inferred",
+   "date_note": "Inquirer (2025-07-25): photo 'Wednesday', state of calamity 'Thursday' (July 24).",
+   "kind": "flood",
+   "cause": "Southwest monsoon enhanced by Crising, Tropical Storm Dante and Typhoon Emong",
+   "storm": "Emong",
+   "habagat": true,
+   "province_calamity": true,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded"
+    }
+   ],
+   "impact": "Province-wide state of calamity (Resolution 330). Inquirer: 44,740 families / 167,078 people affected and 1,731 families (5,923 people) in evacuation centers as of Thursday. Daily Tribune: 172,364 families / 662,038 individuals affected in all 11 towns and the city. The figures differ by source and time.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "State of calamity declared in Bataan due to widespread flooding",
+     "url": "https://newsinfo.inquirer.net/2086592/state-of-calamity-declared-in-bataan-due-to-widesspread-flooding",
+     "published": "2025-07-24",
+     "note": "opened in an earlier session"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Widespread flooding hits Pampanga, Bataan",
+     "url": "https://newsinfo.inquirer.net/2086780/widespread-flooding-hits-pampanga-bataan",
+     "published": "2025-07-25"
+    },
+    {
+     "publisher": "Daily Tribune",
+     "title": "Pampanga, Bataan under state of calamity",
+     "url": "https://tribune.net.ph/2025/07/24/pampanga-bataan-under-state-of-calamity",
+     "published": "2025-07-25"
+    }
+   ],
+   "period": "2025-07"
+  },
+  {
+   "id": "2026-08-08-habagat",
+   "start_date": "2026-08-08",
+   "end_date": "2026-08-09",
+   "date_basis": "stated",
+   "date_note": "Inquirer: Saturday afternoon, 2026-08-08; Daily Tribune: Hermosa flooding reported Sunday 2026-08-09.",
+   "kind": "flood",
+   "cause": "Southwest monsoon (habagat), intensified by tropical cyclone activity",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Sto. Cristo",
+      "Daungan",
+      "San Pedro",
+      "Cataning",
+      "Almaden"
+     ],
+     "note": "knee-high; 'Almaden' as written by the Tribune (Almacen is the known barangay)"
+    },
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded",
+     "barangays": [
+      "San Isidro",
+      "Ipag"
+     ],
+     "note": "up to 3 ft"
+    },
+    {
+     "municipality": "Abucay",
+     "evidence": "flooded",
+     "note": "over 2 ft in rice fields"
+    },
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded"
+    },
+    {
+     "municipality": "Orion",
+     "evidence": "flooded"
+    }
+   ],
+   "impact": "Floods in six towns; Hermosa kept its San Pedro evacuation center open; red rainfall warning.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Floods hit 6 towns in Bataan",
+     "url": "https://newsinfo.inquirer.net/2280264/floods-hit-6-towns-in-bataan",
+     "published": "2026-08-08",
+     "note": "opened in an earlier session"
+    },
+    {
+     "publisher": "Daily Tribune",
+     "title": "Floods, bridge damage hit CL",
+     "url": "https://tribune.net.ph/2026/08/09/floods-bridge-damage-hit-cl",
+     "published": "2026-08-10"
+    }
+   ],
+   "period": "2026-08"
+  },
+  {
+   "id": "2026-08-19-habagat",
+   "start_date": "2026-08-19",
+   "end_date": "2026-08-20",
+   "date_basis": "stated",
+   "date_note": "Daily Tribune: Mariveles flood alert on 19 August 2026; province under a state of calamity effective Thursday 20 August (Resolution 365). Flooding had built up over about 18 days of rain.",
+   "kind": "flood",
+   "cause": "Southwest monsoon (habagat) with Typhoons Luis and Maymay; saturated soil; high tide",
+   "storm": "Luis/Maymay",
+   "habagat": true,
+   "province_calamity": true,
+   "towns": [
+    {
+     "municipality": "Mariveles",
+     "evidence": "flooded",
+     "barangays": [
+      "Townsite",
+      "Cabcaben",
+      "San Carlos",
+      "San Isidro"
+     ],
+     "note": "Roman Highway flooded at Cabcaben and Townsite"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "Daungan",
+      "San Pedro",
+      "A. Rivera"
+     ]
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "note": "low-lying villages"
+    }
+   ],
+   "impact": "About 8,000 residents evacuated (about 4,000 in centers, 4,000 with relatives); 70 barangays in eight towns/cities; 20 injured (GMA). As of Wednesday 793,330 people / 270,233 families affected; 225 houses damaged, 14 destroyed; agriculture P56.53M; infrastructure P542.7M (Inquirer). Governor: over 1,400 mm of rain in 18 days (as reported).",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Bataan declares state of calamity due to widespread floods",
+     "url": "https://newsinfo.inquirer.net/2289402/bataan-declares-state-of-calamity-due-to-widespread-floods",
+     "published": "2026-08-20",
+     "note": "opened in an earlier session"
+    },
+    {
+     "publisher": "Daily Tribune",
+     "title": "MDRRMO Mariveles issues flooding in main thoroughfare",
+     "url": "https://tribune.net.ph/2026/08/19/mdrrmo-mariveles-issues-flooding-in-main-thoroughfare",
+     "published": "2026-08-19"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "State of calamity recommended in Bataan due to flooding, governor says",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/999202/state-of-calamity-recommended-in-bataan-due-to-flooding-governor-says/story/",
+     "published": "2026-08-20"
+    },
+    {
+     "publisher": "DZRH News",
+     "title": "Bataan declared under a state of calamity",
+     "url": "https://www.dzrh.com.ph/post/bataan-declared-under-a-state-of-calamity",
+     "published": "2026-08-20"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "88 areas under state of calamity due to habagat, Luis, Maymay",
+     "url": "https://www.gmanetwork.com/news/topstories/nation/999337/88-areas-under-state-of-calamity-due-to-habagat-luis-maymay/story/",
+     "published": "2026-08-21"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Zambales, Bataan declare calamity state after 'habagat' flooding",
+     "url": "https://newsinfo.inquirer.net/2289625/zambales-bataan-declare-calamity-state-after-habagat-flooding",
+     "published": "2026-08-22"
+    }
+   ],
+   "period": "2026-08"
+  },
+  {
+   "id": "2026-08-28-dinalupihan",
+   "start_date": "2026-08-28",
+   "end_date": "2026-08-28",
+   "date_basis": "inferred",
+   "date_note": "Article (2026-08-29): 'Friday evening'.",
+   "kind": "flood",
+   "cause": "Heavy rain; river overflow in San Pablo",
+   "storm": null,
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "San Pablo",
+      "Pinulot"
+     ],
+     "note": "San Pablo 6-7 ft; Pita Tunnel road 24 in"
+    }
+   ],
+   "impact": "Overnight flooding with rescues; no casualty reported.",
+   "deaths": 0,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "WATCH: Rescue ops launched amid overnight flooding in Dinalupihan, Bataan",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/1000315/watch-rescue-ops-launched-amid-overnight-flooding-in-dinalupihan-bataan/story/",
+     "published": "2026-08-29",
+     "note": "opened in an earlier session"
+    }
+   ],
+   "period": "2026-08"
+  },
+  {
+   "id": "2026-09-pita-debris",
+   "start_date": null,
+   "end_date": null,
+   "period": "2026-09",
+   "date_basis": "not_stated",
+   "date_note": "Reported 2026-09-05 (GMA); flood date not stated.",
+   "kind": "debris_flow",
+   "cause": "Rock- and log-laden flow traced to landslides in three mountain ranges (DPWH and provincial engineers); clogged waterways",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Pita"
+     ],
+     "note": "Purok 5"
+    }
+   ],
+   "impact": "Nine houses wrecked in Barangay Pita; debris flowed into the Pita, Dalai and Pagalanggang rivers.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Rock-laden floodwaters wreck 9 houses in Bataan",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/1001304/rock-laden-floodwaters-wreck-9-houses-in-bataan/story/",
+     "published": "2026-09-05",
+     "note": "opened in an earlier session"
+    },
+    {
+     "publisher": "Provincial Government of Bataan (1Bataan)",
+     "title": "Strong flood traced to landslide, clogged waterways",
+     "url": "https://bataan.gov.ph/news/strong-flood-traced-to-landslide-clogged-waterways",
+     "published": "2026-09-14"
+    }
+   ]
+  },
+  {
+   "id": "2026-09-07-habagat",
+   "start_date": "2026-09-07",
+   "end_date": "2026-09-08",
+   "date_basis": "stated",
+   "date_note": "Dates stated in the Inquirer and Daily Tribune reports.",
+   "kind": "flood",
+   "cause": "Southwest monsoon, continuous rains",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "barangays": [
+      "Puerto Rivas",
+      "Sibacan",
+      "Tenejero"
+     ],
+     "note": "2-3 ft"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "A. Rivera",
+      "Bacong",
+      "Mambog",
+      "Culis",
+      "Cataning"
+     ],
+     "note": "Cataning waist-deep, called the highest recorded by police"
+    },
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Sto. Niño",
+      "Pita",
+      "Gen. Luna",
+      "San Pablo"
+     ]
+    },
+    {
+     "municipality": "Pilar",
+     "evidence": "flooded",
+     "barangays": [
+      "Panilao",
+      "Balut"
+     ]
+    }
+   ],
+   "impact": "845 people (246 families) in nine evacuation centers; below knee to waist-deep.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "Flooding hits Balanga City, Bataan",
+     "url": "https://newsinfo.inquirer.net/2301543/flooding-hits-balanga-city-bataan",
+     "published": "2026-09-08",
+     "note": "opened in an earlier session"
+    },
+    {
+     "publisher": "Daily Tribune",
+     "title": "Bataan floods force 845 people into evacuation centers",
+     "url": "https://tribune.net.ph/2026/09/09/bataan-floods-displace-845-people",
+     "published": "2026-09-09",
+     "note": "opened in an earlier session"
+    }
+   ],
+   "period": "2026-09"
+  }
+ ],
+ "leads_not_used": [
+  {
+   "what": "Undated Rappler monsoon roundup: Hermosa 23 barangays submerged; evacuations from Hermosa, Abucay, Dinalupihan; 4,000+ families affected",
+   "url": "https://www.rappler.com/?p=39656",
+   "why_not_used": "no date on the page"
+  },
+  {
+   "what": "Inquirer 'State of calamity up in flooded areas': two Bataan deaths (Morong, Mariveles); four Bataan villages flooded 'Thursday'",
+   "url": "https://newsinfo.inquirer.net/807678/state-of-calamity-up-in-flooded-areas/amp",
+   "why_not_used": "no date on the page (image path suggests August 2016)"
+  },
+  {
+   "what": "Inquirer 'Floods surprise Central Luzon folk': a person missing in Hermosa; Bataan among provinces with flooded villages",
+   "url": "https://newsinfo.inquirer.net/18997/floods-surprise-central-luzon-folk/amp",
+   "why_not_used": "no date on the page; no Bataan town named as flooded"
+  },
+  {
+   "what": "Daily Tribune 2026-08-14 'Rising floodwaters force Bataan residents to evacuate'",
+   "url": "https://tribune.net.ph/2026/08/14/rising-floodwaters-force-bataan-residents-to-evacuate",
+   "why_not_used": "only the headline could be read"
+  },
+  {
+   "what": "PNA articles 1148155 ('Fabian', habagat submerge Bataan towns), 1148814 (48K displaced), 1148257 (45 families evacuate), 1042556 (habagat affects 39K families), 1038444 (3 Bataan towns flooded), 1044593 (15 villages, heavy rain and high tide), 1045057, 1076909",
+   "url": "https://www.pna.gov.ph/",
+   "why_not_used": "PNA refused automated fetches in this session; headlines only"
+  },
+  {
+   "what": "PIA: Bataan declares state of calamity amid flooding affecting over 660K people (likely July 2025)",
+   "url": "https://pia.gov.ph/news/bataan-declares-state-of-calamity-amid-flooding-affecting-over-660k-people/",
+   "why_not_used": "server error; the same figures were read in the Daily Tribune and are in 2025-07-23-habagat"
+  },
+  {
+   "what": "Punto Central Luzon 'Bataan affected by flood'",
+   "url": "https://punto.com.ph/bataan-affected-by-flood/",
+   "why_not_used": "server error"
+  },
+  {
+   "what": "Manila Bulletin 2018-07-17 'Villages in Bataan, Bulacan submerged in floods'",
+   "url": "https://mb.com.ph/2018/07/17/villages-in-bataan-bulacan-submerged-in-floods/",
+   "why_not_used": "not opened (event already covered by PNA)"
+  }
+ ],
+ "checked_no_bataan_flood": [
+  {
+   "what": "Typhoon Glenda (Rammasun), July 2014: Bataan named among areas under a state of calamity for wind damage",
+   "url": "https://newsinfo.inquirer.net/620385/6-areas-placed-under-state-of-calamity",
+   "finding": "no flooding stated for Bataan"
+  },
+  {
+   "what": "Typhoon Jolina (Conson), September 2021",
+   "url": "https://newsinfo.inquirer.net/1485458/over-28k-flee-homes-as-jolina-crosses-luzon",
+   "finding": "only a Signal No. 2 mention for Bataan; no flood report found"
+  },
+  {
+   "what": "Goring and Hanna habagat, August 2023 (DSWD DROMIC Report 6)",
+   "url": "https://dromic.dswd.gov.ph/wp-content/uploads/2023/08/DSWD-DROMIC-Report-6-on-the-Effects-of-Southwest-Monsoon-enhanced-by-STY-Goring-and-STS-Hanna-as-of-31-August-2023-6PM.pdf",
+   "finding": "4 barangays affected and 76 families in evacuation centers (Bagac, Mariveles, Morong, Orion); no flooding listed"
+  },
+  {
+   "what": "Severe Tropical Storm Kristine (Trami), October 2024",
+   "url": "https://newsinfo.inquirer.net/?p=1997300",
+   "finding": "yellow rainfall warning only; no Bataan flooding reported"
+  },
+  {
+   "what": "Typhoon Ompong, SunStar Pampanga 2018-09-15",
+   "url": "https://www.sunstar.com.ph/pampanga/local-news/ompong-leaves-54-villages-flooded",
+   "finding": "article is about Pampanga only"
+  },
+  {
+   "what": "Red rainfall warning, 2026-09-08",
+   "url": "https://www.gmanetwork.com/news/weather/content/1001660/rainfall-alert-red-in-parts-of-bataan-yellow-in-metro-manila-san-simon-tuesday-8-p-m/story/",
+   "finding": "alert only; flooding that day is in 2026-09-07-habagat"
+  }
+ ],
+ "not_reached": [
+  "EM-DAT (registration required)",
+  "Copernicus EMS (no Bataan-specific activation found)",
+  "Global Flood Database (no Bataan-specific search tool used)"
+ ]
+}
