@@ -13,6 +13,7 @@ import { EXPLAIN } from "../core/explain.js";
 import { loadingState, errorState, onRetry, openDialog } from "../core/ui.js";
 import { buildHash } from "../core/router.js";
 import { renderClimate, mountClimateCharts, explainClimate } from "./parts/climate.js";
+import { renderEvidence, explainEvidence } from "./parts/evidence.js";
 
 const PERIODS = [7, 30, 90];
 const STORE_KEY = "agos.analytics";
@@ -65,6 +66,7 @@ export async function mount(container) {
     history: null,
     skill: null,
     climate: null,
+    evidence: null,
     climateTown: typeof prefs.climateTown === "string" ? prefs.climateTown : "Balanga",
     cleanups: [],
   };
@@ -165,6 +167,13 @@ export async function mount(container) {
     return renderClimate(c.data, state.climateTown);
   }
 
+  function evidenceSection() {
+    const e = state.evidence;
+    if (!e) return "";
+    if (e.error) return `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("evidence.title"))}</h2></div></div>${errorState(e.error)}</section>`;
+    return renderEvidence(e.data);
+  }
+
   function skillSection() {
     const s = state.skill;
     if (s.error) return `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("analytics.accuracy"))}</h2></div></div>${errorState(s.error)}</section>`;
@@ -209,7 +218,7 @@ export async function mount(container) {
 
   function render() {
     teardownCharts();
-    body.innerHTML = historySection() + climateSection() + skillSection();
+    body.innerHTML = historySection() + climateSection() + evidenceSection() + skillSection();
 
     body.querySelectorAll("[data-town]").forEach((chip) => chip.addEventListener("click", () => {
       const name = chip.dataset.town;
@@ -245,7 +254,9 @@ export async function mount(container) {
 
   function explain(kind) {
     const fil = getLang() === "fil";
-    if (kind === "climate") {
+    if (kind === "evidence") {
+      openDialog(t("evidence.title"), explainEvidence(fil));
+    } else if (kind === "climate") {
       openDialog(t("climate.title"), explainClimate(fil));
     } else if (kind === "history") {
       openDialog(t("analytics.rainHistory"), fil ? `
@@ -271,13 +282,15 @@ export async function mount(container) {
   async function load() {
     teardownCharts();
     body.innerHTML = loadingState();
-    const [historyResult, skillResult, climateResult] = await Promise.allSettled([
+    const [historyResult, skillResult, climateResult, evidenceResult] = await Promise.allSettled([
       getJSON(`/api/history?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON(`/skill/rain?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON("/api/climate", { ttlMs: 30 * 60 * 1000, timeoutMs: 30000 }),
+      getJSON("/api/flood-evidence", { ttlMs: 30 * 60 * 1000, timeoutMs: 45000 }),
     ]);
     if (!state.alive) return;
     state.history = historyResult.status === "fulfilled" ? { data: historyResult.value } : { error: historyResult.reason };
+    state.evidence = evidenceResult.status === "fulfilled" ? { data: evidenceResult.value } : { error: evidenceResult.reason };
     state.climate = climateResult.status === "fulfilled" ? { data: climateResult.value } : { error: climateResult.reason };
     state.skill = skillResult.status === "fulfilled" ? { data: skillResult.value } : { error: skillResult.reason };
     render();
