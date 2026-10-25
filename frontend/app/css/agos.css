@@ -703,20 +703,29 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 
 .user-marker { width: 16px; height: 16px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(37, 99, 235, .25); }
 
-/* Typhoon from an article: spinning spiral (illustration) sized by map.js to
-   the stated wind extent. Only the label takes clicks, so the map can still
-   be dragged under a large storm. */
-.typhoon-marker { --size: 84px; width: var(--size); height: var(--size); display: grid; place-items: center; pointer-events: none; }
-.typhoon-spin {
+/* Typhoon from an article: layered storm illustration sized by map.js to the
+   stated wind extent. Only the label takes clicks, so the map can still be
+   dragged under a large storm.
+   The layers turn at different speeds (core fastest, outer haze slowest) and
+   the core breathes slightly, so it reads as moving cloud, not a turning
+   picture. Each layer is drawn once and only rotated (will-change), which
+   keeps the cloud filters from being redrawn every frame. */
+.typhoon-marker { --size: 84px; --mirror: 1; width: var(--size); height: var(--size); display: grid; place-items: center; pointer-events: none; }
+.typhoon-marker.is-south { --mirror: -1; }
+.typhoon-layer {
   grid-area: 1 / 1; width: 100%; height: 100%;
-  opacity: .88;
-  will-change: transform; /* rotate the drawn layer instead of redrawing the cloud filter */
-  animation: typhoon-spin 9s linear infinite;
+  will-change: transform;
+  animation: typhoon-spin var(--spin, 14s) linear infinite;
 }
-/* Counter-clockwise north of the equator; mirrored and clockwise south of it. */
-@keyframes typhoon-spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-@keyframes typhoon-spin-south { from { transform: scaleX(-1) rotate(0deg); } to { transform: scaleX(-1) rotate(-360deg); } }
-.typhoon-marker.is-south .typhoon-spin { animation-name: typhoon-spin-south; }
+.typhoon-layer svg { display: block; }
+.typhoon-haze { --spin: 64s; }
+.typhoon-ghost { --spin: 23s; opacity: .9; }
+.typhoon-bands { --spin: 15s; opacity: .88; }
+.typhoon-core { --spin: 9s; opacity: .92; }
+.typhoon-core svg { animation: typhoon-breathe 4.5s ease-in-out infinite alternate; }
+/* Counter-clockwise north of the equator; mirrored (clockwise) south of it. */
+@keyframes typhoon-spin { from { transform: scaleX(var(--mirror)) rotate(0deg); } to { transform: scaleX(var(--mirror)) rotate(-360deg); } }
+@keyframes typhoon-breathe { from { transform: scale(.97); } to { transform: scale(1.04); } }
 .typhoon-heading {
   grid-area: 1 / 1; width: 0; height: 0; position: relative;
   transform: rotate(var(--bearing));
@@ -739,7 +748,7 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .typhoon-label:hover { border-color: #dc2626; }
 .typhoon-label:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  .typhoon-spin { animation: none !important; }
+  .typhoon-layer, .typhoon-core svg { animation: none !important; }
 }
 
 .typhoon-form { display: flex; gap: var(--space-2); }
