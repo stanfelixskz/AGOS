@@ -415,6 +415,8 @@ table.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm);
 .notice strong { color: var(--text); }
 .notice-info { background: var(--brand-soft); color: var(--text); }
 .notice-info .icon { color: var(--brand); }
+.notice-success { background: var(--success-soft); color: var(--text); }
+.notice-success .icon { color: var(--success); }
 .notice-warning { background: var(--warning-soft); color: var(--text); }
 .notice-warning .icon { color: var(--warning); }
 .notice-danger { background: var(--danger-soft); color: var(--text); }
@@ -904,4 +906,15 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
   /* Larger invisible hit area; the marker stays centered on its point. */
   .rain-marker { padding: 10px; }
   .evac-name { min-height: 40px; display: flex; align-items: center; }
+}
+
+/* Analytics: flood evidence table */
+.table .evidence-date { white-space: normal; min-width: 150px; max-width: 240px; }
+.table .evidence-date .subtle { font-weight: 400; font-size: var(--text-xs); }
+.evidence-towns-cell { min-width: 180px; max-width: 300px; white-space: normal; }
+.evidence-towns { margin: 6px 0 0; padding-left: 18px; font-size: var(--text-xs); color: var(--text-2); }
+.evidence-towns li { margin: 2px 0; }
+@media (max-width: 640px) {
+  .table .evidence-date { min-width: 108px; max-width: 140px; }
+  .table .evidence-date + td.num, .table .evidence-date ~ td.num { padding-left: 6px; padding-right: 6px; }
 }
