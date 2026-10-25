@@ -47,5 +47,31 @@ class ApiSmokeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
 
 
+@unittest.skipUnless(HAVE_API, "fastapi/httpx not installed")
+class InterfaceApiTests(unittest.TestCase):
+    """Routes for the redesigned interface (no external calls needed)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.client = TestClient(app)
+
+    def test_municipalities_list(self):
+        body = self.client.get("/api/municipalities").json()
+        self.assertEqual(body["count"], 12)
+        self.assertIn("latitude", body["municipalities"][0])
+
+    def test_evacuation_centers_are_unverified(self):
+        response = self.client.get("/api/evacuation-centers")
+        self.assertEqual(response.status_code, 200)
+        for center in response.json()["centers"]:
+            self.assertEqual(center["verification"], "unverified")
+
+    def test_unknown_municipality_detail_is_404(self):
+        self.assertEqual(self.client.get("/api/municipalities/Atlantis").status_code, 404)
+
+    def test_overview_hours_are_validated(self):
+        self.assertEqual(self.client.get("/api/overview", params={"hours": 99}).status_code, 422)
+
+
 if __name__ == "__main__":
     unittest.main()

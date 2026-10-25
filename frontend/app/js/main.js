@@ -140,7 +140,13 @@ async function show(route) {
   container.innerHTML = "";
   if (!previous || previous.view !== route.view) window.scrollTo(0, 0);
   try {
-    state.cleanup = (await module.mount(container, route)) || null;
+    const cleanup = (await module.mount(container, route)) || null;
+    if (token !== state.token) {
+      // The user navigated away while this page was still loading.
+      if (typeof cleanup === "function") cleanup();
+      return;
+    }
+    state.cleanup = cleanup;
   } catch (error) {
     console.error("AGOS: page failed", error);
     container.innerHTML = `<div class="state" role="alert"><strong>${escapeHTML(t("common.notAvailable"))}</strong><span>${escapeHTML(error.message)}</span></div>`;
