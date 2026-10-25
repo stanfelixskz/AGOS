@@ -10,7 +10,7 @@ from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
 from app.services.climate_service import climate_report
 from app.services.history_service import history_report
-from app.services import evidence_service, flood_events_service
+from app.services import evidence_service, flood_events_service, flood_model_service
 from app.services import typhoon_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
@@ -83,6 +83,15 @@ def flood_evidence():
     """How unusual rain and river flow were before each known flood, per town (AGOS database only)."""
     try:
         return evidence_service.evidence_report()
+    except ValueError as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+
+
+@router.get("/flood-model")
+def flood_model():
+    """Honest year-by-year test of a simple rain / river-flow alert rule against the known floods."""
+    try:
+        return flood_model_service.model_report()
     except ValueError as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
 
