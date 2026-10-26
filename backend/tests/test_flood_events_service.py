@@ -36,6 +36,26 @@ class RepositoryFileTests(unittest.TestCase):
                 self.assertIn(t["municipality"], MUNICIPALITIES)
 
 
+    def test_events_are_in_date_order_and_not_dated_after_the_file(self):
+        data, _ = fe.read_file()
+        dated = [e["start_date"] for e in data["events"] if e.get("start_date")]
+        self.assertEqual(dated, sorted(dated))
+        self.assertLessEqual(max(dated), data["compiled"])
+
+    def test_an_event_dated_only_by_its_article_is_never_high_confidence(self):
+        data, _ = fe.read_file()
+        for e in data["events"]:
+            if e["date_basis"] == "article_date":
+                self.assertEqual(fe.confidence(e), "medium", e["id"])
+
+    def test_inferred_towns_say_so(self):
+        # A town added only by inference (not named by the source) must be marked in its note.
+        data, _ = fe.read_file()
+        hermosa_2007 = next(e for e in data["events"] if e["id"] == "2007-08-10-chedeng-dodong")
+        note = next(t["note"] for t in hermosa_2007["towns"] if t["municipality"] == "Hermosa")
+        self.assertIn("INFERRED", note)
+
+
 class ValidateTests(unittest.TestCase):
     def check(self, *events):
         return fe.validate({"events": list(events)}, MUNICIPALITIES)
