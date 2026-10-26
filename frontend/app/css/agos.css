@@ -595,6 +595,21 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .swatches { list-style: none; margin: 8px 0 0 48px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--text-xs); color: var(--text-2); }
 .swatches li { display: flex; align-items: center; gap: 8px; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.swatch-faded { background: repeating-linear-gradient(45deg, var(--border), var(--border) 2px, transparent 2px, transparent 4px); }
+
+/* Flood factors (town drawer / page) and flood outlook (map panel) */
+.factor-banner { margin-bottom: var(--space-3); }
+.factor-banner p + p { margin-top: 4px; }
+.factor-rows { margin: 0; display: grid; gap: var(--space-3); }
+.factor-row { display: grid; gap: 2px; padding-bottom: var(--space-3); border-bottom: 1px solid var(--border); }
+.factor-row:last-child { border-bottom: 0; }
+.factor-row dt { font-weight: 600; font-size: var(--text-sm); }
+.factor-row dd { margin: 0; display: grid; gap: 2px; }
+.factor-row dd .subtle { display: block; }
+.factor-row.is-off dt, .factor-row.is-off dd { color: var(--text-3); }
+.factor-reported { margin-top: var(--space-3); }
+.factor-reported h4 { margin: 0 0 4px; }
+#replayControls .input, #replayControls .select { width: 100%; }
 
 .drawer-head { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--border); }
 .drawer-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }

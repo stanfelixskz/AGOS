@@ -15,12 +15,14 @@ import { buildHash } from "../core/router.js";
 import { createAgosMap } from "../map/engine.js";
 import { INTENSITY, intensityLevel } from "../map/typhoon.js";
 import { renderDetail, hydrateDetail } from "./parts/muni-detail.js";
+import { outlookRows, raisedTowns } from "../map/outlook.js";
 import { renderCenterDetail, hydrateCenterDetail } from "./parts/center-detail.js";
 import { loadingState, errorState, onRetry } from "../core/ui.js";
 
 export const layout = "flush";
 
 const OVERVIEW_TTL = 10 * 60 * 1000;
+const FACTORS_TTL = 10 * 60 * 1000;
 
 const LAYERS = [
   { id: "rain", group: "hazard", why: "rainLevels", always: false },
@@ -92,6 +94,30 @@ export async function mount(container, route) {
             <p class="subtle" id="rainStatus"></p>
           </section>
 
+          <section class="panel-section" aria-labelledby="outlookHeading" id="outlookSection">
+            <div class="detail-head"><h3 id="outlookHeading">${escapeHTML(t("outlook.title"))}</h3><button class="why" type="button" data-why="outlook" aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button></div>
+            <label class="switch"><input type="checkbox" id="outlookToggle"><span>${escapeHTML(t("outlook.toggle"))}</span></label>
+            <div id="outlookControls" hidden>
+              <div class="segmented" role="group" aria-label="${escapeHTML(t("outlook.mode"))}" style="margin-top:10px">
+                <button type="button" data-omode="now" aria-pressed="true">${escapeHTML(t("outlook.modeNow"))}</button>
+                <button type="button" data-omode="replay" aria-pressed="false">${escapeHTML(t("outlook.modeReplay"))}</button>
+              </div>
+              <div id="replayControls" hidden>
+                <label class="visually-hidden" for="replayPick">${escapeHTML(t("outlook.pick"))}</label>
+                <select class="select" id="replayPick" style="margin-top:10px"></select>
+                <label class="subtle" for="replayDate" style="display:block;margin-top:8px">${escapeHTML(t("outlook.date"))}</label>
+                <input class="input" type="date" id="replayDate">
+                <p class="subtle" id="replayRange"></p>
+              </div>
+              <p class="subtle" id="outlookStatus" aria-live="polite" style="margin-top:8px"></p>
+              <ul class="swatches" id="outlookSwatches" hidden>
+                <li><span class="swatch" style="background:#5900ff"></span>${escapeHTML(t("outlook.swatchRaised"))}</li>
+                <li><span class="swatch swatch-faded"></span>${escapeHTML(t("outlook.swatchFaded"))}</li>
+              </ul>
+              <p class="subtle">${escapeHTML(t("outlook.note"))}</p>
+            </div>
+          </section>
+
           <section class="panel-section" aria-labelledby="typhoonHeading">
             <div class="detail-head"><h3 id="typhoonHeading">${escapeHTML(t("typhoon.heading"))}</h3><button class="why" type="button" data-why="typhoon" aria-label="${escapeHTML(t("common.why"))}">${icon("info", { size: 16 })}</button></div>
             <form class="typhoon-form" id="typhoonForm" novalidate>
@@ -133,12 +159,14 @@ export async function mount(container, route) {
     rainStatus: $("#rainStatus"), layerList: $("#layerList"), basemap: $("#basemapName"),
     drawer: $("#drawer"), drawerTitle: $("#drawerTitle"), drawerBody: $("#drawerBody"), drawerClose: $("#drawerClose"), drawerGrip: $("#drawerGrip"),
     tyForm: $("#typhoonForm"), tyUrl: $("#typhoonUrl"), tyRead: $("#typhoonRead"), tyStatus: $("#typhoonStatus"),
+    olToggle: $("#outlookToggle"), olControls: $("#outlookControls"), olReplay: $("#replayControls"), olPick: $("#replayPick"),
+    olDate: $("#replayDate"), olRange: $("#replayRange"), olStatus: $("#outlookStatus"), olSwatches: $("#outlookSwatches"),
     tyActions: $("#typhoonActions"), tyDetails: $("#typhoonDetails"), tyRemove: $("#typhoonRemove"),
   };
 
   const state = {
     alive: true, engine: null, here: null, overview: null, overviewError: null, centers: [], reports: [], typhoon: null,
-    mode: "peak", hour: 0, playTimer: null, selected: null, drawerCleanup: null, refreshTimer: null, detailToken: 0,
+    mode: "peak", hour: 0, playTimer: null, factors: null, factorsKey: null, outlookOn: false, omode: "now", replayDate: null, replay: null, outlookToken: 0, selected: null, drawerCleanup: null, refreshTimer: null, detailToken: 0,
   };
 
   // ------------------------------------------------------------ layers panel
@@ -316,6 +344,107 @@ export async function mount(container, route) {
     }, 800);
   });
 
+  // ------------------------------------------------------------ flood outlook (factors + MGB fade)
+  const factorsPath = (date) => `/api/flood-factors${date ? `?date=${encodeURIComponent(date)}` : ""}`;
+  const wantedDate = () => (state.outlookOn && state.omode === "replay" ? state.replayDate : null);
+
+  /** One answer for today, or for the replay day. { status: "ok", data } or { status: "unavailable", detail }. */
+  async function fetchFactors(date) {
+    try {
+      return { status: "ok", data: await getJSON(factorsPath(date), { ttlMs: FACTORS_TTL, timeoutMs: 60000 }) };
+    } catch (error) {
+      return { status: "unavailable", detail: error.message };
+    }
+  }
+
+  function fillReplayChoices(replay) {
+    state.replay = replay;
+    if (!replay) {
+      ui.olRange.textContent = t("factors.replayNA");
+      return;
+    }
+    ui.olDate.min = replay.min;
+    ui.olDate.max = replay.max;
+    ui.olRange.textContent = t("outlook.range", { min: replay.min, max: replay.max });
+    const options = [`<option value="">${escapeHTML(t("outlook.pickNone"))}</option>`].concat((replay.choices || []).map((c) =>
+      `<option value="${escapeHTML(c.date)}">${escapeHTML(`${c.date} · ${(c.towns || []).join(", ") || "—"}`)}</option>`));
+    ui.olPick.innerHTML = options.join("");
+  }
+
+  async function refreshOutlook() {
+    const engine = state.engine;
+    if (!engine) return;
+    if (!state.outlookOn) {
+      engine.setFloodOutlook(null);
+      ui.olControls.hidden = true;
+      ui.olSwatches.hidden = true;
+      return;
+    }
+    ui.olControls.hidden = false;
+    ui.olReplay.hidden = state.omode !== "replay";
+    const date = wantedDate();
+    if (state.omode === "replay" && !date) {
+      engine.setFloodOutlook(null);
+      ui.olSwatches.hidden = true;
+      ui.olStatus.textContent = t("outlook.badDate");
+      return;
+    }
+    const token = ++state.outlookToken;
+    ui.olStatus.textContent = t("outlook.loading");
+    const factors = await fetchFactors(date);
+    if (!state.alive || token !== state.outlookToken) return;
+    state.factors = factors;
+    state.factorsKey = date || "now";
+    if (factors.status !== "ok") {
+      engine.setFloodOutlook(null);
+      ui.olSwatches.hidden = true;
+      ui.olStatus.textContent = t("outlook.error", { message: factors.detail });
+      return;
+    }
+    if (state.omode === "now") fillReplayChoices(factors.data.replay);
+    engine.setFloodOutlook(outlookRows(factors));
+    ui.olSwatches.hidden = false;
+    const raised = raisedTowns(factors);
+    const head = state.omode === "replay" ? `${t("outlook.replayOf", { date: factors.data.date })} ` : "";
+    ui.olStatus.textContent = head + (raised.length ? t("outlook.raisedIn", { towns: raised.join(", ") }) : t("outlook.none"));
+    if (state.selected) selectMunicipality(state.selected, { fly: false });
+  }
+
+  ui.olToggle.addEventListener("change", () => {
+    state.outlookOn = ui.olToggle.checked;
+    // The fade sits on the MGB layer, so the outlook needs that layer on.
+    if (state.outlookOn && !state.engine?.layerStates().mgb?.visible) state.engine?.setLayer("mgb", true);
+    if (state.outlookOn && !state.engine?.outlookAvailable()) {
+      ui.olControls.hidden = false;
+      ui.olStatus.textContent = t("outlook.error", { message: t("common.notAvailable") });
+      return;
+    }
+    refreshOutlook();
+  });
+  container.querySelectorAll("[data-omode]").forEach((button) => button.addEventListener("click", () => {
+    state.omode = button.dataset.omode;
+    container.querySelectorAll("[data-omode]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+    refreshOutlook();
+  }));
+  ui.olPick.addEventListener("change", () => {
+    if (!ui.olPick.value) return;
+    ui.olDate.value = ui.olPick.value;
+    state.replayDate = ui.olPick.value;
+    refreshOutlook();
+  });
+  ui.olDate.addEventListener("change", () => {
+    const value = ui.olDate.value;
+    const r = state.replay;
+    if (!value || (r && (value < r.min || value > r.max))) {
+      state.replayDate = null;
+      ui.olStatus.textContent = t("outlook.badDate");
+      return;
+    }
+    ui.olPick.value = "";
+    state.replayDate = value;
+    refreshOutlook();
+  });
+
   // ------------------------------------------------------------ drawer
   function openDrawer(titleHTML, bodyHTML) {
     state.drawerCleanup?.();
@@ -374,10 +503,14 @@ export async function mount(container, route) {
     const token = ++state.detailToken;
     openDrawer(`<span class="eyebrow">${escapeHTML(t("common.municipality"))}</span><h2>${escapeHTML(canonical)}</h2>`, loadingState());
     try {
-      const data = await getJSON(`/api/municipalities/${encodeURIComponent(canonical)}`, { ttlMs: 5 * 60 * 1000, timeoutMs: 30000 });
+      // Town detail and flood factors load side by side; factors may fail without hiding the town.
+      const [data, factors] = await Promise.all([
+        getJSON(`/api/municipalities/${encodeURIComponent(canonical)}`, { ttlMs: 5 * 60 * 1000, timeoutMs: 30000 }),
+        fetchFactors(wantedDate()),
+      ]);
       if (!state.alive || token !== state.detailToken) return;
       const reports = { status: "ok", data: state.reports.filter((r) => String(r.municipality || "").toLowerCase() === canonical.toLowerCase()) };
-      ui.drawerBody.innerHTML = renderDetail(data, { reports, collapsible: true, banner: true });
+      ui.drawerBody.innerHTML = renderDetail(data, { reports, factors, collapsible: true, banner: true });
       state.drawerCleanup = hydrateDetail(ui.drawerBody, data);
     } catch (error) {
       if (!state.alive || token !== state.detailToken) return;

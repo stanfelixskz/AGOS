@@ -40,7 +40,7 @@ export function stackedBar(shares, { label = "" } = {}) {
   return `<span class="susc-bar" role="img" aria-label="${escapeHTML(label)}">${parts}</span>`;
 }
 
-function barLabel(name, shares) {
+export function barLabel(name, shares) {
   return t("susc.barAria", { town: name, high: pct(highShare(shares)), moderate: pct(shares?.moderate), low: pct(shares?.low), none: pct(shares?.not_rated) });
 }
 

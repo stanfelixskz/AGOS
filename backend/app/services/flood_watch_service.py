@@ -148,8 +148,12 @@ def build_watch(
     }
 
 
-def fetch_forecasts(municipalities: Mapping[str, Mapping[str, float]], request: Callable[..., Any] | None = None) -> dict[str, list[tuple[str, float | None]]]:
-    """Daily precipitation, 2 past days + today + 2, for every town in one request."""
+def fetch_forecasts(
+    municipalities: Mapping[str, Mapping[str, float]],
+    request: Callable[..., Any] | None = None,
+    past_days: int = PAST_DAYS,
+) -> dict[str, list[tuple[str, float | None]]]:
+    """Daily precipitation, `past_days` past days (default 2) + today + 2, for every town in one request."""
     if request is None:
         from app.config.settings import OPEN_METEO_URL
         from app.services.weather_service import CACHE_TTL_SECONDS, FORECAST_TIMEZONE, _cached_request
@@ -161,7 +165,7 @@ def fetch_forecasts(municipalities: Mapping[str, Mapping[str, float]], request: 
         "latitude": ",".join(str(municipalities[n]["latitude"]) for n in names),
         "longitude": ",".join(str(municipalities[n]["longitude"]) for n in names),
         "daily": "precipitation_sum",
-        "past_days": PAST_DAYS,
+        "past_days": past_days,
         "forecast_days": FORECAST_DAYS,
         "precipitation_unit": "mm",
     })
