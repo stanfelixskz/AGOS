@@ -92,7 +92,6 @@ Windows PowerShell: activate the venv with `.\.venv\Scripts\Activate.ps1`
   capacity and status are not provided by any source.
 - Community reports have no review/admin screen yet (all show "unverified").
 - Flood susceptibility by area is not computed; the UI shows a labelled slot.
-- MapLibre is not vendored until `tools/vendor_maplibre.py` is run once.
 - CORS allows all origins; restrict before public deployment.
 - Repo default branch on GitHub is `main` (nearly empty); real code is on `master`.
 
