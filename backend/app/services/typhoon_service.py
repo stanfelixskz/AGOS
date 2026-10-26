@@ -210,13 +210,17 @@ _NUM = r"\d{1,3}(?:,\d{3})+|\d+"
 
 RE_STORM = re.compile(
     r"(?P<cat>(?i:super\s+typhoon|typhoon|severe\s+tropical\s+storm|tropical\s+storm|tropical\s+depression|bagyong))"
-    r"\s+[\"“'‘]?(?P<name>[A-Z][A-Za-z-]{2,})[\"”'’]?"
+    r"\s+[\"“'‘#]?(?P<name>[A-Z][A-Za-z-]{2,})[\"”'’]?"
     r"(?:\s*\((?:international\s+name[:\s]+)?(?P<intl>[A-Z][A-Za-z-]{2,})\))?"
 )
 NOT_NAMES = {
     "signal", "signals", "warning", "warnings", "bulletin", "update", "updates", "advisory", "track",
     "information", "wind", "winds", "season", "the", "was", "has", "is", "will", "may", "and", "or",
     "category", "intensity", "news", "live", "alert", "outlook", "watch", "forecast",
+    # month names and abbreviations ("Tropical Storm Nov. 9 update")
+    "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec",
+    "january", "february", "march", "april", "june", "july", "august", "september", "october",
+    "november", "december",
 }
 RE_COORDS = [
     re.compile(r"(?P<lat>\d{1,2}(?:\.\d+)?)\s*°?\s*(?:N|North)\b\s*[,/]?\s*(?:and\s+)?(?P<lon>\d{2,3}(?:\.\d+)?)\s*°?\s*(?:E|East)\b"),
@@ -326,11 +330,21 @@ def geocode_place(place: str, session: Any = requests) -> dict[str, Any] | None:
     return found
 
 
+def _name_variants(name: str) -> list[str]:
+    """'Borongan City' and 'City of Borongan' are listed as 'Borongan' in GeoNames."""
+    variants = [name]
+    bare = re.sub(r"^(?i:city\s+of)\s+|\s+(?i:city)$", "", name).strip()
+    if bare and bare != name:
+        variants.append(bare)
+    return variants
+
+
 def _geocode_lookup(place: str, session: Any) -> dict[str, Any] | None:
     name, _, hint = place.partition(",")
     name, hint = name.strip(), hint.strip().lower()
-    for params in ({"countryCode": "PH"}, {}):
-        results = _geocode_request(session, {"name": name, "count": 10, "language": "en", "format": "json", **params})
+    attempts = [(variant, params) for variant in _name_variants(name) for params in ({"countryCode": "PH"}, {})]
+    for variant, params in attempts:
+        results = _geocode_request(session, {"name": variant, "count": 10, "language": "en", "format": "json", **params})
         if not results:
             continue
         chosen = results[0]
@@ -352,24 +366,67 @@ def _geocode_lookup(place: str, session: Any) -> dict[str, Any] | None:
     return None
 
 
-def extract_typhoon(text: str, geocode: Callable[[str], dict | None] = geocode_place) -> dict[str, Any]:
+HEADLINE_NOT_NAMES = NOT_NAMES | {
+    "signal", "super", "typhoon", "tropical", "severe", "storm", "depression", "bagyong", "pagasa", "state",
+    "weather", "low", "pressure", "area", "more", "heavy", "rains", "rain", "flood", "floods", "classes",
+    "suspension", "residents", "philippines", "luzon", "visayas", "mindanao", "metro", "manila", "breaking",
+}
+
+
+def _headline_storm_name(title: str | None, text: str) -> str | None:
+    """
+    The storm name when a headline starts with it ("Pepito rapidly intensifies into typhoon")
+    but the article never writes "Typhoon Pepito". The word must appear at least 3 times in
+    the article. None when the headline does not start that way.
+    """
+    if not title:
+        return None
+    first = re.match(r"\s*[\"“'‘#]?([A-Z][a-z]{3,})\b", title)
+    if not first or first.group(1).lower() in HEADLINE_NOT_NAMES:
+        return None
+    word = first.group(1)
+    return word if len(re.findall(rf"\b{word}\b", text)) >= 3 else None
+
+
+def extract_typhoon(
+    text: str,
+    geocode: Callable[[str], dict | None] = geocode_place,
+    title: str | None = None,
+) -> dict[str, Any]:
     """Pick out the storm characteristics the text states. Missing values stay None."""
     result: dict[str, Any] = {
         "storm": None, "position": None, "position_note": None, "max_wind_kmh": None, "gust_kmh": None,
         "movement": None, "radius_km": None, "pressure_hpa": None, "bulletin_time": None,
     }
 
-    for match in RE_STORM.finditer(text):
-        if match.group("name").lower() in NOT_NAMES:
-            continue
+    def clean_name(raw: str) -> str:
+        name = raw.strip("-")
+        if len(name) > 4 and name.endswith("PH") and name[:-2][-1:].islower():  # hashtag form "#PepitoPH"
+            name = name[:-2]
+        return name.title() if name.isupper() else name
+
+    candidates = [m for m in RE_STORM.finditer(text) if m.group("name").lower() not in NOT_NAMES]
+    # Pages often mention other storms in sidebars or "related" links: prefer a storm named in the headline.
+    headline = (title or "").lower()
+    in_title = [m for m in candidates if clean_name(m.group("name")).lower() in headline]
+    headline_name = None if in_title else _headline_storm_name(title, text)
+    match = None if headline_name else (in_title or candidates or [None])[0]
+    if headline_name:
+        first = re.search(rf"\b{re.escape(headline_name)}\b", text)
+        result["storm"] = {
+            "name": headline_name,
+            "category": None,  # the article does not write "Typhoon <name>", so it is not guessed
+            "international_name": None,
+            "evidence": _evidence(text, first.start(), first.end()) if first else title,
+        }
+    if match:
         category = re.sub(r"\s+", " ", match.group("cat")).strip().title()
         result["storm"] = {
-            "name": match.group("name").strip("-").title() if match.group("name").isupper() else match.group("name"),
+            "name": clean_name(match.group("name")),
             "category": "Tropical cyclone (Filipino: Bagyong)" if category == "Bagyong" else category,
             "international_name": match.group("intl"),
             "evidence": _evidence(text, match.start(), match.end()),
         }
-        break
 
     # Position: written coordinates first, then distance + direction from a place.
     for pattern in RE_COORDS:
@@ -479,7 +536,7 @@ def typhoon_from_url(
 ) -> dict[str, Any]:
     final_url, html = fetch(url)
     page = html_to_text(html)
-    found = extract_typhoon(page["text"], geocode=geocode)
+    found = extract_typhoon(page["text"], geocode=geocode, title=page["title"])
     found_any = any(found[key] for key in ("storm", "position", "max_wind_kmh", "radius_km", "movement"))
     return {
         "url": url,
