@@ -200,13 +200,24 @@ COMPASS = {
     "ssw": 202.5, "southsouthwest": 202.5, "sw": 225, "southwest": 225, "wsw": 247.5,
     "westsouthwest": 247.5, "w": 270, "west": 270, "wnw": 292.5, "westnorthwest": 292.5,
     "nw": 315, "northwest": 315, "nnw": 337.5, "northnorthwest": 337.5,
+    # Filipino
+    "hilaga": 0, "hilagangsilangan": 45, "silangan": 90, "timogsilangan": 135,
+    "timog": 180, "timogkanluran": 225, "kanluran": 270, "hilagangkanluran": 315,
 }
 
 _DIR_WORDS = r"(?i:(?:north|south|east|west)(?:[\s-]*(?:north|south|east|west)){0,2})"
 _DIR = rf"(?:{_DIR_WORDS}|\b[NSEW]{{1,3}}\b)"
+_FIL_DIR = r"(?i:hilagang[\s-]*silangan|hilagang[\s-]*kanluran|timog[\s-]*silangan|timog[\s-]*kanluran|hilaga|timog|silangan|kanluran)"
 # Place names stay on one line (spaces only) and do not swallow a sentence's final period.
 _PLACE = r"[A-Z][\w'’-]*(?:\.(?=\w))?(?:[ \t]+(?:de[ \t]+|del[ \t]+)?[A-Z][\w'’-]*){0,3}(?:,[ \t]*[A-Z][\w'’-]*(?:[ \t]+[A-Z][\w'’-]*){0,2})?"
 _NUM = r"\d{1,3}(?:,\d{3})+|\d+"
+_UNIT = r"(?i:km|kms|kilometers|kilometres|kilometro(?:ng)?|nautical\s+miles|nmi)"
+NMI_KM = 1.852
+# Open seas are too large to place a storm "near"; they only count with a direction.
+OPEN_SEAS = {
+    "philippine sea", "west philippine sea", "south china sea", "pacific ocean", "western pacific",
+    "luzon strait", "bashi channel", "celebes sea", "sulu sea",
+}
 
 RE_STORM = re.compile(
     r"(?P<cat>(?i:super\s+typhoon|typhoon|severe\s+tropical\s+storm|tropical\s+storm|tropical\s+depression|bagyong))"
@@ -226,9 +237,47 @@ RE_COORDS = [
     re.compile(r"(?P<lat>\d{1,2}(?:\.\d+)?)\s*°?\s*(?:N|North)\b\s*[,/]?\s*(?:and\s+)?(?P<lon>\d{2,3}(?:\.\d+)?)\s*°?\s*(?:E|East)\b"),
     re.compile(r"(?i:latitude)\s*(?P<lat>\d{1,2}(?:\.\d+)?)\s*°?\s*(?:N|North)?\s*,?\s*(?:and\s+)?(?i:longitude)\s*(?P<lon>\d{2,3}(?:\.\d+)?)\s*°?\s*(?:E|East)?"),
 ]
+# "320 km East of Virac", "190 nautical miles east-northeast of Virac", "1,600 kilometers (km) east of ..."
 RE_RELATIVE = re.compile(
-    rf"(?P<km>{_NUM})\s*(?i:km|kilometers|kilometres)\s+(?P<dir>{_DIR})\s+(?i:of)\s+(?P<place>{_PLACE})"
+    rf"(?P<km>{_NUM})\s*(?P<unit>{_UNIT})\s+(?:\([^)]{{1,12}}\)\s+)?(?P<dir>{_DIR})\s+(?i:of)\s+(?:the\s+)?(?P<place>{_PLACE})"
 )
+# Filipino: "120 km silangan ng Virac", "320 kilometro sa hilagang-silangan ng Aparri"
+RE_RELATIVE_FIL = re.compile(
+    rf"(?P<km>{_NUM})\s*(?P<unit>{_UNIT})\s+(?i:sa\s+)?(?P<dir>{_FIL_DIR})\s+(?i:ng\s+bayan\s+ng|ng|sa)\s+(?P<place>{_PLACE})"
+)
+# Over / near a named place: "over the coastal waters of Morong, Bataan", "made landfall in Casiguran",
+# "in the vicinity of Hsinchu", "sa baybayin ng Morong", "nag-landfall sa Casiguran".
+RE_NEAR_PLACE = [
+    re.compile(
+        r"(?P<how>(?i:over\s+the\s+(?:coastal\s+)?(?:waters|seas)\s+of|over\s+the\s+vicinity\s+of|in\s+the\s+vicinity\s+of"
+        r"|off\s+the\s+coast\s+of|made\s+(?:its\s+)?(?:\w+\s+)?landfall\s+(?:in|over|at|near|on)|landfall\s+(?:in|over|at|near|on)))"
+        rf"\s+(?:the\s+)?(?P<place>{_PLACE})"
+    ),
+    re.compile(
+        r"(?P<how>(?i:(?:was|is)\s+(?:located|estimated|spotted|centered|last\s+seen|last\s+spotted)?\s*(?:over|near)))"
+        rf"\s+(?P<place>{_PLACE})"
+    ),
+    re.compile(
+        r"(?P<how>(?i:sa\s+(?:baybayin|karagatan|katubigan|bisinidad)\s+ng|nag-?landfall\s+sa|tumama\s+(?:ang\s+bagyo\s+)?sa|malapit\s+sa))"
+        rf"\s+(?P<place>{_PLACE})"
+    ),
+]
+# Forecast wording just before a place phrase: that is where the storm may go, not where it is.
+RE_FORECAST_WORD = re.compile(
+    r"(?i)\b(?:may|might|could|would|will|shall|expected|forecast(?:ed)?|projected|likely|possible|possibly|"
+    r"predicted|anticipated|seen\s+to|set\s+to|poised|maaaring|inaasahang|posibleng)\b"
+)
+
+
+def _is_forecast(text: str, start: int) -> bool:
+    """True when the sentence holding a place phrase talks about the future before that phrase."""
+    sentence_start = max(text.rfind(". ", 0, start), text.rfind("\n", 0, start), text.rfind("? ", 0, start)) + 1
+    return bool(RE_FORECAST_WORD.search(text[sentence_start:start]))
+# Direction with no distance: "over the Philippine Sea east of Aurora", "silangan ng Samar".
+RE_AREA = [
+    re.compile(rf"(?<![\w,])(?P<dir>{_DIR_WORDS})\s+of\s+(?:the\s+)?(?P<place>{_PLACE})"),
+    re.compile(rf"(?<![\w,])(?P<dir>{_FIL_DIR})\s+ng\s+(?P<place>{_PLACE})"),
+]
 RE_WIND = [
     re.compile(r"(?i)maximum\s+sustained\s+winds?\s+(?:of\s+)?(?:up\s+to\s+)?(?P<v>\d{2,3})\s*(?:km/?h|kph|kilometers\s+per\s+hour)"),
     re.compile(r"(?i)sustained\s+winds?\s+(?:of\s+)?(?:up\s+to\s+)?(?P<v>\d{2,3})\s*(?:km/?h|kph|kilometers\s+per\s+hour)"),
@@ -366,6 +415,116 @@ def _geocode_lookup(place: str, session: Any) -> dict[str, Any] | None:
     return None
 
 
+def _clean_place(raw: str) -> str:
+    return re.sub(r"\s+", " ", raw).strip().rstrip(".,")
+
+
+def _relative_matches(text: str) -> list[dict[str, Any]]:
+    """Every "distance + direction + place" phrase (English and Filipino), in text order."""
+    found = []
+    for pattern in (RE_RELATIVE, RE_RELATIVE_FIL):
+        for match in pattern.finditer(text):
+            bearing = _bearing(match.group("dir"))
+            if bearing is None:
+                continue
+            amount = _num(match.group("km"))
+            nautical = bool(re.match(r"(?i)nautical|nmi", match.group("unit")))
+            found.append({
+                "start": match.start(),
+                "distance_km": round(amount * NMI_KM, 1) if nautical else amount,
+                "distance_stated": f"{match.group('km')} nautical miles" if nautical else None,
+                "direction": re.sub(r"\s+", " ", match.group("dir")).strip(),
+                "bearing_deg": bearing,
+                "place": _clean_place(match.group("place")),
+                "evidence": _evidence(text, match.start(), match.end()),
+            })
+    return sorted(found, key=lambda r: r["start"])
+
+
+def _find_position(text: str, geocode: Callable[[str], dict | None]) -> tuple[dict | None, dict | None, str | None]:
+    """
+    The storm's position from the text, most precise form first:
+      1. coordinates written in the article                         -> method "coordinates"
+      2. distance + direction from a place (km or nautical miles)   -> method "relative"
+      3. over / near / landfall at a named place                    -> method "place" (approximate)
+      4. direction from a place with no distance                    -> no position; an "area" only
+    Returns (position, area, note). Nothing is estimated beyond what the text states.
+    """
+    notes: list[str] = []
+    geocoder_down = False
+
+    def locate(place: str):
+        nonlocal geocoder_down
+        try:
+            return geocode(place)
+        except GeocoderUnavailable:
+            geocoder_down = True
+            return None
+
+    # 1. Coordinates.
+    for pattern in RE_COORDS:
+        for match in pattern.finditer(text):
+            lat, lon = float(match.group("lat")), float(match.group("lon"))
+            if 0 < lat <= 60 and 90 <= lon <= 180:
+                position = {"latitude": lat, "longitude": lon, "method": "coordinates", "evidence": _evidence(text, match.start(), match.end())}
+                relatives = _relative_matches(text)
+                if relatives:
+                    position["relative"] = {k: v for k, v in relatives[0].items() if k != "start"}
+                return position, None, None
+
+    # 2. Distance + direction from a place.
+    for relative in _relative_matches(text):
+        place = locate(relative["place"])
+        if place and place.get("latitude") is not None:
+            lat, lon = destination_point(place["latitude"], place["longitude"], relative["bearing_deg"], relative["distance_km"])
+            rel = {k: v for k, v in relative.items() if k != "start"}
+            return {"latitude": lat, "longitude": lon, "method": "relative", "relative": rel, "geocode": place, "evidence": relative["evidence"]}, None, None
+        notes.append(f"“{relative['place']}”")
+
+    # 3. Over / near / landfall at a named place (not forecasts like "may make landfall over ...").
+    for pattern in RE_NEAR_PLACE:
+        for match in pattern.finditer(text):
+            name = _clean_place(match.group("place"))
+            if name.lower() in OPEN_SEAS or _is_forecast(text, match.start()):
+                continue
+            place = locate(name)
+            if place and place.get("latitude") is not None:
+                return {
+                    "latitude": round(place["latitude"], 3), "longitude": round(place["longitude"], 3),
+                    "method": "place", "approximate": True,
+                    "near": {"place": name, "how": re.sub(r"\s+", " ", match.group("how")).strip().lower()},
+                    "geocode": place, "evidence": _evidence(text, match.start(), match.end()),
+                }, None, None
+            notes.append(f"“{name}”")
+
+    # 4. Direction from a place, no distance: no position, only the direction.
+    for pattern in RE_AREA:
+        for match in pattern.finditer(text):
+            before = text[max(0, match.start() - 30):match.start()]
+            if re.search(rf"\d\s*{_UNIT}\s*(?:\([^)]*\)\s*)?$", before):
+                continue  # part of a distance phrase handled above
+            bearing = _bearing(match.group("dir"))
+            name = _clean_place(match.group("place"))
+            if bearing is None or name.lower() in OPEN_SEAS or _is_forecast(text, match.start()):
+                continue
+            place = locate(name)
+            area = {
+                "direction": re.sub(r"\s+", " ", match.group("dir")).strip(), "bearing_deg": bearing,
+                "place": name, "geocode": place if place and place.get("latitude") is not None else None,
+                "evidence": _evidence(text, match.start(), match.end()),
+            }
+            note = (f"The article only says the storm is {area['direction']} of {name}, without a distance, "
+                    "so AGOS cannot place it on the map." + ("" if area["geocode"] else f" “{name}” could not be located either."))
+            return None, area, note
+
+    if geocoder_down:
+        return None, None, ("The article places the storm relative to a named place, but the place-name lookup "
+                            "(Open-Meteo geocoder) could not be reached. Try again in a moment.")
+    if notes:
+        return None, None, f"The article places the storm relative to {', '.join(dict.fromkeys(notes))}, but the geocoder found no place with that name."
+    return None, None, "The article does not state the storm’s coordinates, its distance from a named place, or a place it is over."
+
+
 HEADLINE_NOT_NAMES = NOT_NAMES | {
     "signal", "super", "typhoon", "tropical", "severe", "storm", "depression", "bagyong", "pagasa", "state",
     "weather", "low", "pressure", "area", "more", "heavy", "rains", "rain", "flood", "floods", "classes",
@@ -395,7 +554,7 @@ def extract_typhoon(
 ) -> dict[str, Any]:
     """Pick out the storm characteristics the text states. Missing values stay None."""
     result: dict[str, Any] = {
-        "storm": None, "position": None, "position_note": None, "max_wind_kmh": None, "gust_kmh": None,
+        "storm": None, "position": None, "area": None, "position_note": None, "max_wind_kmh": None, "gust_kmh": None,
         "movement": None, "radius_km": None, "pressure_hpa": None, "bulletin_time": None,
     }
 
@@ -428,54 +587,7 @@ def extract_typhoon(
             "evidence": _evidence(text, match.start(), match.end()),
         }
 
-    # Position: written coordinates first, then distance + direction from a place.
-    for pattern in RE_COORDS:
-        for match in pattern.finditer(text):
-            lat, lon = float(match.group("lat")), float(match.group("lon"))
-            if 0 < lat <= 60 and 90 <= lon <= 180:
-                result["position"] = {
-                    "latitude": lat, "longitude": lon, "method": "coordinates",
-                    "evidence": _evidence(text, match.start(), match.end()),
-                }
-                break
-        if result["position"]:
-            break
-
-    relative = None
-    for match in RE_RELATIVE.finditer(text):
-        bearing = _bearing(match.group("dir"))
-        if bearing is None:
-            continue
-        relative = {
-            "distance_km": _num(match.group("km")),
-            "direction": re.sub(r"\s+", " ", match.group("dir")).strip(),
-            "bearing_deg": bearing,
-            "place": match.group("place").strip().rstrip(".,"),
-            "evidence": _evidence(text, match.start(), match.end()),
-        }
-        break
-
-    if result["position"] is None and relative:
-        try:
-            place = geocode(relative["place"])
-        except GeocoderUnavailable:
-            place = None
-            result["position_note"] = (
-                f"The article places the storm relative to “{relative['place']}”, but the place-name "
-                "lookup (Open-Meteo geocoder) could not be reached. Try again in a moment."
-            )
-        if place and place.get("latitude") is not None:
-            lat, lon = destination_point(place["latitude"], place["longitude"], relative["bearing_deg"], relative["distance_km"])
-            result["position"] = {
-                "latitude": lat, "longitude": lon, "method": "relative",
-                "relative": relative, "geocode": place, "evidence": relative["evidence"],
-            }
-        elif result["position_note"] is None:
-            result["position_note"] = f"The article places the storm relative to “{relative['place']}”, but the geocoder found no place with that name."
-    elif result["position"] is not None and relative:
-        result["position"]["relative"] = relative
-    if result["position"] is None and result["position_note"] is None:
-        result["position_note"] = "The article does not state the storm’s coordinates or its distance from a named place."
+    result["position"], result["area"], result["position_note"] = _find_position(text, geocode)
 
     match = _first(RE_WIND, text)
     if match:
@@ -537,7 +649,7 @@ def typhoon_from_url(
     final_url, html = fetch(url)
     page = html_to_text(html)
     found = extract_typhoon(page["text"], geocode=geocode, title=page["title"])
-    found_any = any(found[key] for key in ("storm", "position", "max_wind_kmh", "radius_km", "movement"))
+    found_any = any(found[key] for key in ("storm", "position", "area", "max_wind_kmh", "radius_km", "movement"))
     return {
         "url": url,
         "final_url": final_url,

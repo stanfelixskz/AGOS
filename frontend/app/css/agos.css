@@ -824,6 +824,22 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 }
 .typhoon-label:hover { border-color: #dc2626; }
 .typhoon-label:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Direction-only storm: a dot at the named place and a dashed arrow pointing
+   the stated way. Fixed screen length: it does not show a distance. */
+.typhoon-area { width: 0; height: 0; display: grid; place-items: center; pointer-events: none; }
+.typhoon-area > * { grid-area: 1 / 1; }
+.typhoon-area-dot { width: 12px; height: 12px; border-radius: 50%; background: #dc2626; border: 2px solid #fff; box-shadow: var(--shadow-1); }
+.typhoon-area-arrow { width: 0; height: 0; position: relative; transform: rotate(var(--bearing)); }
+.typhoon-area-arrow::before {
+  content: ""; position: absolute; left: -1.5px; bottom: 8px; height: 70px;
+  border-left: 3px dashed #dc2626;
+}
+.typhoon-area-arrow::after {
+  content: ""; position: absolute; left: -7px; bottom: 76px;
+  border: 7px solid transparent; border-bottom: 11px solid #dc2626; border-top: 0;
+}
+.typhoon-area .typhoon-label { transform: translateY(22px); max-width: 240px; white-space: normal; text-align: center; }
 @media (prefers-reduced-motion: reduce) {
   .typhoon-layer, .typhoon-core svg { animation: none !important; }
 }
