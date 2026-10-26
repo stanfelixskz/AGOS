@@ -698,6 +698,35 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .analytics-fold > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .analytics-fold[open] .fold-chevron { transform: rotate(180deg); }
 .analytics-fold-body { margin-top: var(--space-3); }
+.watch-days { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-3) 0; }
+.watch-day { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); text-align: center; font-size: var(--text-sm); }
+.watch-day.is-today { border-color: var(--brand); }
+.watch-chart { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.watch-row { width: 100%; display: grid; grid-template-columns: minmax(150px, 220px) 1fr; grid-template-areas: "name track" "name sub"; gap: 2px var(--space-3); align-items: center; padding: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-sm); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 44px; }
+.watch-row:hover { background: var(--surface-2, color-mix(in srgb, var(--brand) 6%, transparent)); }
+.watch-row.is-picked { border-color: var(--brand); background: var(--brand-soft); }
+.watch-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.watch-row-name { grid-area: name; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.watch-row-sub { grid-area: sub; font-size: 12px; }
+.watch-track { grid-area: track; position: relative; height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--border) 70%, transparent); overflow: visible; }
+.watch-fill { position: absolute; inset: 0 auto 0 0; border-radius: 6px; min-width: 3px; }
+.watch-fill-normal { background: #38bdf8; }
+.watch-fill-warning { background: #f59e0b; }
+.watch-fill-danger { background: #ef4444; }
+.watch-mark { position: absolute; top: -3px; width: 3px; height: 18px; border-radius: 2px; transform: translateX(-1px); }
+.watch-mark-watch { background: #f59e0b; }
+.watch-mark-warning { background: #ef4444; }
+.watch-mark-high_warning { background: #7f1d1d; }
+:root[data-theme="dark"] .watch-mark-high_warning { background: #fca5a5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .watch-mark-high_warning { background: #fca5a5; } }
+.watch-legend { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-2); font-size: 12px; }
+.watch-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.watch-legend .watch-mark { position: static; display: inline-block; height: 12px; transform: none; }
+.watch-detail { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.watch-detail-inner { display: flex; flex-direction: column; gap: var(--space-2); }
+@media (max-width: 560px) {
+  .watch-row { grid-template-columns: 1fr; grid-template-areas: "name" "track" "sub"; }
+}
 
 /* Evacuation center detail (map drawer and Evacuate page). */
 .center-detail { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) 0; }

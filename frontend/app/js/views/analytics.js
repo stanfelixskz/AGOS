@@ -18,6 +18,7 @@ import { renderClimate, mountClimateCharts, explainClimate } from "./parts/clima
 import { renderEvidence, explainEvidence } from "./parts/evidence.js";
 import { renderModel, explainModel, mountModel } from "./parts/model.js";
 import { renderTownFloods, renderRareRain, renderSeason, fold } from "./parts/resident.js";
+import { renderWatchTown, explainWatch } from "./parts/watch.js";
 
 const PERIODS = [7, 30, 90];
 const TOWNS = ["Abucay", "Bagac", "Balanga", "Dinalupihan", "Hermosa", "Limay", "Mariveles", "Morong", "Orani", "Orion", "Pilar", "Samal"];
@@ -71,6 +72,7 @@ export async function mount(container) {
     folds: prefs.folds && typeof prefs.folds === "object" ? prefs.folds : {},
     history: null,
     events: null,
+    watch: null,
     skill: null,
     climate: null,
     evidence: null,
@@ -223,7 +225,9 @@ export async function mount(container) {
     const climate = state.climate;
     const rare = climate?.error ? sectionError("resident.rareTitle", climate.error) : renderRareRain(climate?.data, state.town);
     const season = climate?.error ? "" : renderSeason(climate?.data, ev?.data, state.town);
-    return recordNotice() + floods + rare + season;
+    const w = state.watch;
+    const watch = w?.data ? renderWatchTown(w.data, state.town) : (w?.error ? sectionError("watch.title", w.error) : "");
+    return recordNotice() + watch + (watch ? `<div style="margin-top:var(--space-4)"></div>` : "") + floods + rare + season;
   }
 
   function render() {
@@ -261,7 +265,9 @@ export async function mount(container) {
 
   function explain(kind) {
     const fil = getLang() === "fil";
-    if (kind === "model") {
+    if (kind === "watch") {
+      openDialog(t("watch.listTitle"), explainWatch(fil));
+    } else if (kind === "model") {
       openDialog(t("model.title"), explainModel(fil));
     } else if (kind === "evidence") {
       openDialog(t("evidence.title"), explainEvidence(fil));
@@ -291,15 +297,17 @@ export async function mount(container) {
   async function load() {
     teardownCharts();
     body.innerHTML = loadingState();
-    const [historyResult, skillResult, climateResult, evidenceResult, modelResult, eventsResult] = await Promise.allSettled([
+    const [historyResult, skillResult, climateResult, evidenceResult, modelResult, eventsResult, watchResult] = await Promise.allSettled([
       getJSON(`/api/history?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON(`/skill/rain?days=${state.days}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 30000 }),
       getJSON("/api/climate", { ttlMs: 30 * 60 * 1000, timeoutMs: 60000 }),
       getJSON("/api/flood-evidence", { ttlMs: 30 * 60 * 1000, timeoutMs: 45000 }),
       getJSON("/api/flood-model", { ttlMs: 30 * 60 * 1000, timeoutMs: 60000 }),
       getJSON("/api/flood-events", { ttlMs: 30 * 60 * 1000, timeoutMs: 30000 }),
+      getJSON("/api/flood-watch", { ttlMs: 10 * 60 * 1000, timeoutMs: 45000 }),
     ]);
     if (!state.alive) return;
+    state.watch = watchResult.status === "fulfilled" ? { data: watchResult.value } : { error: watchResult.reason };
     state.events = eventsResult.status === "fulfilled" ? { data: eventsResult.value } : { error: eventsResult.reason };
     state.history = historyResult.status === "fulfilled" ? { data: historyResult.value } : { error: historyResult.reason };
     state.evidence = evidenceResult.status === "fulfilled" ? { data: evidenceResult.value } : { error: evidenceResult.reason };

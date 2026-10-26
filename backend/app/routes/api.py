@@ -10,7 +10,7 @@ from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
 from app.services.climate_service import climate_report
 from app.services.history_service import history_report
-from app.services import evidence_service, flood_events_service, flood_model_service
+from app.services import evidence_service, flood_events_service, flood_model_service, flood_watch_service
 from app.services import typhoon_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
@@ -85,6 +85,15 @@ def flood_evidence():
         return evidence_service.evidence_report()
     except ValueError as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
+
+
+@router.get("/flood-watch")
+def flood_watch():
+    """Flood warning sign per town for today and the next 2 days (tested rain rule; not an official warning)."""
+    try:
+        return flood_watch_service.watch_report()
+    except (RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 @router.get("/flood-model")

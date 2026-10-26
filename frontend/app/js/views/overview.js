@@ -13,7 +13,8 @@ import { barChart, mountChart } from "../core/charts.js";
 import { EXPLAIN } from "../core/explain.js";
 import { buildHash } from "../core/router.js";
 import { effectiveTheme } from "../core/theme.js";
-import { loadingState, errorState, onRetry } from "../core/ui.js";
+import { loadingState, errorState, onRetry, openDialog } from "../core/ui.js";
+import { renderWatchList, explainWatch, mountWatchChart } from "./parts/watch.js";
 import { levelPill } from "./parts/muni-detail.js";
 
 const TTL = 10 * 60 * 1000;
@@ -97,6 +98,8 @@ function render(data) {
       </section>
     </div>
 
+    <div id="watchSlot"></div>
+
     <section class="card" style="margin-top:var(--space-4)" aria-labelledby="provinceTitle">
       <div class="card-head">
         <div><h2 id="provinceTitle">${escapeHTML(t("overview.provinceChart"))}</h2><p>${escapeHTML(t("overview.provinceChartSub"))}</p></div>
@@ -167,6 +170,23 @@ export async function mount(container) {
     cleanups.splice(0).forEach((fn) => fn());
     container.innerHTML = render(data);
     container.querySelectorAll("[data-why]").forEach((b) => b.addEventListener("click", () => EXPLAIN[b.dataset.why]?.()));
+
+    // Flood warning signs load on their own so a slow answer never blocks the page.
+    getJSON("/api/flood-watch", { ttlMs: TTL, timeoutMs: 45000 }).then((watch) => {
+      const slot = alive && container.querySelector("#watchSlot");
+      if (!slot) return;
+      slot.innerHTML = renderWatchList(watch);
+      slot.querySelector("[data-watch-why]")?.addEventListener("click", () => openDialog(t("watch.listTitle"), explainWatch(getLang() === "fil")));
+      mountWatchChart(slot, watch, (town) => {
+        try {
+          const prefs = JSON.parse(localStorage.getItem("agos.analytics") || "{}");
+          localStorage.setItem("agos.analytics", JSON.stringify({ ...prefs, town }));
+        } catch { /* storage blocked: Analytics opens on its last town */ }
+      });
+    }).catch((error) => {
+      const slot = alive && container.querySelector("#watchSlot");
+      if (slot) slot.innerHTML = `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("watch.listTitle"))}</h2></div></div>${errorState(error)}</section>`;
+    });
 
     // Province chart: heaviest hourly value across the 12 town points.
     const steps = data.municipalities?.[0]?.series?.length || 0;
