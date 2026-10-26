@@ -20,25 +20,33 @@ def hourly_axis(first: date, days: int):
 
 class DailyValueTests(unittest.TestCase):
     def setUp(self):
-        # 6 days from 29 Jul: 1 mm/h every hour, except 5 mm/h on 1 Aug between 10:00 and 12:59
+        # 6 days from 29 Jul: 1 mm/h every hour, except 5 mm/h on 1 Aug between 10:00 and 12:59 (all six models)
         self.axis = hourly_axis(date(2026, 7, 29), 6)
-        self.rain = [5.0 if t.date() == START and 10 <= t.hour < 13 else 1.0 for t in self.axis]
-        self.soil = [0.3] * len(self.axis)
+        rain = [5.0 if t.date() == START and 10 <= t.hour < 13 else 1.0 for t in self.axis]
+        self.series = {"axis": self.axis, "models": [list(rain) for _ in MODELS], "best": rain, "soil": [0.3] * len(self.axis)}
 
     def test_windows(self):
-        v = fh.daily_values(self.axis, self.rain, self.soil, START)
+        v = fh.daily_values(self.series, START)
         self.assertEqual(v["peak_24h_mm_h"], 5.0)
         self.assertEqual(v["peak_3h_mm"], 15.0)
         self.assertEqual(v["total_24h_mm"], 36.0)        # 21 x 1 + 3 x 5
         self.assertEqual(v["total_72h_mm"], 84.0)        # 30 Jul, 31 Jul (24 each) + 1 Aug (36)
         self.assertEqual(v["past_72h_mm"], 72.0)         # 29, 30, 31 Jul
         self.assertEqual(v["soil_moisture"], 0.3)
+        self.assertIsNone(v["upstream_24h_mm"])
 
     def test_missing_hours_give_none_not_zero(self):
-        rain = [None if t.date() == START else 1.0 for t in self.axis]
-        v = fh.daily_values(self.axis, rain, self.soil, START)
+        empty = [None if t.date() == START else 1.0 for t in self.axis]
+        series = {**self.series, "models": [list(empty) for _ in MODELS], "best": empty}
+        v = fh.daily_values(series, START)
         self.assertIsNone(v["total_24h_mm"])
         self.assertIsNone(v["peak_24h_mm_h"])
+
+    def test_upstream_is_the_wettest_high_ground_point(self):
+        dry = {"axis": self.axis, "models": [[0.5] * len(self.axis) for _ in MODELS]}
+        wet = {"axis": self.axis, "models": [[4.0] * len(self.axis) for _ in MODELS]}
+        v = fh.daily_values(self.series, START, upstream=[dry, wet])
+        self.assertEqual(v["upstream_24h_mm"], 96.0)
 
 
 class BaselineTests(unittest.TestCase):

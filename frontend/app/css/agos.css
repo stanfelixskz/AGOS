@@ -1003,3 +1003,10 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .fh-event { all: unset; cursor: pointer; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: var(--text-sm); }
 .fh-event:hover strong { color: var(--brand); text-decoration: underline; }
 .fh-event:focus-visible { outline: 2px solid var(--focus); border-radius: 4px; }
+
+/* Reported floods (news) on the history calendar: a dark ring. */
+.fh-cell.is-reported { box-shadow: inset 0 0 0 2px #111827; }
+.fh-reported-swatch { background: transparent; box-shadow: inset 0 0 0 2px #111827; }
+:root[data-theme="dark"] .fh-cell.is-reported, :root[data-theme="dark"] .fh-reported-swatch { box-shadow: inset 0 0 0 2px #f8fafc; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fh-cell.is-reported, :root:not([data-theme="light"]) .fh-reported-swatch { box-shadow: inset 0 0 0 2px #f8fafc; } }
+.fh-eval th[scope="row"] { white-space: normal; min-width: 220px; font-weight: 500; }

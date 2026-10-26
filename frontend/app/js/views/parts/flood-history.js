@@ -31,7 +31,20 @@ function levelText(level, score) {
   return `${t(`risk.level.${level}`)}${isNumber(score) ? ` · ${t("risk.points", { n: score })}` : ""}`;
 }
 
-function calendar(h) {
+/** "town|date" -> reported flood event, for every day inside an event window. */
+function reportedIndex(h) {
+  const index = new Map();
+  for (const event of h.reported_floods || []) {
+    for (const town of event.towns) {
+      for (const day of h.days) {
+        if (day >= event.start && day <= event.end) index.set(`${town}|${day}`, event);
+      }
+    }
+  }
+  return index;
+}
+
+function calendar(h, reported) {
   const months = [];
   h.days.forEach((d, i) => {
     const month = parseTime(d)?.toLocaleDateString("en-PH", { timeZone: "Asia/Manila", month: "short" });
@@ -43,10 +56,13 @@ function calendar(h) {
     <span></span>${months.map((m) => `<span class="fh-month" style="grid-column: span ${m.span}">${escapeHTML(m.label)}</span>`).join("")}
     ${h.municipalities.map((town) => `
       <span class="fh-town">${escapeHTML(town.municipality)}</span>
-      ${town.days.map((d) => `<button type="button" class="fh-cell" style="background:${riskColor(d.level)}"
+      ${town.days.map((d) => {
+        const event = reported.get(`${town.municipality}|${d.date}`);
+        return `<button type="button" class="fh-cell${event ? " is-reported" : ""}" style="background:${riskColor(d.level)}"
           data-town="${escapeHTML(town.municipality)}" data-date="${d.date}"
-          title="${escapeHTML(`${town.municipality} · ${shortDate(d.date)}: ${levelText(d.level, d.score)} · ${isNumber(d.rain_mm) ? `${num(d.rain_mm, 1)} mm` : "—"}`)}"
-          aria-label="${escapeHTML(`${town.municipality}, ${formatDate(d.date)}: ${levelText(d.level, d.score)}`)}"></button>`).join("")}`).join("")}
+          title="${escapeHTML(`${town.municipality} · ${shortDate(d.date)}: ${levelText(d.level, d.score)} · ${isNumber(d.rain_mm) ? `${num(d.rain_mm, 1)} mm` : "—"}${event ? ` · ${t("fh.reportedTip")}` : ""}`)}"
+          aria-label="${escapeHTML(`${town.municipality}, ${formatDate(d.date)}: ${levelText(d.level, d.score)}${event ? `. ${t("fh.reportedTip")}` : ""}`)}"></button>`;
+      }).join("")}`).join("")}
   </div></div>`;
 }
 
@@ -74,15 +90,40 @@ function eventsList(h) {
     </button></li>`).join("")}</ol>`;
 }
 
+function sourceLinks(sources) {
+  return sources.map((s) => `<a href="${escapeHTML(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(s.name)}</a>`).join(" · ");
+}
+
+function evaluationTable(h) {
+  const rows = h.evaluation || [];
+  if (!rows.length) return "";
+  const sum = h.evaluation_summary;
+  return `<h3 style="margin-top:var(--space-4)">${escapeHTML(t("fh.evalTitle"))}</h3>
+    <p class="subtle">${escapeHTML(t("fh.evalSummary", { mod: sum.moderate_or_above, high: sum.high_or_above, n: sum.town_events }))}</p>
+    <div class="table-wrap"><table class="table fh-eval">
+      <thead><tr><th>${escapeHTML(t("fh.evalReported"))}</th><th>${escapeHTML(t("common.municipality"))}</th><th>${escapeHTML(t("fh.evalIndicator"))}</th><th class="num">${escapeHTML(t("fh.rainTotal"))}</th><th class="num">${escapeHTML(t("fh.evalUpstream"))}</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr>
+        <th scope="row"><button type="button" class="fh-open fh-event" data-town="${escapeHTML(r.municipality)}" data-date="${r.date}"><strong>${escapeHTML(r.start === r.end ? shortDate(r.start) : `${shortDate(r.start)}–${shortDate(r.end)}`)}</strong></button>
+          <div class="subtle">${escapeHTML(r.summary)}</div><div class="subtle">${sourceLinks(r.sources)}</div></th>
+        <td>${escapeHTML(r.municipality)}</td>
+        <td><span class="row" style="gap:6px;flex-wrap:nowrap"><span class="hc-dot" style="background:${riskColor(r.level)}"></span>${escapeHTML(levelText(r.level, r.score))}</span><div class="subtle">${escapeHTML(shortDate(r.date))}</div></td>
+        <td class="num">${isNumber(r.rain_mm) ? `${escapeHTML(num(r.rain_mm, 1))} mm` : "—"}</td>
+        <td class="num">${isNumber(r.upstream_mm) ? `${escapeHTML(num(r.upstream_mm, 1))} mm` : "—"}</td>
+      </tr>`).join("")}</tbody></table></div>
+    <p class="subtle" style="margin-top:6px">${escapeHTML(t("fh.evalNote"))}</p>`;
+}
+
 function dayDetail(h, townName, date) {
   const town = h.municipalities.find((m) => m.municipality === townName);
   const day = town?.days.find((d) => d.date === date);
   if (!day) return "";
+  const event = reportedIndex(h).get(`${townName}|${date}`);
   const shown = day.factors.filter((f) => f.points > 0 || f.held_back);
   const rest = day.factors.filter((f) => !(f.points > 0 || f.held_back));
   return `<div class="fh-detail" style="border-left-color:${riskColor(day.level)}">
     <div class="row" style="justify-content:space-between"><strong>${escapeHTML(townName)} · ${escapeHTML(formatDate(date))}</strong>
       <span class="row" style="gap:6px"><span class="hc-dot" style="background:${riskColor(day.level)}"></span>${escapeHTML(levelText(day.level, day.score))}</span></div>
+    ${event ? `<div class="notice notice-info" style="margin-top:8px"><div><strong>${escapeHTML(t("fh.reportedTip"))}:</strong> ${escapeHTML(event.summary)}<div class="subtle">${sourceLinks(event.sources)}</div></div></div>` : ""}
     ${shown.length ? `<p class="subtle" style="margin-top:6px">${escapeHTML(t("fh.because"))}</p><ul class="risk-factors">${shown.map((f) => `<li>${escapeHTML(historyFactorText(f))}</li>`).join("")}</ul>` : `<p class="subtle" style="margin-top:6px">${escapeHTML(t("fh.nothing"))}</p>`}
     <details style="margin-top:6px"><summary class="subtle">${escapeHTML(t("fh.allInputs"))}</summary><ul class="risk-factors">${rest.map((f) => `<li>${escapeHTML(historyFactorText(f))}</li>`).join("")}</ul></details>
   </div>`;
@@ -112,9 +153,10 @@ export async function mountFloodHistory(slot) {
       <div class="card-head"><div><h2 id="fhTitle">${escapeHTML(t("fh.title", { start: formatDate(h.start) }))}</h2>
         <p>${escapeHTML(t("fh.sub", { end: formatDate(h.end), n: h.days.length }))}</p></div>
         <span class="badge badge-warning">${escapeHTML(t("risk.draft"))}</span></div>
-      <ul class="swatches fh-legend">${RISK_IDS.map((id) => `<li><span class="swatch" style="background:${riskColor(id)}"></span>${escapeHTML(t(`risk.level.${id}`))}</li>`).join("")}</ul>
-      ${calendar(h)}
+      <ul class="swatches fh-legend">${RISK_IDS.map((id) => `<li><span class="swatch" style="background:${riskColor(id)}"></span>${escapeHTML(t(`risk.level.${id}`))}</li>`).join("")}<li><span class="swatch fh-reported-swatch"></span>${escapeHTML(t("fh.reportedLegend"))}</li></ul>
+      ${calendar(h, reportedIndex(h))}
       <div id="fhDetail" aria-live="polite"><p class="subtle">${escapeHTML(t("fh.clickHint"))}</p></div>
+      ${evaluationTable(h)}
       <h3 style="margin-top:var(--space-4)">${escapeHTML(t("fh.dailyMax"))}</h3>
       <div class="detail-chart" id="fhChart"></div>
       <h3 style="margin-top:var(--space-4)">${escapeHTML(t("fh.byTown"))}</h3>${summaryTable(h)}

@@ -137,6 +137,14 @@ def build_overview(outlook: dict) -> dict[str, Any]:
             f"next_{hours}h": summarize_points(points, hours)
             for hours in (6, 24, 48)
         }
+        # AGOS consensus: totals and peaks are the median of each model's own total
+        # and peak (adding hour-by-hour medians would understate the rain).
+        for key, ens in (record.get("ensemble") or {}).items():
+            window = windows.get(key)
+            if window is not None and ens and ens.get("median_of_totals") is not None:
+                window["total_mm"] = ens["median_of_totals"]
+                window["peak_mm_h"] = ens["median_of_peaks"]
+                window["level"] = rain_level(ens["median_of_peaks"])
 
         municipalities.append({
             "name": record.get("municipality"),

@@ -1,0 +1,65 @@
+{
+  "note": "Floods in Bataan reported by news media in 2026, used to check the flood-risk indicator. Dates are the reported dates; some articles give only an approximate day, so each event has a window. This is not a complete record: a day without a report is not proof that no flooding happened.",
+  "events": [
+    {
+      "id": "2026-08-08-hermosa",
+      "summary": "Flooding in parts of six Bataan towns, Hermosa hit hardest.",
+      "towns": ["Hermosa"],
+      "start": "2026-08-07",
+      "end": "2026-08-08",
+      "sources": [
+        {"name": "Inquirer: Floods hit 6 towns in Bataan", "url": "https://newsinfo.inquirer.net/2280264/floods-hit-6-towns-in-bataan"}
+      ]
+    },
+    {
+      "id": "2026-08-14-orion",
+      "summary": "Forced evacuation and rescue in Sitio Araro, Barangay San Vicente, Orion, as floodwaters rose under southwest monsoon rain.",
+      "towns": ["Orion"],
+      "start": "2026-08-13",
+      "end": "2026-08-14",
+      "sources": [
+        {"name": "Daily Tribune: Rising floodwaters force Bataan residents to evacuate (14 Aug 2026)", "url": "https://tribune.net.ph/2026/08/14/rising-floodwaters-force-bataan-residents-to-evacuate"}
+      ]
+    },
+    {
+      "id": "2026-08-20-calamity",
+      "summary": "Province declared under a state of calamity on 20 Aug; higher flooding in parts of Hermosa, Dinalupihan and Mariveles in the preceding days.",
+      "towns": ["Hermosa", "Dinalupihan", "Mariveles"],
+      "start": "2026-08-16",
+      "end": "2026-08-20",
+      "sources": [
+        {"name": "DZRH: Bataan declared under a state of calamity (20 Aug 2026)", "url": "https://www.dzrh.com.ph/post/bataan-declared-under-a-state-of-calamity"}
+      ]
+    },
+    {
+      "id": "2026-08-28-dinalupihan",
+      "summary": "A river overflowed in Barangay San Pablo, Dinalupihan, from the evening of 28 Aug; floodwater up to six to seven feet, rescues and evacuations (also Barangay Pinulot).",
+      "towns": ["Dinalupihan"],
+      "start": "2026-08-28",
+      "end": "2026-08-29",
+      "sources": [
+        {"name": "GMA News: Rescue ops launched amid overnight flooding in Dinalupihan, Bataan (29 Aug 2026)", "url": "https://www.gmanetwork.com/news/topstories/regions/1000315/watch-rescue-ops-launched-amid-overnight-flooding-in-dinalupihan-bataan/story/"}
+      ]
+    },
+    {
+      "id": "2026-09-02-pita",
+      "summary": "Flash flood with rocks and tree trunks in Purok 5, Barangay Pita, Dinalupihan; nine houses wrecked. The barangay captain said the rocks came from a landslide in Zambales.",
+      "towns": ["Dinalupihan"],
+      "start": "2026-09-01",
+      "end": "2026-09-02",
+      "sources": [
+        {"name": "GMA News: Rock-laden floodwaters wreck 9 houses in Bataan (5 Sep 2026)", "url": "https://www.gmanetwork.com/news/topstories/regions/1001304/rock-laden-floodwaters-wreck-9-houses-in-bataan/story/"}
+      ]
+    },
+    {
+      "id": "2026-09-08-evacuation",
+      "summary": "845 people from 246 families evacuated as flooding affected 11 barangays in Hermosa, Dinalupihan and Pilar (status as of 8 Sep; start date not given).",
+      "towns": ["Hermosa", "Dinalupihan", "Pilar"],
+      "start": "2026-09-06",
+      "end": "2026-09-08",
+      "sources": [
+        {"name": "Daily Tribune: Bataan floods force 845 people into evacuation centers (9 Sep 2026)", "url": "https://tribune.net.ph/2026/09/09/bataan-floods-displace-845-people"}
+      ]
+    }
+  ]
+}

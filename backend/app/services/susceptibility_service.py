@@ -216,6 +216,41 @@ def coastal_towns(boundaries: dict, coastline: Sequence[Sequence[tuple[float, fl
     return result
 
 
+# ------------------------------------------------------------------ upstream points
+HIGHLAND_M = 150.0
+
+
+def upstream_points(connect: Callable[[], sqlite3.Connection] | None = None) -> dict[str, list[dict]]:
+    """
+    Where each town's rivers start, from the terrain cells: the town's highest
+    cell and the centre of its high ground (cells >= HIGHLAND_M). Rain there
+    feeds the rivers that overflow downstream even when the town itself gets
+    little. Empty when the terrain layer has not been built.
+    """
+    connect = connect or ts._default_connect
+    connection = connect()
+    try:
+        ts.init_tables(connection)
+        rows = [dict(r) for r in connection.execute(
+            "SELECT municipality, latitude, longitude, elevation_m FROM terrain_cells WHERE elevation_m IS NOT NULL")]
+    finally:
+        connection.close()
+    out: dict[str, list[dict]] = {}
+    for name in sorted({r["municipality"] for r in rows}):
+        high = [r for r in rows if r["municipality"] == name and r["elevation_m"] >= HIGHLAND_M]
+        if not high:
+            continue
+        top = max(high, key=lambda r: r["elevation_m"])
+        points = [{"latitude": round(top["latitude"], 4), "longitude": round(top["longitude"], 4),
+                   "elevation_m": round(top["elevation_m"]), "kind": "highest cell"}]
+        if len(high) >= 3:
+            points.append({"latitude": round(sum(r["latitude"] for r in high) / len(high), 4),
+                           "longitude": round(sum(r["longitude"] for r in high) / len(high), 4),
+                           "elevation_m": round(sum(r["elevation_m"] for r in high) / len(high)), "kind": "centre of high ground"})
+        out[name] = points
+    return out
+
+
 # ------------------------------------------------------------------ summary
 def _share(values: list[bool]) -> float | None:
     return round(sum(values) / len(values), 3) if values else None

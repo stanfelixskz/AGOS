@@ -25,8 +25,10 @@ these dates.
 
 from __future__ import annotations
 
+import json
 import statistics
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from threading import Lock
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
@@ -34,7 +36,7 @@ from zoneinfo import ZoneInfo
 from app.data.municipalities import MUNICIPALITIES
 from app.services import flood_risk_service as fr
 from app.services.analysis_service import BEST_MATCH, MODELS, clean_series
-from app.services.consensus_service import combine
+from app.services.rain_metrics import METRICS, ensemble_metrics, series_metrics
 from app.services.weather_service import FLOOD_API_URL, _cached_request
 
 PH_TZ = ZoneInfo("Asia/Manila")
@@ -45,7 +47,7 @@ ANTECEDENT_DAYS = 3         # rain before the first day
 MAX_DAYS = 120
 CACHE_SECONDS = 3 * 3600
 HISTORY_WINDOWS = {
-    "peak_24h": "that day", "peak_3h": "that day", "total_24h": "that day",
+    "peak_24h": "that day", "peak_3h": "that day", "upstream": "that day, high ground", "total_24h": "that day",
     "total_72h": "3 days ending that day", "past_72h": "3 days before that day",
     "soil": "daily mean", "discharge": "that day vs the 30 days before",
     "tide": "that day vs the 30 days before", "low_ground": "static layer", "mgb": "static layer",
@@ -68,13 +70,29 @@ def _as_list(payload: Any, n: int, what: str) -> list[dict]:
     return items
 
 
-def fetch(start: date, end: date, request: Callable[..., Any] = _cached_request) -> dict[str, Any]:
+def fetch(start: date, end: date, request: Callable[..., Any] = _cached_request,
+          upstream: dict[str, list[dict]] | None = None) -> dict[str, Any]:
     names, lats, lons = _coords()
-    rain = _as_list(request(HISTORICAL_URL, {
-        "latitude": lats, "longitude": lons, "hourly": "precipitation,soil_moisture_0_to_10cm",
+    if upstream is None:
+        try:
+            from app.services.susceptibility_service import upstream_points
+
+            upstream = upstream_points()
+        except Exception:  # noqa: BLE001 - terrain layer not built: no upstream factor
+            upstream = {}
+    # Town points first, then every town's upstream points, in one request.
+    extra = [(name, p) for name in names for p in upstream.get(name, [])]
+    all_lats = lats + "".join(f",{p['latitude']}" for _, p in extra)
+    all_lons = lons + "".join(f",{p['longitude']}" for _, p in extra)
+    rain_all = _as_list(request(HISTORICAL_URL, {
+        "latitude": all_lats, "longitude": all_lons, "hourly": "precipitation,soil_moisture_0_to_10cm",
         "start_date": (start - timedelta(days=ANTECEDENT_DAYS)).isoformat(), "end_date": end.isoformat(),
         "models": ",".join([BEST_MATCH, *MODELS]), "timezone": "Asia/Manila",
-    }, ttl_seconds=CACHE_SECONDS), len(names), "Historical Forecast API")
+    }, ttl_seconds=CACHE_SECONDS), len(names) + len(extra), "Historical Forecast API")
+    rain = rain_all[:len(names)]
+    upstream_rain: dict[str, list[dict]] = {}
+    for (name, point), location in zip(extra, rain_all[len(names):]):
+        upstream_rain.setdefault(name, []).append({"point": point, "location": location})
     base = (start - timedelta(days=LOOKBACK_DAYS)).isoformat()
     try:
         flood = _as_list(request(FLOOD_API_URL, {
@@ -90,50 +108,51 @@ def fetch(start: date, end: date, request: Callable[..., Any] = _cached_request)
         }, ttl_seconds=CACHE_SECONDS), len(names), "Marine API")
     except RuntimeError:
         marine = [None] * len(names)
-    return {"names": names, "rain": rain, "flood": flood, "marine": marine}
+    return {"names": names, "rain": rain, "upstream": upstream_rain, "flood": flood, "marine": marine}
 
 
 # ------------------------------------------------------------------ per-town daily metrics
-def hourly_consensus(location: dict) -> tuple[list[datetime], list[float | None], list[float | None]]:
-    """Cleaned hourly consensus rain (median of six models) and default-model soil moisture."""
+def model_series(location: dict) -> dict[str, Any]:
+    """Cleaned hourly rain of every model (kept separate), the default model, and soil moisture."""
     hourly = location.get("hourly") or {}
     times = hourly.get("time") or []
     axis, best, _ = clean_series(times, hourly.get(f"precipitation_{BEST_MATCH}") or [None] * len(times), "precipitation")
     models = [clean_series(times, hourly.get(f"precipitation_{m}") or [None] * len(times), "precipitation")[1] for m in MODELS]
-    rain = [combine([s[i] for s in models], best[i], rain=True)["value"] for i in range(len(axis))]
     soil_raw = hourly.get(f"soil_moisture_0_to_10cm_{BEST_MATCH}") or [None] * len(times)
     soil = [v if isinstance(v, (int, float)) and 0 <= v <= 0.8 else None for v in soil_raw]
-    return axis, rain, soil
+    return {"axis": axis, "models": models, "best": best, "soil": soil}
 
 
-def _by_day(axis: list[datetime], values: list) -> dict[date, list]:
-    out: dict[date, list] = {}
-    for t, v in zip(axis, values):
-        out.setdefault(t.date(), []).append(v)
-    return out
-
-
-def _sum(values: list, need: int) -> float | None:
-    valid = [v for v in values if v is not None]
-    return round(sum(valid), 1) if len(valid) >= need else None
-
-
-def daily_values(axis: list[datetime], rain: list, soil: list, day: date) -> dict[str, Any]:
-    by_day = _by_day(axis, rain)
-    today = by_day.get(day, [])
-    window3 = [v for d in range(3) for v in by_day.get(day - timedelta(days=d), [])]
-    before3 = [v for d in range(1, 4) for v in by_day.get(day - timedelta(days=d), [])]
-    sums3 = [sum(today[i:i + 3]) for i in range(len(today) - 2) if None not in today[i:i + 3]]
-    valid = [v for v in today if v is not None]
-    soil_day = [v for v in _by_day(axis, soil).get(day, []) if v is not None]
+def daily_values(series: dict, day: date, statistic: str = "median", upstream: list[dict] | None = None) -> dict[str, Any]:
+    """
+    Rain metrics of day D: computed per model, then combined (rain_metrics). The
+    default model is used only if fewer than 3 models have data. Upstream =
+    the wettest of the town's high-ground points (24 h total, same combination).
+    """
+    start = datetime(day.year, day.month, day.day, tzinfo=PH_TZ)
+    ens = ensemble_metrics(series["axis"], series["models"], start, "day", statistic)
+    if ens["models"] < 3:
+        ens = {**ens, **series_metrics(series["axis"], series["best"], start, "day")}
+    soil_day = [v for t, v in zip(series["axis"], series["soil"]) if t.date() == day and v is not None]
+    ups = []
+    for item in upstream or []:
+        u = ensemble_metrics(item["axis"], item["models"], start, "day", statistic)["total_24h_mm"]
+        if u is not None:
+            ups.append(u)
+    # Rain shown to people is the best guess (middle model); the scored value may be the cautious one.
+    best_guess = ens if statistic == "median" else ensemble_metrics(series["axis"], series["models"], start, "day", "median")
     return {
-        "peak_24h_mm_h": round(max(valid), 2) if valid else None,
-        "peak_3h_mm": round(max(sums3), 1) if sums3 else None,
-        "total_24h_mm": _sum(today, 20),
-        "total_72h_mm": _sum(window3, 60),
-        "past_72h_mm": _sum(before3, 60),
+        **{m: ens[m] for m in METRICS},
+        "total_24h_median_mm": best_guess["total_24h_mm"] if best_guess["models"] >= 3 else ens["total_24h_mm"],
+        "upstream_24h_mm": round(max(ups), 1) if ups else None,
         "soil_moisture": round(statistics.fmean(soil_day), 3) if soil_day else None,
+        "models_low_high_24h": _low_high([pm["total_24h_mm"] for pm in ens.get("per_model", [])]),
     }
+
+
+def _low_high(values: list) -> list | None:
+    valid = [v for v in values if v is not None]
+    return [min(valid), max(valid)] if valid else None
 
 
 def daily_discharge(location: dict | None, day: date) -> dict[str, Any]:
@@ -174,6 +193,32 @@ def daily_tide(highs: dict[date, float], day: date) -> dict[str, Any]:
 
 # ------------------------------------------------------------------ build
 LEVEL_KEYS = ["low", "moderate", "high", "very_high", "nodata"]
+REPORTED_FILE = Path(__file__).resolve().parents[1] / "data" / "reported_floods.json"
+RANK = {"nodata": -1, "low": 0, "moderate": 1, "high": 2, "very_high": 3}
+
+
+def load_reported(path: Path = REPORTED_FILE) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"events": [], "note": None}
+
+
+def evaluate(towns_out: list[dict], reported: dict) -> list[dict]:
+    """For each reported flood and town: the highest level the indicator gave in the event window."""
+    rows = []
+    for event in reported.get("events", []):
+        for name in event["towns"]:
+            town = next((t for t in towns_out if t["municipality"] == name), None)
+            window = [d for d in (town or {}).get("days", []) if event["start"] <= d["date"] <= event["end"]]
+            if not window:
+                continue
+            best = max(window, key=lambda d: (RANK[d["level"]], d["score"] if d["score"] is not None else -1))
+            rows.append({"event": event["id"], "municipality": name, "start": event["start"], "end": event["end"],
+                         "summary": event["summary"], "sources": event["sources"],
+                         "date": best["date"], "level": best["level"], "score": best["score"],
+                         "rain_mm": best["rain_mm"], "upstream_mm": best.get("upstream_mm")})
+    return rows
 
 
 def build_history(
@@ -182,7 +227,9 @@ def build_history(
     fetcher: Callable[[date, date], dict] = fetch,
     static_loader: Callable[[], dict] = fr.load_static,
     today: date | None = None,
+    statistic: str | None = None,
 ) -> dict[str, Any]:
+    statistic = statistic or fr.RULES["ensemble_statistic"]
     today = today or datetime.now(PH_TZ).date()
     start = start or date(today.year, 8, 1)
     end = end or today - timedelta(days=1)
@@ -196,16 +243,19 @@ def build_history(
     days = [start + timedelta(days=k) for k in range((end - start).days + 1)]
     towns_out, events = [], []
     for index, name in enumerate(data["names"]):
-        axis, rain, soil = hourly_consensus(data["rain"][index])
+        series = model_series(data["rain"][index])
+        upstream = [model_series(item["location"]) for item in (data.get("upstream") or {}).get(name, [])]
         highs = daily_highs(data["marine"][index])
         rows = []
         for day in days:
-            values = daily_values(axis, rain, soil, day)
+            values = daily_values(series, day, statistic, upstream)
             assessed = fr.assess_town(name, values, daily_discharge(data["flood"][index], day), None,
                                       daily_tide(highs, day), static.get(name))
             row = {
                 "date": day.isoformat(), "level": assessed["level"], "score": assessed["score"],
-                "rain_mm": values["total_24h_mm"], "peak_mm_h": values["peak_24h_mm_h"],
+                "rain_mm": values["total_24h_median_mm"], "rain_scored_mm": values["total_24h_mm"],
+                "peak_mm_h": values["peak_24h_mm_h"],
+                "upstream_mm": values["upstream_24h_mm"], "models_low_high": values["models_low_high_24h"],
                 # factors without the long rule/source texts (those are the same every day)
                 "factors": [
                     {k: f[k] for k in ("id", "value", "points", "held_back", "unit", "level", "forecast_max", "median_30d", "p90_30d")
@@ -232,26 +282,38 @@ def build_history(
                 "worst_level": worst["level"] if worst else None,
             },
         })
+    reported = load_reported()
+    evaluation = evaluate(towns_out, reported)
     rank = {"very_high": 3, "high": 2, "moderate": 1}
     events.sort(key=lambda e: (rank[e["level"]], e["score"] or 0, e["rain_mm"] or 0), reverse=True)
     return {
         "start": start.isoformat(), "end": end.isoformat(), "days": [d.isoformat() for d in days],
         "rules_status": fr.RULES_STATUS,
+        "ensemble_statistic": statistic,
         "levels_rule": "Total points: 0-2 low, 3-5 moderate, 6-8 high, 9 or more very high.",
         "windows": HISTORY_WINDOWS,
         "source": "AGOS consensus of six models from the Open-Meteo Historical Forecast API; GloFAS river flow; Open-Meteo Marine sea level",
         "municipalities": towns_out,
         "events": events[:40],
+        "reported_floods": reported.get("events", []),
+        "reported_note": reported.get("note"),
+        "evaluation": evaluation,
+        "evaluation_summary": {
+            "town_events": len(evaluation),
+            "moderate_or_above": sum(1 for r in evaluation if RANK[r["level"]] >= 1),
+            "high_or_above": sum(1 for r in evaluation if RANK[r["level"]] >= 2),
+        },
         "limitations": [
-            "Rebuilt with the draft rules of the live indicator; not checked against recorded floods.",
-            "Past rain is archived short-range model output (median of six models), not rain-gauge records.",
+            "Rebuilt with the draft rules of the live indicator; checked only against the floods reported in the news listed here (not a complete record).",
+            "Past rain is archived short-range model output of six models, combined per day (not hour by hour), not rain-gauge records.",
+            "Upstream rain uses each town's own high ground; rivers fed from outside Bataan (for example Zambales) are not covered.",
             "The storm-from-article step is not applied to past days.",
         ],
     }
 
 
 def cached_history(start: date | None = None, end: date | None = None) -> dict[str, Any]:
-    key = (start, end, datetime.now(PH_TZ).date())
+    key = (start, end, datetime.now(PH_TZ).date(), fr.RULES["ensemble_statistic"])
     now = datetime.now().timestamp()
     with _lock:
         hit = _cache.get(key)

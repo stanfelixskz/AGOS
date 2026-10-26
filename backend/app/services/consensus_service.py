@@ -224,16 +224,20 @@ def _window_index(times: list[datetime], start: datetime, hours: int) -> list[in
 def window_totals(series: dict, start: datetime, hours: int) -> dict[str, Any]:
     """24-hour (or other) total: consensus sum, and each model's own total for the range."""
     idx = _window_index(series["times"], start, hours)
-    model_totals = []
+    model_totals, model_peaks = [], []
     for values in series["precipitation_models"]:
         picked = [values[i] for i in idx]
         if picked and None not in picked:
             model_totals.append(round(sum(picked), 1))
+            model_peaks.append(max(picked))
+    enough = len(model_totals) >= MIN_MODELS
     return {
         "models": len(model_totals),
         "low": min(model_totals) if model_totals else None,
         "high": max(model_totals) if model_totals else None,
-        "median_of_totals": round(statistics.median(model_totals), 1) if model_totals else None,
+        # Totals and peaks are combined per model, never by adding hour-by-hour medians.
+        "median_of_totals": round(statistics.median(model_totals), 1) if enough else None,
+        "median_of_peaks": round(statistics.median(model_peaks), 1) if enough else None,
     }
 
 
@@ -327,3 +331,32 @@ def precipitation_by_time(towns: dict | None = None) -> dict[str, dict[str, floa
         name: {t.strftime("%Y-%m-%dT%H:%M"): cell["value"] for t, cell in zip(series["times"], series["precipitation"])}
         for name, series in towns.items()
     }
+
+
+def point_models(points_by_town: dict[str, list[dict]], request: Callable[..., Any] = _cached_request) -> dict[str, list[dict]]:
+    """
+    Every model's cleaned hourly rain at extra points (for example each town's high
+    ground), past 3 days and next 4 days, in one request: {town: [{"times", "models", "point"}]}.
+    """
+    flat = [(name, p) for name, pts in points_by_town.items() for p in pts]
+    if not flat:
+        return {}
+    payload = request(OPEN_METEO_URL, {
+        "latitude": ",".join(str(p["latitude"]) for _, p in flat),
+        "longitude": ",".join(str(p["longitude"]) for _, p in flat),
+        "hourly": "precipitation", "past_days": 3, "forecast_days": 4,
+        "models": ",".join(MODELS), "timezone": "Asia/Manila", "precipitation_unit": "mm",
+    })
+    items = payload if isinstance(payload, list) else [payload]
+    if len(items) != len(flat):
+        raise RuntimeError(f"Upstream request returned {len(items)} locations, expected {len(flat)}")
+    out: dict[str, list[dict]] = {}
+    for (name, point), location in zip(flat, items):
+        hourly = location.get("hourly") or {}
+        times = hourly.get("time") or []
+        models, axis = [], []
+        for model in MODELS:
+            axis, values, _ = clean_series(times, hourly.get(f"precipitation_{model}") or [None] * len(times), "precipitation")
+            models.append(values)
+        out.setdefault(name, []).append({"times": axis, "models": models, "point": point})
+    return out

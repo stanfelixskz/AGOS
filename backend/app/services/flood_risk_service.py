@@ -37,6 +37,7 @@ from zoneinfo import ZoneInfo
 from app.config.settings import OPEN_METEO_URL
 from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
+from app.services.rain_metrics import METRICS as RAIN_METRICS, ensemble_metrics
 from app.services.weather_service import FLOOD_API_URL, _cached_request
 
 PH_TZ = ZoneInfo("Asia/Manila")
@@ -50,6 +51,12 @@ RULES: dict[str, Any] = {
     "peak_level_points": {"yellow": 2, "orange": 3, "red": 4},
     # Heaviest 3 consecutive hours in the next 24 h (mm): short bursts, flash floods.
     "peak_3h_mm": [(60, 2), (30, 1)],
+    # Rain over the town's own high ground (where its rivers start), wettest upstream point, 24 h (mm).
+    "upstream_24h_mm": [(200, 3), (100, 2), (50, 1)],
+    # How the six models are combined: "median" (middle model) or "upper" (second-wettest model).
+    # Chosen by backtest against floods reported in Aug-Sep 2026: "upper" flagged 9 of 10
+    # reported town-floods at moderate or above (median: 5 of 10), with no alarms in the dry spell.
+    "ensemble_statistic": "upper",
     # Forecast rain totals (mm): list of (at least, points), highest first.
     "total_24h_mm": [(200, 3), (100, 2), (50, 1)],
     "total_72h_mm": [(300, 2), (150, 1)],
@@ -73,7 +80,7 @@ RULES: dict[str, Any] = {
     "storm_inside_radius_steps": 1,
 }
 LEVELS = ["low", "moderate", "high", "very_high"]
-WEATHER_FACTORS = ("peak_24h", "peak_3h", "total_24h", "total_72h", "past_72h", "soil", "discharge")
+WEATHER_FACTORS = ("peak_24h", "peak_3h", "upstream", "total_24h", "total_72h", "past_72h", "soil", "discharge")
 STATIC_FACTORS = ("low_ground", "mgb")
 
 SOURCES = {
@@ -133,23 +140,23 @@ def fetch_inputs(request: Callable[..., Any] = _cached_request) -> dict[str, Any
         "past_days": 3, "forecast_days": 4,
         "timezone": "Asia/Manila", "precipitation_unit": "mm",
     }), len(names), "forecast")
-    # Rain inputs use the AGOS consensus of six models (same numbers as the dashboard).
-    # Copies are changed, never the cached API payload.
+    # Rain inputs: every model's own series (six models) for the town and its high ground.
+    # Metrics are computed per model and then combined (rain_metrics). The default model
+    # in `forecast` is only used if the multi-model request fails.
     rain_basis = "single_model_fallback"
+    rain_models: dict[str, dict] = {}
+    upstream_models: dict[str, list[dict]] = {}
     try:
         from app.services import consensus_service
+        from app.services.susceptibility_service import upstream_points
 
-        consensus = consensus_service.precipitation_by_time()
-        replaced = []
-        for name, location in zip(names, forecast):
-            hourly = dict(location.get("hourly") or {})
-            by_time = consensus.get(name, {})
-            hourly["precipitation"] = [
-                by_time.get(stamp) if by_time.get(stamp) is not None else value
-                for stamp, value in zip(hourly.get("time") or [], hourly.get("precipitation") or [])
-            ]
-            replaced.append({**location, "hourly": hourly})
-        forecast, rain_basis = replaced, "consensus"
+        for name, series in consensus_service.all_towns().items():
+            rain_models[name] = {"times": series["times"], "models": series["precipitation_models"]}
+        try:
+            upstream_models = consensus_service.point_models(upstream_points())
+        except Exception:  # noqa: BLE001 - no terrain layer or request failed: no upstream factor
+            upstream_models = {}
+        rain_basis = "ensemble"
     except (RuntimeError, ValueError, KeyError):
         pass
     try:
@@ -173,6 +180,7 @@ def fetch_inputs(request: Callable[..., Any] = _cached_request) -> dict[str, Any
     return {
         "names": names, "forecast": forecast, "flood": flood, "flood_error": flood_error,
         "marine": marine, "marine_error": marine_error, "rain_basis": rain_basis,
+        "rain_models": rain_models, "upstream_models": upstream_models,
     }
 
 
@@ -313,6 +321,12 @@ def assess_town(
             "window": "heaviest 3 hours in the next 24 h",
         },
         {
+            "id": "upstream", "value": values.get("upstream_24h_mm"), "unit": "mm",
+            "points": _points(values.get("upstream_24h_mm"), RULES["upstream_24h_mm"]),
+            "rule": _threshold_text(RULES["upstream_24h_mm"], " mm"), "source": SOURCES["forecast"],
+            "window": "24 h, wettest point of the town's high ground",
+        },
+        {
             "id": "total_24h", "value": values["total_24h_mm"], "unit": "mm",
             "points": _points(values["total_24h_mm"], RULES["total_24h_mm"]),
             "rule": _threshold_text(RULES["total_24h_mm"], " mm"), "source": SOURCES["forecast"], "window": "next 24 h",
@@ -422,8 +436,19 @@ def build_flood_risk(
     today = now.date().isoformat()
     towns = []
     marine = data.get("marine") or [None] * len(data["names"])
+    statistic = RULES["ensemble_statistic"]
+    current = now.replace(minute=0, second=0, microsecond=0)
     for index, name in enumerate(data["names"]):
-        values = _hourly_windows(data["forecast"][index].get("hourly") or {}, now)
+        values = _hourly_windows(data["forecast"][index].get("hourly") or {}, now)  # soil + fallback
+        models = (data.get("rain_models") or {}).get(name)
+        if models:
+            ens = ensemble_metrics(models["times"], models["models"], current, "forecast", statistic)
+            if ens["models"] >= 3:
+                values.update({m: ens[m] for m in RAIN_METRICS})
+        ups = [ensemble_metrics(u["times"], u["models"], current, "forecast", statistic)["total_24h_mm"]
+               for u in (data.get("upstream_models") or {}).get(name, [])]
+        ups = [u for u in ups if u is not None]
+        values["upstream_24h_mm"] = round(max(ups), 1) if ups else None
         discharge = _discharge_ratio(data["flood"][index], today)
         tide = _tide(marine[index], now)
         towns.append(assess_town(name, values, discharge, storm, tide, static_towns.get(name)))
