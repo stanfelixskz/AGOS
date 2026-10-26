@@ -28,8 +28,12 @@ export function factorText(factor) {
   if (factor.id === "peak_24h") value = `${num(factor.value, 1)} mm/h (${t(`risk.peak.${factor.level}`)})`;
   else if (factor.id === "soil") value = `${num(factor.value, 2)} m³/m³`;
   else if (factor.id === "discharge") value = t("risk.dischargeValue", { ratio: num(factor.value, 1), now: num(factor.forecast_max, 1), median: num(factor.median_30d, 1) });
+  else if (factor.id === "tide") value = t("risk.tideValue", { peak: num(factor.value, 2), p90: num(factor.p90_30d, 2) });
+  else if (factor.unit === "share") value = t("risk.shareValue", { pct: Math.round(factor.value * 100) });
   else value = `${num(factor.value, 1)} mm`;
-  return `${label}: ${value}${factor.points ? ` (+${factor.points})` : ""}`;
+  // Static layers held back on a dry day: say what they would add.
+  const held = factor.held_back ? ` ${t("risk.heldBack", { n: factor.held_back })}` : "";
+  return `${label}: ${value}${factor.points ? ` (+${factor.points})` : ""}${held}`;
 }
 
 export function stormText(storm) {

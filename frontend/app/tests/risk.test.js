@@ -43,6 +43,18 @@ test("when nothing scored, the card still explains with the main rain values", (
   assert.match(row.lines.join(" | "), /Forecast rain, next 24 h: 20\.0 mm \| Rain in the past 72 h: 12\.0 mm/);
 });
 
+test("place factors show a share and what they would add when it rains", () => {
+  assert.equal(factorText(factor("low_ground", 0.26, 2, { unit: "share" })), "Low ground (≤5 m, or ≤10 m near a waterway): 26% of the town (+2)");
+  assert.equal(
+    factorText(factor("mgb", 0.3, 0, { unit: "share", held_back: 1 })),
+    "MGB high or very high susceptibility: 30% of the town (would add +1 when it rains)",
+  );
+});
+
+test("tide factor shows the peak against the high-tide mark", () => {
+  assert.equal(factorText(factor("tide", 1.31, 1, { unit: "m", p90_30d: 1.12 })), "Sea level (coastal): peak 1.31 m vs high-tide mark 1.12 m (+1)");
+});
+
 test("missing values say no data, never zero", () => {
   assert.equal(factorText(factor("discharge", null, 0)), "River flow (GloFAS): no data");
 });
