@@ -166,6 +166,32 @@ class ExtractionTests(unittest.TestCase):
         ts.extract_typhoon("Tropical Storm Testg was 180 km North Northeast of Virac, Catanduanes.\nSignal No. 2 is raised.", geocode=geocode)
         self.assertEqual(seen, ["Virac, Catanduanes"])
 
+    def test_headline_storm_wins_over_sidebar_mentions(self):
+        text = "Related: Severe Tropical Storm Testy left PAR. Typhoon Testz is 300 km east of Virac, Catanduanes."
+        r = ts.extract_typhoon(text, geocode=fake_geocode, title="Testz rapidly intensifies")
+        self.assertEqual(r["storm"]["name"], "Testz")
+        self.assertEqual(ts.extract_typhoon(text, geocode=fake_geocode)["storm"]["name"], "Testy")
+
+    def test_headline_name_without_category_is_used_and_category_not_guessed(self):
+        text = ("Testv could make landfall tonight. Testv was 465 km east of Virac, Catanduanes. "
+                "Testv has winds of 150 km/h. Earlier, Severe Tropical Storm Testu left the country.")
+        r = ts.extract_typhoon(text, geocode=fake_geocode, title="Testv rapidly intensifies into typhoon")
+        self.assertEqual(r["storm"]["name"], "Testv")
+        self.assertIsNone(r["storm"]["category"])
+        # A headline that starts with a generic word does not become a storm name.
+        r2 = ts.extract_typhoon("Signal Signal Signal. Typhoon Testz nears.", geocode=fake_geocode, title="Signal No. 3 raised")
+        self.assertEqual(r2["storm"]["name"], "Testz")
+
+    def test_month_is_not_a_storm_name_and_hashtags_are_read(self):
+        self.assertIsNone(ts.extract_typhoon("Tropical Storm Nov. 9 update: no storm.", geocode=fake_geocode)["storm"])
+        r = ts.extract_typhoon("Super Typhoon #TestwPH nears land.", geocode=fake_geocode)
+        self.assertEqual(r["storm"]["name"], "Testw")
+
+    def test_city_suffix_is_retried_without_city(self):
+        self.assertEqual(ts._name_variants("Borongan City"), ["Borongan City", "Borongan"])
+        self.assertEqual(ts._name_variants("City of Borongan"), ["City of Borongan", "Borongan"])
+        self.assertEqual(ts._name_variants("Virac"), ["Virac"])
+
     def test_text_without_storm_details(self):
         r = ts.extract_typhoon("The city council approved a new budget today.", geocode=fake_geocode)
         self.assertIsNone(r["storm"])
