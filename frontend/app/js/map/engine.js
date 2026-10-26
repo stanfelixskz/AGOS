@@ -123,6 +123,7 @@ export async function createAgosMap(container, options = {}) {
     userMarker: null,
     typhoon: null,
     typhoonMarker: null,
+    areaMarker: null,
     precip: precipTileUrl(),
     precipDate: null,       // null = the current hour
     precipOpacity: 0.7,
@@ -276,6 +277,29 @@ export async function createAgosMap(container, options = {}) {
     // Stated wind extent: true size on the map. Otherwise a fixed screen size by strength.
     const px = radius ? 2 * kmToPixels(radius, ty.position.latitude, map.getZoom()) : unscaledSize(intensityLevel(ty));
     el.style.setProperty("--size", `${Math.round(Math.min(4000, Math.max(28, px)))}px`);
+  }
+
+  /**
+   * Direction-only storm ("east of Aurora", no distance): a dot at the named
+   * place and an arrow of fixed screen length pointing the stated way. It
+   * makes no claim about how far away the storm is, so no storm symbol is drawn.
+   */
+  function renderAreaMarker(area, label) {
+    state.areaMarker?.remove();
+    state.areaMarker = null;
+    if (!area?.geocode) return;
+    const el = document.createElement("div");
+    el.className = "typhoon-area";
+    el.innerHTML = `<span class="typhoon-area-arrow" style="--bearing:${area.bearing_deg}deg" aria-hidden="true"></span>
+      <span class="typhoon-area-dot" aria-hidden="true"></span>
+      <button type="button" class="typhoon-label">${escapeHTML(label)}</button>`;
+    el.querySelector(".typhoon-label").addEventListener("click", (event) => {
+      event.stopPropagation();
+      options.onSelectTyphoon?.();
+    });
+    state.areaMarker = new maplibregl.Marker({ element: el, anchor: "center" })
+      .setLngLat([area.geocode.longitude, area.geocode.latitude])
+      .addTo(map);
   }
 
   function renderTyphoonMarker(label) {
@@ -692,10 +716,14 @@ export async function createAgosMap(container, options = {}) {
       state.typhoon = typhoon?.position ? typhoon : null;
       map.getSource("agos-typhoon")?.setData(typhoonGeoJSON());
       renderTyphoonMarker(label);
-      if (!state.typhoon) return;
+      renderAreaMarker(state.typhoon ? null : typhoon?.area, label);
+      const area = !state.typhoon && typhoon?.area?.geocode ? typhoon.area : null;
+      if (!state.typhoon && !area) return;
       map.setMaxBounds(null);
-      const center = [state.typhoon.position.longitude, state.typhoon.position.latitude];
-      const reach = state.typhoon.radius_km?.value || 60;
+      const center = state.typhoon
+        ? [state.typhoon.position.longitude, state.typhoon.position.latitude]
+        : [area.geocode.longitude, area.geocode.latitude];
+      const reach = state.typhoon?.radius_km?.value || 60;
       const lons = [BATAAN_BOUNDS[0][0], BATAAN_BOUNDS[1][0]];
       const lats = [BATAAN_BOUNDS[0][1], BATAAN_BOUNDS[1][1]];
       for (const bearing of [0, 90, 180, 270]) {
@@ -710,6 +738,7 @@ export async function createAgosMap(container, options = {}) {
       state.typhoon = null;
       map.getSource("agos-typhoon")?.setData(typhoonGeoJSON());
       renderTyphoonMarker("");
+      renderAreaMarker(null, "");
       map.setMaxBounds(MAX_BOUNDS);
       controller.fitBataan();
     },
@@ -745,6 +774,7 @@ export async function createAgosMap(container, options = {}) {
       for (const marker of state.markers.values()) marker.remove();
       state.userMarker?.remove();
       state.typhoonMarker?.remove();
+      state.areaMarker?.remove();
       hoverCard.remove();
       rainfx?.destroy();
       map.remove();
