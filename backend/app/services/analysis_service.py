@@ -36,6 +36,7 @@ from zoneinfo import ZoneInfo
 from app.config.settings import OPEN_METEO_URL
 from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
+from app.services.rain_metrics import ensemble_metrics
 from app.services.weather_service import _cached_request
 
 PH_TZ = ZoneInfo("Asia/Manila")
@@ -390,6 +391,13 @@ def analyze_municipality(
     peak_idx = max(valid_idx, key=lambda i: rain24[i]) if valid_idx else None
     peak_times = [t for t in t_axis if current <= t < current + timedelta(hours=24)]
     rain_desc["peak_time"] = peak_times[peak_idx].isoformat() if peak_idx is not None and peak_idx < len(peak_times) else None
+    # Totals and peaks: the median of each model's own value (adding hour-by-hour
+    # medians understates rain). Hour-level statistics (mean, wet hours) stay hourly.
+    ens = ensemble_metrics(t_axis, [model_series[m] for m in MODELS], current, "forecast", "median")
+    if ens["models"] >= 3:
+        rain_desc.update({"sum": ens["total_24h_mm"], "max": ens["peak_24h_mm_h"], "max_3h": ens["peak_3h_mm"]})
+    week_totals = [sum(v for t, v in zip(t_axis, model_series[m]) if current - timedelta(days=7) <= t < current and v is not None)
+                   for m in MODELS]
     stats = {
         "next_24h": {
             "precipitation": rain_desc,
@@ -398,8 +406,9 @@ def analyze_municipality(
             "cloud_cover": describe(_window(t_axis, consensus["cloud_cover"], current, 24)),
             "wind_speed_10m": describe(_window(t_axis, consensus["wind_speed_10m"], current, 24)),
         },
-        "next_72h_precipitation": describe(rain72),
-        "past_7d_precipitation": {**describe(past7), "wet_hours": sum(1 for v in past7 if v is not None and v >= WET_HOUR_MM)},
+        "next_72h_precipitation": {**describe(rain72), **({"sum": ens["total_72h_mm"]} if ens["models"] >= 3 else {})},
+        "past_7d_precipitation": {**describe(past7), "wet_hours": sum(1 for v in past7 if v is not None and v >= WET_HOUR_MM),
+                                  **({"sum": round(statistics.median(week_totals), 1)} if ens["models"] >= 3 else {})},
     }
 
     # 4. models

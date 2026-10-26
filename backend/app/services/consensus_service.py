@@ -192,7 +192,16 @@ def daily_summary(series: dict, start: datetime, days: int = 3) -> list[dict]:
         conds = [condition(series["precipitation"][i], series["cloud_cover"][i], series["codes"][i]) for i in idx]
         daytime = [series["cloud_cover"][i]["value"] for i in idx
                    if 6 <= series["times"][i].hour < 18 and series["cloud_cover"][i]["value"] is not None]
-        total = round(sum(mm), 1) if mm else None
+        # Day total = median of the models' own day totals (never a sum of hourly medians).
+        model_totals = []
+        for values in series.get("precipitation_models") or []:
+            picked = [values[i] for i in idx]
+            if None not in picked:
+                model_totals.append(sum(picked))
+        if len(model_totals) >= MIN_MODELS:
+            total = round(statistics.median(model_totals), 1)
+        else:
+            total = round(sum(mm), 1) if mm else None
         # The worst wet condition of the day wins; a dry day takes its daytime mean cloud cover.
         for wet in ("thunder", "heavy_rain", "rain", "light_rain"):
             if wet in conds and (wet != "light_rain" or (total or 0) >= 1):
