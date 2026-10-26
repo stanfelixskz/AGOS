@@ -134,3 +134,21 @@ def municipality_analysis(name: str):
         raise HTTPException(status_code=404, detail=str(error)) from error
     except RuntimeError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.get("/flood-risk/history")
+def flood_risk_history(start: str | None = Query(None, description="YYYY-MM-DD; default 1 August of this year"),
+                       end: str | None = Query(None, description="YYYY-MM-DD; default yesterday")):
+    """The flood-risk indicator rebuilt for each past day (draft rules, not checked against recorded floods)."""
+    from datetime import date as date_type
+
+    from app.services import flood_history_service
+
+    try:
+        start_date = date_type.fromisoformat(start) if start else None
+        end_date = date_type.fromisoformat(end) if end else None
+        return flood_history_service.cached_history(start_date, end_date)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error

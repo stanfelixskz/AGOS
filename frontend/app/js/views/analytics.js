@@ -12,6 +12,7 @@ import { barChart, lineChart, mountChart } from "../core/charts.js";
 import { EXPLAIN } from "../core/explain.js";
 import { loadingState, errorState, onRetry, openDialog } from "../core/ui.js";
 import { buildHash } from "../core/router.js";
+import { mountFloodHistory } from "./parts/flood-history.js";
 
 const PERIODS = [7, 30, 90];
 const STORE_KEY = "agos.analytics";
@@ -77,7 +78,8 @@ export async function mount(container) {
         ${PERIODS.map((d) => `<button type="button" data-days="${d}" aria-pressed="${d === state.days}">${escapeHTML(t("analytics.days", { n: d }))}</button>`).join("")}
       </div>
     </div>
-    <div id="analyticsBody">${loadingState()}</div>`;
+    <div id="floodHistorySlot"></div>
+    <div id="analyticsBody" style="margin-top:var(--space-4)">${loadingState()}</div>`;
 
   const body = container.querySelector("#analyticsBody");
 
@@ -264,9 +266,17 @@ export async function mount(container) {
     onRetry(body, load);
   }
 
+  // Flood-risk history loads on its own so it never holds up the rest of the page.
+  let floodCleanup = null;
+  mountFloodHistory(container.querySelector("#floodHistorySlot")).then((fn) => {
+    if (state.alive) floodCleanup = fn;
+    else fn?.();
+  });
+
   await load();
   return () => {
     state.alive = false;
     teardownCharts();
+    floodCleanup?.();
   };
 }
