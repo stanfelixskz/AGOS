@@ -15,6 +15,7 @@ import { buildHash } from "../core/router.js";
 import { effectiveTheme } from "../core/theme.js";
 import { loadingState, errorState, onRetry, openDialog } from "../core/ui.js";
 import { renderWatchList, explainWatch, mountWatchChart } from "./parts/watch.js";
+import { renderSusceptibility, mountSusceptibility, explainSusceptibility } from "./parts/susceptibility.js";
 import { levelPill } from "./parts/muni-detail.js";
 
 const TTL = 10 * 60 * 1000;
@@ -99,6 +100,7 @@ function render(data) {
     </div>
 
     <div id="watchSlot"></div>
+    <div id="suscSlot"></div>
 
     <section class="card" style="margin-top:var(--space-4)" aria-labelledby="provinceTitle">
       <div class="card-head">
@@ -136,16 +138,7 @@ function render(data) {
       </div>
       <p class="card-foot">${escapeHTML(t("overview.townsFoot"))}</p>
     </section>
-
-    <section class="card susceptibility-slot" style="margin-top:var(--space-4)" aria-labelledby="suscTitle">
-      <div class="row">
-        ${icon("layers", { size: 22 })}
-        <div class="spacer">
-          <h2 id="suscTitle" style="font-size:var(--text-md)">${escapeHTML(t("overview.suscTitle"))} <span class="badge">${escapeHTML(t("common.comingSoon"))}</span></h2>
-          <p class="muted">${escapeHTML(t("overview.suscBody"))}</p>
-        </div>
-      </div>
-    </section>`;
+`;
 }
 
 export async function mount(container) {
@@ -172,7 +165,23 @@ export async function mount(container) {
     container.querySelectorAll("[data-why]").forEach((b) => b.addEventListener("click", () => EXPLAIN[b.dataset.why]?.()));
 
     // Flood warning signs load on their own so a slow answer never blocks the page.
+    let latestWatch = null;
+    let suscPick = null;
+    getJSON("/api/susceptibility", { ttlMs: 60 * 60 * 1000, timeoutMs: 30000 }).then((susc) => {
+      const slot = alive && container.querySelector("#suscSlot");
+      if (!slot) return;
+      slot.innerHTML = renderSusceptibility(susc);
+      slot.querySelector("[data-susc-why]")?.addEventListener("click", () => openDialog(t("susc.title"), explainSusceptibility(getLang() === "fil")));
+      suscPick = mountSusceptibility(slot, susc, () => latestWatch) || null;
+    }).catch((error) => {
+      const slot = alive && container.querySelector("#suscSlot");
+      if (slot) slot.innerHTML = `<section class="card" style="margin-top:var(--space-4)"><div class="card-head"><div><h2>${escapeHTML(t("susc.title"))}</h2></div></div>${errorState(error)}</section>`;
+    });
+
     getJSON("/api/flood-watch", { ttlMs: TTL, timeoutMs: 45000 }).then((watch) => {
+      latestWatch = watch;
+      const picked = container.querySelector("[data-susc-pick].is-picked");
+      if (picked && suscPick) suscPick(picked.dataset.suscPick); // show today's sign next to susceptibility
       const slot = alive && container.querySelector("#watchSlot");
       if (!slot) return;
       slot.innerHTML = renderWatchList(watch);

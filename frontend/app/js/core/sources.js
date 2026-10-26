@@ -55,10 +55,10 @@ export const SOURCES = [
     url: "https://controlmap.mgb.gov.ph/arcgis/rest/services/GeospatialDataInventory_Public/GDI_Detailed_Flood_Susceptibility_Public/MapServer",
     kind: "Official hazard map (static)",
     what: "Mapped flood susceptibility classes from the Mines and Geosciences Bureau, shown as map tiles.",
-    usedFor: "The flood susceptibility map layer.",
-    limits: "Shows where flooding is possible in general, not whether it will flood now. AGOS displays the tiles; it does not extract values from them.",
+    usedFor: "The flood susceptibility map layer, and the share of each town's and barangay's land per class on Overview (shapes downloaded once, measured every 200 m).",
+    limits: "Shows where flooding is possible in general, not whether it will flood now or how deep. In Bataan this layer has High, Moderate and Low areas (no Very High). Land MGB did not rate (mostly uplands) is shown as not rated, not as safe.",
     refresh: "Static; served by MGB.",
-    fil: {"kind": "Opisyal na hazard map (hindi nagbabago)", "what": "Mga klase ng flood susceptibility mula sa Mines and Geosciences Bureau, ipinapakita bilang map tiles.", "usedFor": "Ang flood susceptibility layer sa mapa.", "limits": "Ipinapakita kung saan posible ang baha sa pangkalahatan, hindi kung babaha ngayon. Ipinapakita lang ng AGOS ang tiles; hindi ito kumukuha ng value mula rito.", "refresh": "Hindi nagbabago; mula sa MGB."},
+    fil: {"kind": "Opisyal na hazard map (hindi nagbabago)", "what": "Mga klase ng flood susceptibility mula sa Mines and Geosciences Bureau, ipinapakita bilang map tiles.", "usedFor": "Ang flood susceptibility layer sa mapa, at ang bahagi ng lupa ng bawat bayan at barangay sa bawat klase sa Overview (kinuha ang mga hugis nang isang beses, sinukat bawat 200 m).", "limits": "Ipinapakita kung saan posible ang baha sa pangkalahatan, hindi kung babaha ngayon o gaano kalalim. Sa Bataan, may Mataas, Katamtaman at Mababa ang layer na ito (walang Napakataas). Ang lupang hindi inuri ng MGB (kadalasang kabundukan) ay walang rating, hindi ligtas.", "refresh": "Hindi nagbabago; mula sa MGB."},
   },
   {
     id: "weatherapi-tiles",

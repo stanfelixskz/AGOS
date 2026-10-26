@@ -11,6 +11,7 @@ from app.services import overview_service as overview
 from app.services.climate_service import climate_report
 from app.services.history_service import history_report
 from app.services import evidence_service, flood_events_service, flood_model_service, flood_watch_service
+from app.services import susceptibility_service
 from app.services import typhoon_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
@@ -85,6 +86,12 @@ def flood_evidence():
         return evidence_service.evidence_report()
     except ValueError as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
+
+
+@router.get("/susceptibility")
+def flood_susceptibility():
+    """Share of each town's and barangay's land in each official DENR-MGB flood susceptibility class."""
+    return susceptibility_service.susceptibility_report()
 
 
 @router.get("/flood-watch")
