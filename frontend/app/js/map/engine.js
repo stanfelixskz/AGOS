@@ -108,14 +108,15 @@ export async function createAgosMap(container, options = {}) {
   }
 
   const state = {
-    visible: { boundaries: true, rain: true, rainfx: false, windfx: false, cloudfx: false, evacuation: true, reports: true, mgb: false, precip: false },
+    visible: { risk: false, boundaries: true, rain: true, rainfx: false, windfx: false, cloudfx: false, evacuation: true, reports: true, mgb: false, precip: false },
     // windfx and cloudfx are listed but not available: AGOS stores no wind direction, cloud cover or sun data yet.
-    available: { boundaries: null, rain: null, rainfx: null, windfx: false, cloudfx: false, evacuation: null, reports: null, mgb: true, precip: true },
+    available: { risk: null, boundaries: null, rain: null, rainfx: null, windfx: false, cloudfx: false, evacuation: null, reports: null, mgb: true, precip: true },
     messages: {},
     boundaries: null,
     centers: [],
     reports: [],
     rainRows: [],
+    riskRows: [], // [{ name, level, color, title, lines: [text], foot }] prepared by the page
     markers: new Map(),
     selected: null,
     selectedCenter: null,
@@ -313,26 +314,27 @@ export async function createAgosMap(container, options = {}) {
     return state.boundaries?.features.find((f) => normName(featureName(f)) === key)?.id;
   }
 
-  /** Color each town shape by its rain level (only while the rain layer is on). */
+  /** Color each town shape by its flood-risk indicator when that layer is on, else by rain level. */
   function applyTint() {
     if (!state.boundaries || !map.getSource("agos-boundaries")) return;
     const byId = new Map();
-    if (state.visible.rain) {
-      for (const row of state.rainRows) {
-        const id = featureIdFor(row.name);
-        if (id !== undefined) byId.set(id, row);
-      }
+    const useRisk = state.visible.risk && state.riskRows.length > 0;
+    const rows = useRisk ? state.riskRows : state.visible.rain ? state.rainRows : [];
+    for (const row of rows) {
+      const id = featureIdFor(row.name);
+      if (id !== undefined) byId.set(id, row);
     }
     for (const f of state.boundaries.features) {
       const row = byId.get(f.id);
       const tinted = Boolean(row) && row.level !== "nodata";
-      map.setFeatureState({ source: "agos-boundaries", id: f.id }, { tinted, color: tinted ? levelColor(row.level) : null });
+      const color = !tinted ? null : useRisk ? row.color : levelColor(row.level);
+      map.setFeatureState({ source: "agos-boundaries", id: f.id }, { tinted, color });
     }
   }
 
   function updateFillVisibility() {
     for (const id of ["agos-boundary-fill", "agos-boundary-selected"]) {
-      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis(state.visible.boundaries || state.visible.rain));
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis(state.visible.boundaries || state.visible.rain || state.visible.risk));
     }
   }
 
@@ -359,9 +361,16 @@ export async function createAgosMap(container, options = {}) {
       map.setFeatureState({ source: "agos-boundaries", id: hoverId }, { hover: true });
     }
     const key = normName(featureName(feature));
+    const risk = state.visible.risk ? state.riskRows.find((r) => normName(r.name) === key) : null;
     const row = state.rainRows.find((r) => normName(r.name) === key);
-    if (!row) return clearHover();
-    hoverCard.innerHTML = `<strong>${escapeHTML(row.name)}</strong><span class="hc-level"><span class="hc-dot" style="background:${levelColor(row.level)}"></span>${escapeHTML(row.levelText || "")} · <span class="num">${escapeHTML(row.valueText)}</span></span><span class="hc-sub">${escapeHTML(row.modeText || "")}</span>`;
+    if (!risk && !row) return clearHover();
+    hoverCard.classList.toggle("is-risk", Boolean(risk));
+    hoverCard.innerHTML = risk
+      // Flood-risk analysis: level, the reasons (inputs that scored), and where the numbers come from.
+      ? `<strong>${escapeHTML(risk.name)}</strong><span class="hc-level"><span class="hc-dot" style="background:${risk.color}"></span>${escapeHTML(risk.title)}</span>`
+        + `<ul class="hc-reasons">${risk.lines.map((line) => `<li>${escapeHTML(line)}</li>`).join("")}</ul>`
+        + `<span class="hc-sub">${escapeHTML(risk.foot)}</span>`
+      : `<strong>${escapeHTML(row.name)}</strong><span class="hc-level"><span class="hc-dot" style="background:${levelColor(row.level)}"></span>${escapeHTML(row.levelText || "")} · <span class="num">${escapeHTML(row.valueText)}</span></span><span class="hc-sub">${escapeHTML(row.modeText || "")}</span>`;
     hoverCard.hidden = false;
     // Keep the card inside the map: flip to the left / above the pointer near the edges.
     const width = hoverCard.offsetWidth || 160;
@@ -562,7 +571,11 @@ export async function createAgosMap(container, options = {}) {
       }
       if (id === "precip" && visible) probePrecip(state.precip.url);
       if (id === "rainfx") rainfx?.setEnabled(visible);
-      if (id === "rain" || id === "boundaries") updateFillVisibility();
+      if (id === "rain" || id === "boundaries" || id === "risk") updateFillVisibility();
+      if (id === "risk") {
+        applyTint();
+        clearHover();
+      }
       if (id === "rain") {
         applyTint();
         renderRainMarkers();
@@ -616,6 +629,15 @@ export async function createAgosMap(container, options = {}) {
       rainfx?.setRates(rainfxRows());
       applyTint();
       renderRainMarkers();
+      emit();
+    },
+
+    /** rows: [{ name, level, color, title, lines: [text], foot }] — flood-risk indicator per town. */
+    setRisk(rows, available = true, message = "") {
+      state.riskRows = rows || [];
+      state.available.risk = available;
+      state.messages.risk = message;
+      applyTint();
       emit();
     },
 

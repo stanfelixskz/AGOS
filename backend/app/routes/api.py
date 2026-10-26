@@ -10,6 +10,7 @@ from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
 from app.services.history_service import history_report
 from app.services import typhoon_service
+from app.services import flood_risk_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
     get_bataan_rainfall_outlook,
@@ -75,4 +76,25 @@ def typhoon_from_url(url: str = Query(..., min_length=8, max_length=2048)):
     except typhoon_service.UrlRejected as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     except typhoon_service.FetchFailed as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.get("/flood-risk")
+def flood_risk(
+    storm_lat: float | None = Query(None, ge=-60, le=60),
+    storm_lon: float | None = Query(None, ge=-180, le=180),
+    storm_radius_km: float | None = Query(None, gt=0, le=2000),
+    storm_strength: int | None = Query(None, ge=0, le=4),
+    storm_name: str | None = Query(None, max_length=60),
+):
+    """Flood-risk indicator per town (DRAFT rules, unverified). Optional storm from an article."""
+    storm = None
+    if storm_lat is not None and storm_lon is not None:
+        storm = {
+            "latitude": storm_lat, "longitude": storm_lon, "radius_km": storm_radius_km,
+            "strength_level": storm_strength, "name": storm_name,
+        }
+    try:
+        return flood_risk_service.build_flood_risk(storm=storm)
+    except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=502, detail=str(error)) from error

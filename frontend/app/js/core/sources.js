@@ -138,6 +138,17 @@ export const SOURCES = [
     fil: {"kind": "Tekstong kinuha mula sa balita o bulletin", "what": "Pangalan, kategorya, lokasyon, hangin, bugso, galaw, radius ng lawak ng hangin at pressure ng bagyo, kinuha mula sa teksto ng artikulo gamit ang mga nakatakdang pattern. Ipinapakita ang bawat value kasama ang pangungusap na pinagmulan nito.", "usedFor": "Simbolo ng bagyo, bilog ng lawak ng hangin at mga detalye sa pahinang Mapa.", "limits": "Hindi beripikado at maaaring luma na: maaaring ilang oras o araw na ang artikulo. Ang mga value lang na nakasulat sa artikulo ang ginagamit; walang tinatantiya. Walang resulta ang mga pahinang naglo-load ng teksto gamit ang script o humaharang sa awtomatikong pagbasa. Kung higit sa isang bagyo ang nabanggit, ang unang nakita ang ginagamit. Hindi ito opisyal na bulletin ng PAGASA.", "refresh": "Binabasa nang isang beses kapag idinikit mo ang link. Hindi iniipon."},
   },
   {
+    id: "agos-flood-risk",
+    name: "AGOS flood-risk indicator (draft)",
+    url: null,
+    kind: "AGOS screening rules on model data",
+    what: "A level per municipality (low, moderate, high, very high) from points for Open-Meteo forecast rain (heaviest hour, 24 h and 72 h totals), rain in the past 72 h, soil moisture, and GloFAS river flow against its 30-day median. Optionally, a storm read from an article raises towns inside its stated wind radius by one level.",
+    usedFor: "The flood-risk layer, its hover reasons and the analysis in each town's drawer on the Map page.",
+    limits: "Draft thresholds chosen for review; not official values and not checked against past floods. One model point per town; model data, not gauges; GloFAS is modeled. The storm's rain is already in the forecast, so the storm adds only one capped step. Terrain is not used yet. Not a flood forecast or warning.",
+    refresh: "Recomputed every 10 minutes on the Map page (Open-Meteo answers cached for 15 minutes, river flow for 6 hours).",
+    fil: {"kind": "Mga patakaran ng AGOS sa model data", "what": "Antas bawat bayan (mababa, katamtaman, mataas, napakataas) mula sa mga puntos para sa forecast na ulan ng Open-Meteo (pinakamalakas na oras, kabuuan sa 24 at 72 oras), ulan sa nakaraang 72 oras, soil moisture, at daloy ng ilog ng GloFAS kumpara sa 30-araw na median. Kung gusto, tumataas ng isang antas ang mga bayang nasa loob ng nakasulat na radius ng hangin ng bagyo mula sa artikulo.", "usedFor": "Ang flood-risk layer, ang mga dahilan sa hover, at ang pagsusuri sa drawer ng bawat bayan sa pahinang Mapa.", "limits": "Draft na threshold para suriin; hindi opisyal at hindi pa naikukumpara sa mga nakaraang baha. Isang model point bawat bayan; model data, hindi gauge; modeled ang GloFAS. Kasama na sa forecast ang ulan ng bagyo, kaya isang limitadong hakbang lang ang dagdag ng bagyo. Hindi pa ginagamit ang terrain. Hindi ito forecast o babala ng baha.", "refresh": "Kinakalkula ulit bawat 10 minuto sa pahinang Mapa (15 minutong naitatabi ang sagot ng Open-Meteo, 6 na oras ang daloy ng ilog)."},
+  },
+  {
     id: "open-meteo-geocoding",
     name: "Open-Meteo Geocoding API",
     url: "https://open-meteo.com/en/docs/geocoding-api",

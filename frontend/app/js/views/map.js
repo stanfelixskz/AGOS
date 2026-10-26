@@ -14,6 +14,7 @@ import { EXPLAIN } from "../core/explain.js";
 import { buildHash } from "../core/router.js";
 import { createAgosMap } from "../map/engine.js";
 import { INTENSITY, intensityLevel } from "../map/typhoon.js";
+import { RISK_IDS, riskColor, riskRows, riskQuery, factorText, stormText } from "../core/risk.js";
 import { renderDetail, hydrateDetail } from "./parts/muni-detail.js";
 import { renderCenterDetail, hydrateCenterDetail } from "./parts/center-detail.js";
 import { loadingState, errorState, onRetry } from "../core/ui.js";
@@ -23,6 +24,7 @@ export const layout = "flush";
 const OVERVIEW_TTL = 10 * 60 * 1000;
 
 const LAYERS = [
+  { id: "risk", group: "hazard", why: "floodRisk" },
   { id: "rain", group: "hazard", why: "rainLevels", always: false },
   { id: "mgb", group: "hazard", why: "mgb" },
   { id: "precip", group: "hazard", why: "precipitation" },
@@ -36,6 +38,7 @@ const LAYERS = [
 ];
 
 const LAYER_SWATCHES = {
+  risk: () => RISK_IDS.map((id) => [riskColor(id), t(`risk.level.${id}`)]),
   rain: () => LEVEL_IDS.filter((id) => id !== "nodata").map((id) => [LEVELS[id].color, `${levelLabel(id, getLang())} · ${levelRange(id, getLang())}`]),
   mgb: () => [["#002673", t("mgb.veryHigh")], ["#5900ff", t("mgb.high")], ["#b045ff", t("mgb.moderate")], ["#e3d1ff", t("mgb.low")]],
   rainfx: () => [],
@@ -104,6 +107,10 @@ export async function mount(container, route) {
               <button class="btn btn-sm" type="button" id="typhoonDetails">${escapeHTML(t("typhoon.details"))}</button>
               <button class="btn btn-sm btn-ghost" type="button" id="typhoonRemove">${icon("close", { size: 14 })} ${escapeHTML(t("typhoon.remove"))}</button>
             </div>
+            <div id="typhoonUseWrap" hidden>
+              <label class="check"><input type="checkbox" id="typhoonUse"><span>${escapeHTML(t("typhoon.useStorm"))}</span></label>
+              <p class="subtle" id="typhoonUseNote"></p>
+            </div>
           </section>
 
           <section class="panel-section" aria-labelledby="layersHeading">
@@ -134,10 +141,12 @@ export async function mount(container, route) {
     drawer: $("#drawer"), drawerTitle: $("#drawerTitle"), drawerBody: $("#drawerBody"), drawerClose: $("#drawerClose"), drawerGrip: $("#drawerGrip"),
     tyForm: $("#typhoonForm"), tyUrl: $("#typhoonUrl"), tyRead: $("#typhoonRead"), tyStatus: $("#typhoonStatus"),
     tyActions: $("#typhoonActions"), tyDetails: $("#typhoonDetails"), tyRemove: $("#typhoonRemove"),
+    tyUseWrap: $("#typhoonUseWrap"), tyUse: $("#typhoonUse"), tyUseNote: $("#typhoonUseNote"),
   };
 
   const state = {
     alive: true, engine: null, here: null, overview: null, overviewError: null, centers: [], reports: [], typhoon: null,
+    risk: null, riskError: null, useStorm: false,
     mode: "peak", hour: 0, playTimer: null, selected: null, drawerCleanup: null, refreshTimer: null, detailToken: 0,
   };
 
@@ -159,6 +168,7 @@ export async function mount(container, route) {
         </div>
         ${s.visible && swatches.length && !unavailable ? `<ul class="swatches">${swatches.map(([color, label]) => `<li><span class="swatch" style="background:${color}"></span>${escapeHTML(label)}</li>`).join("")}</ul>` : ""}
         ${layer.id === "rainfx" && s.visible && !unavailable ? `<p class="subtle">${escapeHTML(t("map.rainfxNote"))}</p>` : ""}
+        ${layer.id === "risk" && s.visible && !unavailable ? `<p class="subtle">${escapeHTML(t("risk.layerNote"))}${state.useStorm && state.typhoon?.position ? ` ${escapeHTML(t("risk.layerStorm", { name: state.typhoon.storm?.name || t("typhoon.unnamed") }))}` : ""}</p>` : ""}
         ${layer.id === "boundaries" && s.visible && state.engine?.boundarySource() === "psgc2023" ? `<p class="subtle">${escapeHTML(t("map.boundarySource"))} <a href="https://github.com/faeldon/philippines-json-maps" target="_blank" rel="noopener noreferrer">philippines-json-maps</a> (MIT) · <a href="#/sources?s=boundaries">${escapeHTML(t("explain.details"))}</a></p>` : ""}
         ${layer.id === "precip" && s.visible && !unavailable ? precipControls() : ""}
         ${unavailable || s.message ? `<p class="subtle layer-msg">${icon(unavailable ? "alert" : "info", { size: 14 })} ${escapeHTML(layer.planned ? t(`map.${layer.id}NA`) : s.message || t("common.notAvailable"))}</p>` : ""}
@@ -364,6 +374,77 @@ export async function mount(container, route) {
     if (event.key === "Escape" && !ui.drawer.hidden) closeDrawer();
   });
 
+  // ------------------------------------------------------------ flood-risk indicator (draft)
+  async function loadRisk() {
+    const storm = state.useStorm && state.typhoon?.position
+      ? { ...state.typhoon, strength: intensityLevel(state.typhoon) }
+      : null;
+    try {
+      state.risk = await getJSON(riskQuery(storm), { ttlMs: OVERVIEW_TTL, timeoutMs: 45000 });
+      state.riskError = null;
+    } catch (error) {
+      state.risk = null;
+      state.riskError = error;
+    }
+    if (!state.alive || !state.engine) return;
+    if (state.riskError) {
+      state.engine.setRisk([], false, state.riskError.message);
+      return;
+    }
+    state.engine.setRisk(
+      riskRows(state.risk, { timeText: formatTime(state.risk.generated_at) }),
+      true,
+      state.risk.river_data_note ? t("risk.riverMissing") : "",
+    );
+    fillRiskSlot();
+  }
+
+  /** The open town drawer shows the latest analysis, whenever it arrives or changes. */
+  function fillRiskSlot() {
+    const slot = ui.drawerBody.querySelector("[data-risk-slot]");
+    if (slot && state.selected) slot.innerHTML = riskSection(state.selected);
+  }
+
+  /** Full analysis for one town, shown at the top of its drawer. */
+  function riskSection(name) {
+    const town = state.risk?.municipalities?.find((m) => m.municipality.toLowerCase() === name.toLowerCase());
+    if (!town) return "";
+    const rows = town.factors.map((f) => `<li><span>${escapeHTML(factorText(f))}</span><span class="subtle">${escapeHTML(f.window)} · ${escapeHTML(f.source)}</span></li>`).join("");
+    const storm = town.storm
+      ? `<p style="margin-top:8px">${escapeHTML(stormText(town.storm))}${town.storm.steps ? ` <span class="subtle">(${escapeHTML(t("risk.levelBefore", { level: t(`risk.level.${town.storm.level_before}`) }))})</span>` : ""}</p>`
+      : "";
+    return `<section class="detail-section risk-section" aria-labelledby="riskHeading">
+      <div class="detail-head"><h3 id="riskHeading">${escapeHTML(t("risk.heading"))}</h3><span class="badge badge-warning">${escapeHTML(t("risk.draft"))}</span></div>
+      <p class="risk-level"><span class="hc-dot" style="background:${riskColor(town.level)}"></span><strong>${escapeHTML(t(`risk.level.${town.level}`))}</strong>${isNumber(town.score) ? ` · ${escapeHTML(t("risk.points", { n: town.score }))}` : ""}</p>
+      <ul class="risk-factors">${rows}</ul>
+      ${storm}
+      <p class="subtle" style="margin-top:8px">${escapeHTML(t("risk.levelsRule"))} ${escapeHTML(t("risk.nowNote"))}</p>
+      <p class="source-line" style="margin-top:6px">${escapeHTML(t("risk.foot", { time: formatTime(state.risk.generated_at) }))} · <a href="#/sources?s=agos-flood-risk">${escapeHTML(t("explain.details"))}</a></p>
+    </section>`;
+  }
+
+  /** Whether to use the article's storm: on for fresh articles, off (with a reason) otherwise. */
+  function offerStorm(ty) {
+    ui.tyUseWrap.hidden = !ty?.position;
+    if (!ty?.position) {
+      state.useStorm = false;
+      return;
+    }
+    const published = parseTime(ty.article?.published);
+    const ageHours = published ? (Date.now() - published.getTime()) / 3600000 : null;
+    const age = ageHours === null ? "" : ageHours < 48 ? t("risk.ageHours", { n: Math.max(0, Math.round(ageHours)) }) : t("risk.ageDays", { n: Math.round(ageHours / 24) });
+    state.useStorm = ageHours !== null && ageHours <= 24;
+    ui.tyUse.checked = state.useStorm;
+    ui.tyUseNote.textContent = ageHours === null ? t("typhoon.useNoteUnknown")
+      : state.useStorm ? t("typhoon.useNoteFresh", { age }) : t("typhoon.useNoteOld", { age });
+  }
+
+  ui.tyUse.addEventListener("change", () => {
+    state.useStorm = ui.tyUse.checked;
+    if (state.useStorm) state.engine?.setLayer("risk", true);
+    loadRisk();
+  });
+
   async function selectMunicipality(name, { fly = true } = {}) {
     const muni = state.overview?.municipalities?.find((m) => m.name.toLowerCase() === name.toLowerCase());
     const canonical = muni?.name || name;
@@ -377,7 +458,8 @@ export async function mount(container, route) {
       const data = await getJSON(`/api/municipalities/${encodeURIComponent(canonical)}`, { ttlMs: 5 * 60 * 1000, timeoutMs: 30000 });
       if (!state.alive || token !== state.detailToken) return;
       const reports = { status: "ok", data: state.reports.filter((r) => String(r.municipality || "").toLowerCase() === canonical.toLowerCase()) };
-      ui.drawerBody.innerHTML = renderDetail(data, { reports, collapsible: true, banner: true });
+      ui.drawerBody.innerHTML = `<div data-risk-slot></div>${renderDetail(data, { reports, collapsible: true, banner: true })}`;
+      fillRiskSlot();
       state.drawerCleanup = hydrateDetail(ui.drawerBody, data);
     } catch (error) {
       if (!state.alive || token !== state.detailToken) return;
@@ -523,6 +605,8 @@ export async function mount(container, route) {
       state.typhoon = data;
       ui.tyActions.hidden = false;
       state.engine?.setTyphoon(data.position ? data : null, typhoonLabel(data));
+      offerStorm(data);
+      loadRisk();
       ui.tyStatus.textContent = data.position
         ? t("typhoon.shown", { name: typhoonLabel(data) })
         : t("typhoon.noPosition", { note: data.position_note || "" });
@@ -535,8 +619,11 @@ export async function mount(container, route) {
   });
   ui.tyDetails.addEventListener("click", () => selectTyphoon());
   ui.tyRemove.addEventListener("click", () => {
+    const wasUsed = state.useStorm;
     state.typhoon = null;
     state.engine?.clearTyphoon();
+    offerStorm(null);
+    if (wasUsed) loadRisk();
     ui.tyActions.hidden = true;
     ui.tyStatus.textContent = "";
     ui.tyUrl.value = "";
@@ -659,9 +746,10 @@ export async function mount(container, route) {
   updateRain();
   loadCenters();
   loadReports();
+  loadRisk();
 
   if (route.query.m) selectMunicipality(route.query.m);
-  state.refreshTimer = setInterval(loadOverview, OVERVIEW_TTL);
+  state.refreshTimer = setInterval(() => { loadOverview(); loadRisk(); }, OVERVIEW_TTL);
 
   return () => {
     state.alive = false;

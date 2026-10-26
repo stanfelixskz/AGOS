@@ -4,6 +4,7 @@ import { openDialog } from "./ui.js";
 import { escapeHTML } from "./format.js";
 import { LEVELS, LEVEL_IDS, levelRange } from "./levels.js";
 import { getLang, t } from "./i18n.js";
+import { RISK_IDS, riskColor } from "./risk.js";
 
 function swatchList(rows) {
   return `<ul class="list">${rows
@@ -150,6 +151,26 @@ const TEXT = {
       body: `<p>Simulated na daloy ng ilog bawat araw (m³/s) mula sa GloFAS sa pamamagitan ng Open-Meteo Flood API, para sa river grid cell na malapit sa town point.</p>
         <p>Model ito, hindi nasukat na taas ng ilog, at maaaring hindi ito ang ilog na inaasahan mo. Hindi sapat ang daloy lang para kumpirmahin ang baha.</p>
         ${sourceLink("GloFAS", "glofas")}`,
+    }),
+  },
+  floodRisk: {
+    en: () => ({
+      title: "Flood-risk indicator (draft)",
+      body: `<p>An AGOS <strong>screening indicator</strong> per municipality. It is <strong>not a flood forecast</strong>: the rules are a draft for review, and they have not been checked against past floods.</p>
+        ${swatchList(RISK_IDS.map((id) => [riskColor(id), t(`risk.level.${id}`, {}, "en")]))}
+        <p>Points from Open-Meteo data at each town's reference point: heaviest forecast hour in the next 24 h (yellow +2, orange +3, red +4), forecast rain in the next 24 h (≥50 mm +1, ≥100 +2, ≥200 +3) and 72 h (≥150 mm +1, ≥300 +2), rain in the past 72 h (≥50 mm +1, ≥100 +2), soil moisture 0–10 cm (≥0.40 m³/m³ +1), and GloFAS river flow over the next 3 days compared with its 30-day median (≥1.5× +1, ≥3× +2). Total: 0–1 low, 2–3 moderate, 4–5 high, 6 or more very high.</p>
+        <p><strong>Storm from an article:</strong> a town inside the storm's <em>stated</em> wind radius goes up one level. The storm's rain is already in the Open-Meteo forecast, so it is not counted again. An old article's storm is not today's weather; AGOS only uses it when you tick the box.</p>
+        <p>Missing data is shown as missing, never as zero. Terrain (low-lying areas, distance to rivers) is not used yet.</p>
+        ${sourceLink("AGOS flood-risk indicator", "agos-flood-risk")}`,
+    }),
+    fil: () => ({
+      title: "Flood-risk indicator (draft)",
+      body: `<p>Isang <strong>screening indicator</strong> ng AGOS bawat bayan. <strong>Hindi ito forecast ng baha</strong>: draft pa ang mga patakaran para suriin, at hindi pa ito naikukumpara sa mga nakaraang baha.</p>
+        ${swatchList(RISK_IDS.map((id) => [riskColor(id), t(`risk.level.${id}`, {}, "fil")]))}
+        <p>Mga puntos mula sa datos ng Open-Meteo sa reference point ng bawat bayan: pinakamalakas na oras ng forecast sa susunod na 24 oras (yellow +2, orange +3, red +4), forecast na ulan sa susunod na 24 oras (≥50 mm +1, ≥100 +2, ≥200 +3) at 72 oras (≥150 mm +1, ≥300 +2), ulan sa nakaraang 72 oras (≥50 mm +1, ≥100 +2), soil moisture 0–10 cm (≥0.40 m³/m³ +1), at daloy ng ilog ng GloFAS sa susunod na 3 araw kumpara sa 30-araw na median nito (≥1.5× +1, ≥3× +2). Kabuuan: 0–1 mababa, 2–3 katamtaman, 4–5 mataas, 6 pataas napakataas.</p>
+        <p><strong>Bagyo mula sa artikulo:</strong> tumataas ng isang antas ang bayang nasa loob ng <em>nakasulat</em> na radius ng hangin ng bagyo. Kasama na sa forecast ng Open-Meteo ang ulan ng bagyo, kaya hindi na ito binibilang ulit. Hindi panahon ngayon ang bagyo mula sa lumang artikulo; ginagamit lang ito ng AGOS kapag na-tsek mo ang kahon.</p>
+        <p>Ipinapakitang walang datos ang nawawalang datos, hindi zero. Hindi pa ginagamit ang terrain (mabababang lugar, layo sa ilog).</p>
+        ${sourceLink("AGOS flood-risk indicator", "agos-flood-risk")}`,
     }),
   },
   typhoon: {
