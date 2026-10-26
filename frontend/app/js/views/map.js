@@ -15,6 +15,7 @@ import { buildHash } from "../core/router.js";
 import { createAgosMap } from "../map/engine.js";
 import { INTENSITY, intensityLevel } from "../map/typhoon.js";
 import { RISK_IDS, riskColor, riskRows, riskQuery, factorText, stormText } from "../core/risk.js";
+import { methodLabel } from "../core/consensus.js";
 import { renderDetail, hydrateDetail } from "./parts/muni-detail.js";
 import { renderCenterDetail, hydrateCenterDetail } from "./parts/center-detail.js";
 import { loadingState, errorState, onRetry } from "../core/ui.js";
@@ -254,7 +255,7 @@ export async function mount(container, route) {
     ui.timeLabel.textContent = state.mode === "hour"
       ? hourLabel(steps[state.hour]?.time, state.hour)
       : t("map.peakLabel");
-    ui.rainStatus.textContent = `${t("common.updated")} ${formatTime(state.overview.generated_at)} · Open-Meteo · ${t("common.notOfficial")}`;
+    ui.rainStatus.textContent = `${t("common.updated")} ${formatTime(state.overview.generated_at)} · ${methodLabel(state.overview.method, state.overview.models?.length)} · ${t("common.notOfficial")}`;
     const warn = (state.overview.municipalities || []).filter((m) => ["yellow", "orange", "red"].includes(m.level_24h)).length;
     ui.handleSummary.textContent = warn ? t("map.summaryWarn", { n: warn }) : levelLabel(state.overview.highest_level_24h, getLang());
   }

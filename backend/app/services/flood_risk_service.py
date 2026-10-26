@@ -77,7 +77,7 @@ WEATHER_FACTORS = ("peak_24h", "peak_3h", "total_24h", "total_72h", "past_72h", 
 STATIC_FACTORS = ("low_ground", "mgb")
 
 SOURCES = {
-    "forecast": "Open-Meteo Forecast API (model forecast, not gauge readings)",
+    "forecast": "AGOS consensus: median of 6 weather models via Open-Meteo (soil moisture: default model); model forecasts, not gauge readings",
     "glofas": "Open-Meteo Flood API / GloFAS (modeled river discharge)",
     "marine": "Open-Meteo Marine API (modeled sea level with tides; no storm surge; limited near coasts)",
     "terrain": "Copernicus DEM GLO-90 via Open-Meteo + OpenStreetMap waterways, AGOS 1 km terrain cells",
@@ -133,6 +133,25 @@ def fetch_inputs(request: Callable[..., Any] = _cached_request) -> dict[str, Any
         "past_days": 3, "forecast_days": 4,
         "timezone": "Asia/Manila", "precipitation_unit": "mm",
     }), len(names), "forecast")
+    # Rain inputs use the AGOS consensus of six models (same numbers as the dashboard).
+    # Copies are changed, never the cached API payload.
+    rain_basis = "single_model_fallback"
+    try:
+        from app.services import consensus_service
+
+        consensus = consensus_service.precipitation_by_time()
+        replaced = []
+        for name, location in zip(names, forecast):
+            hourly = dict(location.get("hourly") or {})
+            by_time = consensus.get(name, {})
+            hourly["precipitation"] = [
+                by_time.get(stamp) if by_time.get(stamp) is not None else value
+                for stamp, value in zip(hourly.get("time") or [], hourly.get("precipitation") or [])
+            ]
+            replaced.append({**location, "hourly": hourly})
+        forecast, rain_basis = replaced, "consensus"
+    except (RuntimeError, ValueError, KeyError):
+        pass
     try:
         flood = _as_list(request(FLOOD_API_URL, {
             "latitude": lats, "longitude": lons,
@@ -153,7 +172,7 @@ def fetch_inputs(request: Callable[..., Any] = _cached_request) -> dict[str, Any
         marine, marine_error = [None] * len(names), str(error)
     return {
         "names": names, "forecast": forecast, "flood": flood, "flood_error": flood_error,
-        "marine": marine, "marine_error": marine_error,
+        "marine": marine, "marine_error": marine_error, "rain_basis": rain_basis,
     }
 
 
@@ -416,6 +435,7 @@ def build_flood_risk(
             "static": "Low ground and MGB susceptibility count only with at least 2 weather points.",
             "storm": "A town inside the storm's stated wind radius goes up one level (only when a storm is supplied).",
         },
+        "rain_basis": data.get("rain_basis", "consensus"),
         "river_data_note": data.get("flood_error"),
         "sea_level_note": data.get("marine_error"),
         "static_layers": {

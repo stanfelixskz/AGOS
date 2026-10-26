@@ -123,6 +123,11 @@ def build_overview(outlook: dict) -> dict[str, Any]:
                     point.get("precipitation_probability_percent")
                 ),
                 "level": rain_level(mm),
+                # AGOS consensus extras (absent for the single-model fallback)
+                "low_mm": _number(point.get("low_mm")),
+                "high_mm": _number(point.get("high_mm")),
+                "heavy_chance_percent": _number(point.get("heavy_chance_percent")),
+                "models": point.get("models"),
             })
 
         windows = {
@@ -137,6 +142,8 @@ def build_overview(outlook: dict) -> dict[str, Any]:
             "windows": windows,
             "level_24h": windows["next_24h"]["level"],
             "series": series,
+            "ensemble": record.get("ensemble"),
+            "fallback_hours": record.get("fallback_hours", 0),
         })
 
     ranked = sorted(
@@ -155,6 +162,8 @@ def build_overview(outlook: dict) -> dict[str, Any]:
         "generated_at": outlook.get("generated_at"),
         "timezone": outlook.get("timezone", "Asia/Manila"),
         "source": outlook.get("source", "Open-Meteo Forecast API"),
+        "method": outlook.get("method", "single_model"),
+        "models": outlook.get("models", []),
         "hours": outlook.get("hours_requested"),
         "time_steps": outlook.get("time_steps", []),
         "thresholds_mm_h": {
@@ -397,6 +406,7 @@ def municipality_detail(
             **row,
             "generated_at": overview["generated_at"],
             "source": overview["source"],
+            "method": overview["method"],
             "thresholds_mm_h": overview["thresholds_mm_h"],
         }
 

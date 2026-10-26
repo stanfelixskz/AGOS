@@ -11,6 +11,7 @@ import { levelLabel, levelColor, THRESHOLDS } from "../../core/levels.js";
 import { barChart, lineChart, mountChart } from "../../core/charts.js";
 import { EXPLAIN } from "../../core/explain.js";
 import { buildHash } from "../../core/router.js";
+import { methodLabel, rangeText } from "../../core/consensus.js";
 
 const LEVEL_KEYS = new Set(["nodata", "little", "rain", "yellow", "orange", "red"]);
 
@@ -54,6 +55,11 @@ function rainSection(section) {
   const w24 = rain.windows?.next_24h || {};
   const w6 = rain.windows?.next_6h || {};
   const w48 = rain.windows?.next_48h || {};
+  const ens = rain.ensemble || {};
+  const spread = (key) => {
+    const text = rangeText(ens[key]?.low, ens[key]?.high, " mm");
+    return text ? `<span class="stat-sub">${escapeHTML(text)}</span>` : "";
+  };
   const peakText = isNumber(w24.peak_mm_h)
     ? t("detail.peakAt", { mm: num(w24.peak_mm_h, 1), time: formatTime(w24.peak_time) })
     : t("common.notAvailable");
@@ -62,12 +68,13 @@ function rainSection(section) {
       <div>${levelPill(rain.level_24h)}<p class="subtle" style="margin-top:6px">${escapeHTML(t("detail.next24"))} · ${escapeHTML(peakText)}</p></div>
     </div>`}
     <div class="grid grid-3 detail-stats">
-      <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total6"))}</span><span class="stat-value num">${escapeHTML(num(w6.total_mm, 1))}<span class="unit">mm</span></span></div>
-      <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total24"))}</span><span class="stat-value num">${escapeHTML(num(w24.total_mm, 1))}<span class="unit">mm</span></span></div>
-      <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total48"))}</span><span class="stat-value num">${escapeHTML(num(w48.total_mm, 1))}<span class="unit">mm</span></span></div>
+      <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total6"))}</span><span class="stat-value num">${escapeHTML(num(w6.total_mm, 1))}<span class="unit">mm</span></span>${spread("next_6h")}</div>
+      <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total24"))}</span><span class="stat-value num">${escapeHTML(num(w24.total_mm, 1))}<span class="unit">mm</span></span>${spread("next_24h")}</div>
+      <div class="stat"><span class="stat-label">${escapeHTML(t("detail.total48"))}</span><span class="stat-value num">${escapeHTML(num(w48.total_mm, 1))}<span class="unit">mm</span></span>${spread("next_48h")}</div>
     </div>
     <div class="detail-chart" data-chart="rain" aria-label="${escapeHTML(t("detail.rainChart"))}"></div>
-    <p class="source-line">${icon("clock", { size: 14 })} Open-Meteo forecast · ${escapeHTML(formatTime(rain.generated_at))} · ${escapeHTML(t("common.notOfficial"))}</p>`);
+    <p class="source-line">${icon("clock", { size: 14 })} ${escapeHTML(methodLabel(rain.method))} · ${escapeHTML(formatTime(rain.generated_at))} · ${escapeHTML(t("common.notOfficial"))}</p>
+    ${rain.method === "consensus" ? `<p class="source-line">${escapeHTML(t("cons.howRain"))}</p>` : ""}`);
 }
 
 /** Level banner at the top of the map drawer: level, peak, plain meaning. */
@@ -87,17 +94,22 @@ function bannerSection(section) {
 function weatherSection(section) {
   if (section?.status !== "ok") return wrap(t("detail.weather"), "", unavailable(section));
   const w = section.data;
+  const sub = (range, unit, digits) => {
+    const text = range ? rangeText(range[0], range[1], unit, digits) : null;
+    return text ? `<span class="stat-sub">${escapeHTML(text)}</span>` : "";
+  };
   const cells = [
-    ["temperature", t("detail.temp"), isNumber(w.temperature_c) ? `${num(w.temperature_c, 1)}<span class="unit">°C</span>` : "—"],
-    ["humidity", t("detail.humidity"), isNumber(w.humidity_percent) ? `${num(w.humidity_percent, 0)}<span class="unit">%</span>` : "—"],
-    ["rain", t("detail.rainNow"), isNumber(w.precipitation_mm) ? `${num(w.precipitation_mm, 1)}<span class="unit">mm</span>` : "—"],
-    ["wind", t("detail.wind"), isNumber(w.wind_speed_kmh) ? `${num(w.wind_speed_kmh, 0)}<span class="unit">km/h</span>` : "—"],
+    ["temperature", t("detail.temp"), isNumber(w.temperature_c) ? `${num(w.temperature_c, 1)}<span class="unit">°C</span>` : "—", sub(w.temperature_range, " °C", 1)],
+    ["humidity", t("detail.humidity"), isNumber(w.humidity_percent) ? `${num(w.humidity_percent, 0)}<span class="unit">%</span>` : "—", sub(w.humidity_range, "%", 0)],
+    ["rain", t("detail.rainNow"), isNumber(w.precipitation_mm) ? `${num(w.precipitation_mm, 1)}<span class="unit">mm</span>` : "—",
+      isNumber(w.rain_chance_percent) ? `<span class="stat-sub">${escapeHTML(t("cons.chanceNow", { chance: w.rain_chance_percent }))}</span>` : ""],
+    ["wind", t("detail.wind"), isNumber(w.wind_speed_kmh) ? `${num(w.wind_speed_kmh, 0)}<span class="unit">km/h</span>` : "—", sub(w.wind_range, " km/h", 0)],
   ];
   return wrap(t("detail.weather"), "", `
-    <div class="grid grid-4 detail-stats detail-weather">${cells.map(([ic, label, value]) => `
-      <div class="stat"><span class="stat-label">${icon(ic, { size: 14 })} ${escapeHTML(label)}</span><span class="stat-value num">${value}</span></div>`).join("")}
+    <div class="grid grid-4 detail-stats detail-weather">${cells.map(([ic, label, value, extra]) => `
+      <div class="stat"><span class="stat-label">${icon(ic, { size: 14 })} ${escapeHTML(label)}</span><span class="stat-value num">${value}</span>${extra}</div>`).join("")}
     </div>
-    <p class="source-line">${icon("clock", { size: 14 })} Open-Meteo · ${escapeHTML(formatTime(w.updated_at))} · ${escapeHTML(t("detail.modelNote"))}</p>`);
+    <p class="source-line">${icon("clock", { size: 14 })} ${escapeHTML(methodLabel(w.method, w.models))} · ${escapeHTML(formatTime(w.updated_at))} · ${escapeHTML(t("detail.modelNote"))}</p>`);
 }
 
 function dischargeSection(section) {
@@ -184,7 +196,12 @@ export function hydrateDetail(root, data) {
       hour: parseTime(p.time)?.toLocaleString("en-US", { timeZone: "Asia/Manila", hour: "numeric", hour12: false }),
       value: p.precipitation_mm,
       color: levelColor(p.level),
-      title: `${formatTime(p.time)}: ${isNumber(p.precipitation_mm) ? `${p.precipitation_mm} mm/h` : "no data"} · ${levelLabel(p.level, getLang())}${isNumber(p.probability_percent) ? ` · ${p.probability_percent}% chance` : ""}`,
+      title: [
+        `${formatTime(p.time)}: ${isNumber(p.precipitation_mm) ? `${p.precipitation_mm} mm/h` : t("risk.peak.nodata")}`,
+        levelLabel(p.level, getLang()),
+        rangeText(p.low_mm, p.high_mm, " mm/h"),
+        isNumber(p.probability_percent) ? t(data.rain.data.method === "consensus" ? "cons.chanceTip" : "cons.chanceApi", { chance: p.probability_percent }) : null,
+      ].filter(Boolean).join(" · "),
     }));
     cleanups.push(mountChart(rainEl, (width) => barChart(bars, {
       width, height: 150, unit: "mm/h",

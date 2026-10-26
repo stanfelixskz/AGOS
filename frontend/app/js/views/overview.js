@@ -5,6 +5,7 @@
  */
 
 import { icon } from "../core/icons.js";
+import { methodLabel } from "../core/consensus.js";
 import { t, getLang } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
 import { escapeHTML, num, formatTime, formatHour, isNumber, relativeTime, parseTime } from "../core/format.js";
@@ -57,7 +58,7 @@ function render(data) {
         </div>
         <h2 id="heroTitle" class="hero-title">${escapeHTML(headline)}</h2>
         ${more ? `<p class="hero-more">${escapeHTML(more)}</p>` : ""}
-        <p class="source-line">${icon("clock", { size: 14 })}${escapeHTML(t("common.updated"))} ${escapeHTML(formatTime(data.generated_at))} (${escapeHTML(relativeTime(data.generated_at))}) · Open-Meteo · ${escapeHTML(t("common.notOfficial"))}</p>
+        <p class="source-line">${icon("clock", { size: 14 })}${escapeHTML(t("common.updated"))} ${escapeHTML(formatTime(data.generated_at))} (${escapeHTML(relativeTime(data.generated_at))}) · ${escapeHTML(methodLabel(data.method, data.models?.length))} · ${escapeHTML(t("common.notOfficial"))}</p>
       </div>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#/map">${icon("map", { size: 18 })} ${escapeHTML(t("overview.openMap"))}</a>

@@ -364,10 +364,25 @@ def analyze_municipality(
         report["variable"] = f"precipitation ({MODELS[model]})"
         reports.append(report)
 
+    # AGOS consensus (the numbers the dashboard shows): per hour, the median of the
+    # cleaned values of the six models; the default model only when fewer than 3 are valid.
+    consensus: dict[str, list] = {}
+    for variable in HOURLY:
+        if variable == "weather_code":
+            continue
+        per_model = [model_series[m] for m in MODELS] if variable == "precipitation" else [
+            clean_series(times, hourly.get(f"{variable}_{m}") or [None] * len(times), variable)[1] for m in MODELS
+        ]
+        column = []
+        for i in range(len(t_axis)):
+            valid = [series[i] for series in per_model if i < len(series) and series[i] is not None]
+            column.append(statistics.median(valid) if len(valid) >= 3 else cleaned[variable][i])
+        consensus[variable] = column
+
     # 3. describe
-    rain24 = _window(t_axis, cleaned["precipitation"], current, 24)
-    rain72 = _window(t_axis, cleaned["precipitation"], current, 72)
-    past7 = _window(t_axis, cleaned["precipitation"], current - timedelta(days=7), 24 * 7)
+    rain24 = _window(t_axis, consensus["precipitation"], current, 24)
+    rain72 = _window(t_axis, consensus["precipitation"], current, 72)
+    past7 = _window(t_axis, consensus["precipitation"], current - timedelta(days=7), 24 * 7)
     rain_desc = describe(rain24)
     rain_desc["wet_hours"] = sum(1 for v in rain24 if v is not None and v >= WET_HOUR_MM)
     rain_desc["max_3h"] = max_rolling_sum(rain24, 3)
@@ -378,10 +393,10 @@ def analyze_municipality(
     stats = {
         "next_24h": {
             "precipitation": rain_desc,
-            "temperature_2m": describe(_window(t_axis, cleaned["temperature_2m"], current, 24)),
-            "relative_humidity_2m": describe(_window(t_axis, cleaned["relative_humidity_2m"], current, 24)),
-            "cloud_cover": describe(_window(t_axis, cleaned["cloud_cover"], current, 24)),
-            "wind_speed_10m": describe(_window(t_axis, cleaned["wind_speed_10m"], current, 24)),
+            "temperature_2m": describe(_window(t_axis, consensus["temperature_2m"], current, 24)),
+            "relative_humidity_2m": describe(_window(t_axis, consensus["relative_humidity_2m"], current, 24)),
+            "cloud_cover": describe(_window(t_axis, consensus["cloud_cover"], current, 24)),
+            "wind_speed_10m": describe(_window(t_axis, consensus["wind_speed_10m"], current, 24)),
         },
         "next_72h_precipitation": describe(rain72),
         "past_7d_precipitation": {**describe(past7), "wet_hours": sum(1 for v in past7 if v is not None and v >= WET_HOUR_MM)},

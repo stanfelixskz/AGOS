@@ -12,6 +12,7 @@ from app.services.history_service import history_report
 from app.services import typhoon_service
 from app.services import flood_risk_service
 from app.services import analysis_service
+from app.services import consensus_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
     get_bataan_rainfall_outlook,
@@ -32,10 +33,31 @@ def list_municipalities():
     }
 
 
+def _outlook(hours: int) -> dict:
+    """AGOS consensus of six models; the default model only if the multi-model request fails."""
+    try:
+        return consensus_service.rainfall_outlook(hours=hours)
+    except (ValueError, RuntimeError, KeyError) as error:
+        outlook = get_bataan_rainfall_outlook(hours=hours)
+        outlook["method"] = "single_model_fallback"
+        outlook["source"] = "Open-Meteo default model (AGOS consensus unavailable)"
+        outlook.setdefault("limitations", []).insert(0, f"AGOS consensus unavailable ({error}); showing the default model only.")
+        return outlook
+
+
+def _current(name: str) -> dict:
+    try:
+        return consensus_service.current_conditions(name)
+    except (ValueError, RuntimeError, KeyError):
+        data = get_current_weather(name)
+        data["method"] = "single_model_fallback"
+        return data
+
+
 @router.get("/overview")
 def province_overview(hours: int = Query(48, ge=6, le=48)):
     try:
-        return overview.build_overview(get_bataan_rainfall_outlook(hours=hours))
+        return overview.build_overview(_outlook(hours))
     except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
 
@@ -46,8 +68,8 @@ def municipality(name: str):
         return overview.municipality_detail(
             name,
             municipalities=MUNICIPALITIES,
-            get_current=get_current_weather,
-            get_outlook=lambda hours: get_bataan_rainfall_outlook(hours=hours),
+            get_current=_current,
+            get_outlook=_outlook,
             get_discharge=lambda days: get_bataan_flood_outlook(forecast_days=days),
             get_centers=overview.load_evacuation_centers,
         )
