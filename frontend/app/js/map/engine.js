@@ -543,8 +543,13 @@ export async function createAgosMap(container, options = {}) {
   }
 
   // ---------------- public controller ----------------
+  // AGOS layers only need the style, not the basemap tiles. Waiting for "load" (all visible tiles)
+  // left the page without towns or markers whenever the basemap server was slow or blocked.
   const ready = new Promise((resolve) => {
-    map.once("load", async () => {
+    let started = false;
+    const start = async () => {
+      if (started) return;
+      started = true;
       await loadBoundaries();
       state.available.rainfx = Boolean(state.boundaries);
       state.messages.rainfx = state.boundaries ? "" : "Needs the municipal boundaries.";
@@ -559,7 +564,10 @@ export async function createAgosMap(container, options = {}) {
       renderRainMarkers();
       emit();
       resolve();
-    });
+    };
+    if (map.isStyleLoaded()) start();
+    else map.once("style.load", start);
+    map.once("load", start); // safety net if style.load was missed
   });
 
   // Some basemap styles reference sprite icons they do not ship (e.g. "circle-11").
