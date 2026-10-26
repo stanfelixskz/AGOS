@@ -128,6 +128,9 @@ def build_overview(outlook: dict) -> dict[str, Any]:
                 "high_mm": _number(point.get("high_mm")),
                 "heavy_chance_percent": _number(point.get("heavy_chance_percent")),
                 "models": point.get("models"),
+                "condition": point.get("condition"),
+                "is_day": point.get("is_day"),
+                "temperature_c": _number(point.get("temperature_c")),
             })
 
         windows = {
@@ -143,6 +146,7 @@ def build_overview(outlook: dict) -> dict[str, Any]:
             "level_24h": windows["next_24h"]["level"],
             "series": series,
             "ensemble": record.get("ensemble"),
+            "daily": record.get("daily") or [],
             "fallback_hours": record.get("fallback_hours", 0),
         })
 

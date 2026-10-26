@@ -12,6 +12,7 @@ import { barChart, lineChart, mountChart } from "../../core/charts.js";
 import { EXPLAIN } from "../../core/explain.js";
 import { buildHash } from "../../core/router.js";
 import { methodLabel, rangeText } from "../../core/consensus.js";
+import { weatherIcon, conditionLabel } from "../../core/weather-icons.js";
 
 const LEVEL_KEYS = new Set(["nodata", "little", "rain", "yellow", "orange", "red"]);
 
@@ -106,10 +107,41 @@ function weatherSection(section) {
     ["wind", t("detail.wind"), isNumber(w.wind_speed_kmh) ? `${num(w.wind_speed_kmh, 0)}<span class="unit">km/h</span>` : "—", sub(w.wind_range, " km/h", 0)],
   ];
   return wrap(t("detail.weather"), "", `
+    ${w.condition ? `<div class="wx-current">${weatherIcon(w.condition, w.is_day, 64)}<div><strong>${escapeHTML(conditionLabel(w.condition, w.is_day))}</strong>${isNumber(w.temperature_c) ? `<span class="wx-current-temp num">${escapeHTML(num(w.temperature_c, 0))}°C</span>` : ""}</div></div>` : ""}
     <div class="grid grid-4 detail-stats detail-weather">${cells.map(([ic, label, value, extra]) => `
       <div class="stat"><span class="stat-label">${icon(ic, { size: 14 })} ${escapeHTML(label)}</span><span class="stat-value num">${value}</span>${extra}</div>`).join("")}
     </div>
     <p class="source-line">${icon("clock", { size: 14 })} ${escapeHTML(methodLabel(w.method, w.models))} · ${escapeHTML(formatTime(w.updated_at))} · ${escapeHTML(t("detail.modelNote"))}</p>`);
+}
+
+/** Weather-tracker style forecast: the next 24 hours as a strip, then the next 3 days. */
+function forecastSection(section) {
+  if (section?.status !== "ok") return "";
+  const rain = section.data;
+  const hours = (rain.series || []).slice(0, 24).filter((p) => p.condition);
+  if (!hours.length) return "";
+  const days = rain.daily || [];
+  const strip = hours.map((p, i) => {
+    const mm = isNumber(p.precipitation_mm) && p.precipitation_mm >= 0.1 ? `${num(p.precipitation_mm, 1)} mm` : "";
+    const chance = isNumber(p.probability_percent) && p.probability_percent > 0 ? `${p.probability_percent}%` : "";
+    return `<li class="wx-hour">
+      <span class="wx-hour-time">${escapeHTML(i === 0 ? t("wx.now") : formatHour(p.time))}</span>
+      ${weatherIcon(p.condition, p.is_day, 36)}
+      <span class="wx-hour-temp num">${isNumber(p.temperature_c) ? `${escapeHTML(num(p.temperature_c, 0))}°` : "—"}</span>
+      <span class="wx-hour-rain">${escapeHTML(mm || chance || "")}</span>
+    </li>`;
+  }).join("");
+  const dayRows = days.map((d, i) => `<li class="wx-day">
+      <span class="wx-day-name">${escapeHTML(i === 0 ? t("wx.today") : formatDate(d.date).replace(/, \d{4}$/, ""))}</span>
+      ${weatherIcon(d.condition, true, 40)}
+      <span class="wx-day-label">${escapeHTML(conditionLabel(d.condition, true))}</span>
+      <span class="wx-day-temp num">${isNumber(d.temp_max) ? `${escapeHTML(num(d.temp_max, 0))}°` : "—"} <span class="subtle">/ ${isNumber(d.temp_min) ? `${escapeHTML(num(d.temp_min, 0))}°` : "—"}</span></span>
+      <span class="wx-day-rain">${isNumber(d.rain_total_mm) ? `${escapeHTML(num(d.rain_total_mm, 1))} mm` : ""}${isNumber(d.rain_chance_max) ? ` · ${escapeHTML(t("wx.chanceMax", { chance: d.rain_chance_max }))}` : ""}</span>
+    </li>`).join("");
+  return wrap(t("wx.forecast"), "", `
+    <ul class="wx-strip" aria-label="${escapeHTML(t("wx.hourly"))}">${strip}</ul>
+    ${dayRows ? `<ul class="wx-days" aria-label="${escapeHTML(t("wx.daily"))}">${dayRows}</ul>` : ""}
+    <p class="source-line">${escapeHTML(methodLabel(rain.method))} · ${escapeHTML(t("wx.rule"))}</p>`);
 }
 
 function dischargeSection(section) {
@@ -171,6 +203,7 @@ function renderParts(data, reports, showOpenPage, banner) {
     ${banner ? bannerSection(data.rain) : ""}
     ${rainSection(data.rain)}
     ${weatherSection(data.current_weather)}
+    ${forecastSection(data.rain)}
     ${dischargeSection(data.river_discharge)}
     ${susceptibilitySection(data.susceptibility)}
     ${centersSection(data.evacuation_centers)}

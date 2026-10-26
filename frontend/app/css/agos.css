@@ -959,3 +959,31 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .analysis-bad { color: var(--danger); font-weight: 650; }
 /* AGOS consensus: the lowest-highest model range under a value. */
 .stat-sub { display: block; margin-top: 2px; font-size: var(--text-xs); color: var(--text-3); font-family: var(--font-sans); }
+
+/* Weather icons (weather-icons.js) */
+.wx-icon { display: block; flex: none; }
+.wx-now { display: inline-flex; align-items: center; gap: 4px; }
+.wx-current { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.wx-current strong { display: block; font-size: var(--text-md); }
+.wx-current-temp { font-size: 28px; font-weight: 650; line-height: 1.1; }
+.wx-strip {
+  list-style: none; margin: 0; padding: 4px 0 8px; display: flex; gap: 6px;
+  overflow-x: auto; scroll-snap-type: x proximity;
+}
+.wx-hour {
+  flex: none; min-width: 64px; scroll-snap-align: start;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 6px; border-radius: var(--radius-sm); background: var(--surface-2);
+}
+.wx-hour:first-child { background: var(--brand-soft); }
+.wx-hour-time { font-size: var(--text-xs); color: var(--text-3); font-weight: 600; }
+.wx-hour-temp { font-weight: 650; }
+.wx-hour-rain { font-size: 11px; color: #2563eb; min-height: 14px; }
+.wx-days { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-direction: column; }
+.wx-day {
+  display: grid; grid-template-columns: 7.5em 40px 1fr auto; align-items: center; gap: var(--space-3);
+  padding: 6px 0; border-top: 1px solid var(--border);
+}
+.wx-day-name { font-weight: 600; }
+.wx-day-temp { font-weight: 650; text-align: right; }
+.wx-day-rain { grid-column: 3 / 5; font-size: var(--text-xs); color: var(--text-3); margin-top: -6px; }

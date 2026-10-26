@@ -24,8 +24,9 @@ shown with it.
 
 from __future__ import annotations
 
+import math
 import statistics
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
@@ -37,6 +38,9 @@ from app.services.weather_service import _cached_request
 
 PH_TZ = ZoneInfo("Asia/Manila")
 VARIABLES = ["precipitation", "temperature_2m", "relative_humidity_2m", "wind_speed_10m", "cloud_cover"]
+CODE_VARIABLE = "weather_code"  # used only for model votes on thunderstorm and fog
+THUNDER_CODES = range(95, 100)
+FOG_CODES = (45, 48)
 MIN_MODELS = 3
 WET_MM = 0.1
 SOURCE = f"AGOS consensus: median of {len(MODELS)} weather models (via Open-Meteo)"
@@ -47,7 +51,7 @@ def fetch(request: Callable[..., Any] = _cached_request) -> list[dict]:
     payload = request(OPEN_METEO_URL, {
         "latitude": ",".join(str(MUNICIPALITIES[n]["latitude"]) for n in names),
         "longitude": ",".join(str(MUNICIPALITIES[n]["longitude"]) for n in names),
-        "hourly": ",".join(VARIABLES), "past_days": 3, "forecast_days": 4,
+        "hourly": ",".join([*VARIABLES, CODE_VARIABLE]), "past_days": 3, "forecast_days": 4,
         "models": ",".join([BEST_MATCH, *MODELS]), "timezone": "Asia/Manila",
         "precipitation_unit": "mm", "wind_speed_unit": "kmh",
     })
@@ -92,7 +96,119 @@ def town_series(location: dict) -> dict[str, Any]:
         ]
         out[f"{variable}_models"] = per_model
         out["quality"][variable] = report
+    # Model votes from each model's own WMO weather code: share forecasting thunderstorm / fog.
+    votes = []
+    for model in MODELS:
+        _, codes, _ = clean_series(times, hourly.get(f"{CODE_VARIABLE}_{model}") or [None] * len(times), CODE_VARIABLE)
+        votes.append(codes)
+    out["codes"] = []
+    for i in range(len(out["times"])):
+        valid = [int(series[i]) for series in votes if i < len(series) and series[i] is not None]
+        out["codes"].append({
+            "models": len(valid),
+            "thunder": round(sum(1 for c in valid if c in THUNDER_CODES) / len(valid), 2) if valid else None,
+            "fog": round(sum(1 for c in valid if c in FOG_CODES) / len(valid), 2) if valid else None,
+        })
     out["model_point"] = {"latitude": location.get("latitude"), "longitude": location.get("longitude")}
+    return out
+
+
+# ------------------------------------------------------------------ condition (icons)
+def sun_elevation(lat: float, lon: float, when: datetime) -> float:
+    """Solar elevation angle in degrees (NOAA low-precision formulas, good to about 1 degree)."""
+    t = when.astimezone(timezone.utc)
+    day = t.timetuple().tm_yday
+    hour = t.hour + t.minute / 60
+    gamma = 2 * math.pi / 365 * (day - 1 + (hour - 12) / 24)
+    decl = (0.006918 - 0.399912 * math.cos(gamma) + 0.070257 * math.sin(gamma) - 0.006758 * math.cos(2 * gamma)
+            + 0.000907 * math.sin(2 * gamma) - 0.002697 * math.cos(3 * gamma) + 0.00148 * math.sin(3 * gamma))
+    eqtime = 229.18 * (0.000075 + 0.001868 * math.cos(gamma) - 0.032077 * math.sin(gamma)
+                       - 0.014615 * math.cos(2 * gamma) - 0.040849 * math.sin(2 * gamma))
+    solar_minutes = hour * 60 + eqtime + 4 * lon
+    hour_angle = math.radians(solar_minutes / 4 - 180)
+    phi = math.radians(lat)
+    cos_zenith = math.sin(phi) * math.sin(decl) + math.cos(phi) * math.cos(decl) * math.cos(hour_angle)
+    return 90 - math.degrees(math.acos(max(-1.0, min(1.0, cos_zenith))))
+
+
+def is_day(lat: float, lon: float, when: datetime) -> bool:
+    """Daytime = the centre of the sun above -0.833 degrees (standard sunrise/sunset definition)."""
+    return sun_elevation(lat, lon, when) > -0.833
+
+
+CONDITION_RULE = (
+    "Per hour, from the AGOS consensus: thunderstorm if at least half of the models forecast one and rain >= 0.1 mm; "
+    "heavy rain >= 7.5 mm/h; rain >= 2.5 mm/h; light rain >= 0.1 mm/h with at least half of the models wet; "
+    "fog if at least half of the models forecast fog; otherwise cloud cover >= 80% cloudy, >= 50% mostly cloudy, "
+    ">= 20% partly cloudy, else clear. Day or night from the position of the sun."
+)
+
+
+def condition(rain: dict, cloud: dict, code: dict) -> str:
+    """Weather condition id for one hour, from consensus values (AGOS rule, see CONDITION_RULE)."""
+    mm = rain.get("value")
+    chance = rain.get("chance")
+    if mm is not None and mm >= WET_MM and (code.get("thunder") or 0) >= 0.5:
+        return "thunder"
+    if mm is not None and mm >= YELLOW_MM_H:
+        return "heavy_rain"
+    if mm is not None and mm >= 2.5:
+        return "rain"
+    if mm is not None and mm >= WET_MM and (chance is None or chance >= 50):
+        return "light_rain"
+    if (code.get("fog") or 0) >= 0.5:
+        return "fog"
+    cover = cloud.get("value")
+    if cover is None:
+        return "unknown"
+    if cover >= 80:
+        return "overcast"
+    if cover >= 50:
+        return "mostly_cloudy"
+    if cover >= 20:
+        return "partly_cloudy"
+    return "clear"
+
+
+def hourly_condition(series: dict, i: int, point: dict) -> dict:
+    return {
+        "condition": condition(series["precipitation"][i], series["cloud_cover"][i], series["codes"][i]),
+        "is_day": is_day(point["latitude"], point["longitude"], series["times"][i]),
+    }
+
+
+def daily_summary(series: dict, start: datetime, days: int = 3) -> list[dict]:
+    """Per local calendar day: condition, min/max temperature, rain total and the highest chance."""
+    out = []
+    first = start.replace(hour=0, minute=0, second=0, microsecond=0)
+    for d in range(days):
+        day_start = first + timedelta(days=d)
+        idx = [i for i, t in enumerate(series["times"]) if day_start <= t < day_start + timedelta(days=1)]
+        if len(idx) < 20:
+            continue
+        rain = [series["precipitation"][i] for i in idx]
+        temps = [series["temperature_2m"][i]["value"] for i in idx if series["temperature_2m"][i]["value"] is not None]
+        mm = [c["value"] for c in rain if c["value"] is not None]
+        conds = [condition(series["precipitation"][i], series["cloud_cover"][i], series["codes"][i]) for i in idx]
+        daytime = [series["cloud_cover"][i]["value"] for i in idx
+                   if 6 <= series["times"][i].hour < 18 and series["cloud_cover"][i]["value"] is not None]
+        total = round(sum(mm), 1) if mm else None
+        # The worst wet condition of the day wins; a dry day takes its daytime mean cloud cover.
+        for wet in ("thunder", "heavy_rain", "rain", "light_rain"):
+            if wet in conds and (wet != "light_rain" or (total or 0) >= 1):
+                day_condition = wet
+                break
+        else:
+            cover = statistics.fmean(daytime) if daytime else None
+            day_condition = condition({"value": 0}, {"value": cover}, {"fog": 0})
+        out.append({
+            "date": day_start.date().isoformat(),
+            "condition": day_condition,
+            "temp_min": round(min(temps), 1) if temps else None,
+            "temp_max": round(max(temps), 1) if temps else None,
+            "rain_total_mm": total,
+            "rain_chance_max": max((c.get("chance") or 0) for c in rain) if rain else None,
+        })
     return out
 
 
@@ -136,6 +252,8 @@ def rainfall_outlook(hours: int = 48, towns: dict | None = None, now: datetime |
             steps.add(stamp)
             points.append({
                 "time": stamp,
+                **hourly_condition(series, i, MUNICIPALITIES[name]),
+                "temperature_c": series["temperature_2m"][i]["value"],
                 "precipitation_mm": rain["value"],
                 "precipitation_probability_percent": rain.get("chance"),
                 "low_mm": rain["low"], "high_mm": rain["high"],
@@ -148,6 +266,7 @@ def rainfall_outlook(hours: int = 48, towns: dict | None = None, now: datetime |
             "model_coordinates": series["model_point"],
             "points": points,
             "ensemble": {f"next_{h}h": window_totals(series, current, h) for h in (6, 24, 48)},
+            "daily": daily_summary(series, current),
             "fallback_hours": sum(1 for p in points if p["basis"] == "fallback"),
         })
     return {
@@ -160,6 +279,7 @@ def rainfall_outlook(hours: int = 48, towns: dict | None = None, now: datetime |
         "models": list(MODELS.values()),
         "municipalities": records,
         "time_steps": sorted(steps),
+        "condition_rule": CONDITION_RULE,
         "limitations": [
             "Hourly rain is the median of six weather models at each town's reference point; the range shows the lowest and highest model.",
             "Chance of rain is the share of models forecasting at least 0.1 mm in that hour, not a calibrated probability.",
@@ -195,6 +315,8 @@ def current_conditions(name: str, towns: dict | None = None, now: datetime | Non
         "precipitation_mm": rain["value"], "precipitation_range": [rain["low"], rain["high"]],
         "rain_chance_percent": rain.get("chance"),
         "models": temp["models"],
+        **hourly_condition(series, i, MUNICIPALITIES[name]),
+        "condition_rule": CONDITION_RULE,
     }
 
 

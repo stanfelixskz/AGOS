@@ -6,6 +6,7 @@
 
 import { icon } from "../core/icons.js";
 import { methodLabel } from "../core/consensus.js";
+import { weatherIcon } from "../core/weather-icons.js";
 import { t, getLang } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
 import { escapeHTML, num, formatTime, formatHour, isNumber, relativeTime, parseTime } from "../core/format.js";
@@ -113,6 +114,7 @@ function render(data) {
         <table class="table town-table">
           <thead><tr>
             <th scope="col">${escapeHTML(t("common.municipality"))}</th>
+            <th scope="col">${escapeHTML(t("wx.now"))}</th>
             <th scope="col">${escapeHTML(t("overview.level"))}</th>
             <th scope="col" class="num">${escapeHTML(t("overview.peak"))}</th>
             <th scope="col" class="num hide-sm">${escapeHTML(t("detail.total24"))}</th>
@@ -121,8 +123,10 @@ function render(data) {
           </tr></thead>
           <tbody>${munis.map((m) => {
             const w = m.windows?.next_24h || {};
+            const now = m.series?.[0] || {};
             return `<tr>
               <th scope="row"><a href="${buildHash("municipality", [m.name])}">${escapeHTML(m.name)}</a></th>
+              <td><span class="wx-now">${now.condition ? weatherIcon(now.condition, now.is_day, 30) : ""}<span class="num">${isNumber(now.temperature_c) ? `${escapeHTML(num(now.temperature_c, 0))}°` : ""}</span></span></td>
               <td>${levelPill(m.level_24h)}</td>
               <td class="num">${isNumber(w.peak_mm_h) ? `${escapeHTML(num(w.peak_mm_h, 1))} mm/h` : "—"}${w.peak_time ? `<div class="subtle">${escapeHTML(formatHour(w.peak_time))}</div>` : ""}</td>
               <td class="num hide-sm">${isNumber(w.total_mm) ? `${escapeHTML(num(w.total_mm, 1))} mm` : "—"}</td>
