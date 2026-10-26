@@ -11,6 +11,7 @@ from app.services import overview_service as overview
 from app.services.history_service import history_report
 from app.services import typhoon_service
 from app.services import flood_risk_service
+from app.services import analysis_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
     get_bataan_rainfall_outlook,
@@ -97,4 +98,17 @@ def flood_risk(
     try:
         return flood_risk_service.build_flood_risk(storm=storm)
     except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.get("/analysis/{name}")
+def municipality_analysis(name: str):
+    """Step-by-step data analysis behind one town's forecast numbers (fetch, clean, statistics, models, climate, skill, classification)."""
+    try:
+        return analysis_service.analyze_municipality(
+            name, skill=analysis_service.default_skill, risk=analysis_service.default_risk,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except RuntimeError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error

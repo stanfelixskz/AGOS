@@ -7,6 +7,7 @@ import { escapeHTML, formatTime } from "../core/format.js";
 import { buildHash, navigate } from "../core/router.js";
 import { loadingState, errorState, onRetry, toast } from "../core/ui.js";
 import { renderDetail, hydrateDetail, levelPill } from "./parts/muni-detail.js";
+import { renderAnalysis, hydrateAnalysis } from "./parts/analysis.js";
 
 const TOWNS = ["Abucay", "Bagac", "Balanga", "Dinalupihan", "Hermosa", "Limay", "Mariveles", "Morong", "Orani", "Orion", "Pilar", "Samal"];
 
@@ -51,13 +52,17 @@ export async function mount(container, route) {
           <label class="visually-hidden" for="townSwitch">${escapeHTML(t("muni.switch"))}</label>
           <select class="select" id="townSwitch" style="width:auto">${TOWNS.map((n) => `<option ${n === data.name ? "selected" : ""}>${n}</option>`).join("")}</select>
           <a class="btn" href="${buildHash("map", [], { m: data.name })}">${icon("map", { size: 16 })} ${escapeHTML(t("common.openMap"))}</a>
+          <button class="btn" type="button" id="howBtn">${icon("analytics", { size: 16 })} ${escapeHTML(t("an.how"))}</button>
           <button class="btn btn-ghost btn-icon" type="button" id="shareBtn" aria-label="${escapeHTML(t("muni.share"))}">${icon("share", { size: 18 })}</button>
         </div>
       </div>
       <div class="card detail-page">${renderDetail(data, { reports, showOpenPage: false })}</div>
-      <p class="subtle" style="margin-top:var(--space-3)">${escapeHTML(t("muni.generated", { time: formatTime(data.generated_at) }))}</p>`;
+      <p class="subtle" style="margin-top:var(--space-3)">${escapeHTML(t("muni.generated", { time: formatTime(data.generated_at) }))}</p>
+      <div id="analysisSlot" style="margin-top:var(--space-4)"><div class="card">${loadingState(t("an.loading"))}</div></div>`;
 
     cleanup = hydrateDetail(container, data);
+    container.querySelector("#howBtn").addEventListener("click", () => container.querySelector("#analysisSlot")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    loadAnalysis(data.name);
     container.querySelector("#townSwitch").addEventListener("change", (event) => navigate("municipality", [event.target.value]));
     container.querySelector("#shareBtn").addEventListener("click", async () => {
       const url = location.href;
@@ -73,9 +78,26 @@ export async function mount(container, route) {
     });
   }
 
+  let analysisCleanup = null;
+  /** Step-by-step calculations, loaded after the page so they never delay it. */
+  async function loadAnalysis(name) {
+    const slot = container.querySelector("#analysisSlot");
+    try {
+      const analysis = await getJSON(`/api/analysis/${encodeURIComponent(name)}`, { ttlMs: 10 * 60 * 1000, timeoutMs: 90000 });
+      if (!alive || !slot.isConnected) return;
+      slot.innerHTML = renderAnalysis(analysis);
+      analysisCleanup = hydrateAnalysis(slot, analysis);
+    } catch (error) {
+      if (!alive || !slot.isConnected) return;
+      slot.innerHTML = `<div class="card">${errorState(error)}</div>`;
+      onRetry(slot, () => loadAnalysis(name));
+    }
+  }
+
   await load();
   return () => {
     alive = false;
     cleanup?.();
+    analysisCleanup?.();
   };
 }

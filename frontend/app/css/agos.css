@@ -933,3 +933,27 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
   .rain-marker { padding: 10px; }
   .evac-name { min-height: 40px; display: flex; align-items: center; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Data analysis section (municipality page)                           */
+/* ------------------------------------------------------------------ */
+.analysis { display: flex; flex-direction: column; gap: var(--space-3); }
+.analysis h2 { font-size: var(--text-lg, 18px); }
+.analysis-summary p { margin-top: 4px; line-height: 1.5; }
+.analysis-step { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.analysis-step > summary {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3);
+  cursor: pointer; list-style: none; font-weight: 650;
+}
+.analysis-step > summary::-webkit-details-marker { display: none; }
+.analysis-step-title { flex: 1; }
+.analysis-step[open] > summary .fold-chevron { transform: rotate(180deg); }
+.analysis-step-body { display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-3) var(--space-3); }
+.analysis-table th[scope="row"] { white-space: normal; }
+.analysis-table td { white-space: normal; }
+.formula {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: var(--text-xs);
+  padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2);
+}
+.analysis-note { font-size: var(--text-xs); line-height: 1.45; }
+.analysis-bad { color: var(--danger); font-weight: 650; }
