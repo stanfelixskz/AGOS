@@ -96,8 +96,12 @@ cd "$HOME\OneDrive\Desktop\AGOS\frontend"
 2. Start the frontend server:
 
 ```powershell
-python -m http.server 5500
+python tools/serve.py 5500
 ```
+
+`tools/serve.py` is a small static server that tells the browser not to cache
+files, so changes show up after a normal reload. (`python -m http.server 5500`
+also works, but browsers may keep old copies of page scripts.)
 
 Open <http://localhost:5500> in your browser. The frontend and the backend must
 run at the same time, each in its own terminal. To stop the frontend, click
@@ -196,7 +200,7 @@ uvicorn app.main:app --reload      # http://127.0.0.1:8000  (API docs at /docs)
 
 # 2. Frontend (new terminal)
 cd frontend
-python -m http.server 5500         # open http://localhost:5500
+python tools/serve.py 5500         # open http://localhost:5500 (no browser caching)
 ```
 
 Pages opened from `localhost`, `127.0.0.1` or `file://` automatically talk to
