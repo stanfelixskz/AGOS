@@ -557,7 +557,9 @@ export async function mount(container, route) {
   // ------------------------------------------------------------ typhoon from an article
   function typhoonLabel(ty) {
     const name = ty.storm?.name || t("typhoon.unnamed");
-    return ty.storm?.category ? t("typhoon.label", { category: ty.storm.category, name }) : name;
+    const label = ty.storm?.category ? t("typhoon.label", { category: ty.storm.category, name }) : name;
+    if (!ty.position && ty.area) return t("typhoon.areaLabel", { name: label, dir: ty.area.direction, place: ty.area.place });
+    return ty.position?.approximate ? `${label} ${t("typhoon.approx")}` : label;
   }
 
   /** Article dates keep the year (an article may be from a past season); unparsed text is shown as written. */
@@ -579,15 +581,19 @@ export async function mount(container, route) {
     const p = ty.position;
     const rel = p?.relative;
     let position = escapeHTML(t("common.notAvailable"));
+    const match = (g) => [g?.name, g?.admin1].filter(Boolean).join(", ");
     if (p) {
       const coords = `${num(p.latitude, 2)}°N, ${num(p.longitude, 2)}°E`;
-      const how = p.method === "coordinates"
-        ? t("typhoon.posCoords")
-        : t("typhoon.posRelative", {
-          km: num(rel.distance_km, 0), dir: rel.direction, place: rel.place,
-          match: [p.geocode?.name, p.geocode?.admin1].filter(Boolean).join(", "),
-        });
+      let how;
+      if (p.method === "coordinates") how = t("typhoon.posCoords");
+      else if (p.method === "place") how = t("typhoon.posPlace", { how: p.near.how, place: p.near.place, match: match(p.geocode) });
+      else {
+        how = t("typhoon.posRelative", { km: num(rel.distance_km, 0), dir: rel.direction, place: rel.place, match: match(p.geocode) });
+        if (rel.distance_stated) how += ` (${t("typhoon.converted", { stated: rel.distance_stated })})`;
+      }
       position = `<span class="num">${escapeHTML(coords)}</span><br><span class="subtle">${escapeHTML(how)}</span>`;
+    } else if (ty.area) {
+      position = `<span>${escapeHTML(t("typhoon.posArea", { dir: ty.area.direction, place: ty.area.place }))}</span>`;
     }
     const m = ty.movement;
     const movement = !m ? t("common.notAvailable")
@@ -597,7 +603,7 @@ export async function mount(container, route) {
     const level = intensityLevel(ty);
     const strength = level === null ? t("common.notAvailable") : t(`typhoon.level.${INTENSITY[level].id}`);
     const evidence = [
-      [t("typhoon.category"), ty.storm], [t("typhoon.position"), p], [t("typhoon.maxWind"), ty.max_wind_kmh],
+      [t("typhoon.category"), ty.storm], [t("typhoon.position"), p || ty.area], [t("typhoon.maxWind"), ty.max_wind_kmh],
       [t("typhoon.gust"), ty.gust_kmh], [t("typhoon.movement"), m], [t("typhoon.radius"), ty.radius_km],
       [t("typhoon.pressure"), ty.pressure_hpa], [t("typhoon.bulletinTime"), ty.bulletin_time],
     ].filter(([, field]) => field?.evidence);
@@ -655,10 +661,12 @@ export async function mount(container, route) {
       }
       state.typhoon = data;
       ui.tyActions.hidden = false;
-      state.engine?.setTyphoon(data.position ? data : null, typhoonLabel(data));
+      state.engine?.setTyphoon(data.position || data.area ? data : null, typhoonLabel(data));
       ui.tyStatus.textContent = data.position
         ? t("typhoon.shown", { name: typhoonLabel(data) })
-        : t("typhoon.noPosition", { note: data.position_note || "" });
+        : data.area?.geocode
+          ? t("typhoon.areaShown", { dir: data.area.direction, place: data.area.place })
+          : t("typhoon.noPosition", { note: data.position_note || "" });
       selectTyphoon(data);
     } catch (error) {
       if (state.alive) ui.tyStatus.textContent = error.message;

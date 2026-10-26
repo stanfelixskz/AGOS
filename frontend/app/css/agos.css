@@ -787,10 +787,12 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
    the core breathes slightly, so it reads as moving cloud, not a turning
    picture. Each layer is drawn once and only rotated (will-change), which
    keeps the cloud filters from being redrawn every frame. */
-.typhoon-marker { --size: 84px; --mirror: 1; width: var(--size); height: var(--size); display: grid; place-items: center; pointer-events: none; }
+/* Every part is positioned on its own around the storm point. (In a shared grid cell, a label
+   wider than the spiral stretched the cell and pushed the spiral off the storm when zoomed out.) */
+.typhoon-marker { --size: 84px; --mirror: 1; position: relative; width: var(--size); height: var(--size); pointer-events: none; }
 .typhoon-marker.is-south { --mirror: -1; }
 .typhoon-layer {
-  grid-area: 1 / 1; width: 100%; height: 100%;
+  position: absolute; inset: 0;
   will-change: transform;
   animation: typhoon-spin var(--spin, 14s) linear infinite;
 }
@@ -804,7 +806,7 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 @keyframes typhoon-spin { from { transform: scaleX(var(--mirror)) rotate(0deg); } to { transform: scaleX(var(--mirror)) rotate(-360deg); } }
 @keyframes typhoon-breathe { from { transform: scale(.97); } to { transform: scale(1.04); } }
 .typhoon-heading {
-  grid-area: 1 / 1; width: 0; height: 0; position: relative;
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
   transform: rotate(var(--bearing));
 }
 .typhoon-heading::before {
@@ -816,7 +818,7 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
   border: 6px solid transparent; border-bottom: 9px solid #dc2626; border-top: 0;
 }
 .typhoon-label {
-  grid-area: 1 / 1; align-self: center; transform: translateY(26px);
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, 14px);
   pointer-events: auto; cursor: pointer; white-space: nowrap;
   padding: 3px 9px; border: 1px solid var(--border); border-radius: var(--radius-pill);
   background: var(--surface); color: var(--text); box-shadow: var(--shadow-1);
@@ -824,6 +826,21 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 }
 .typhoon-label:hover { border-color: #dc2626; }
 .typhoon-label:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Direction-only storm: a dot at the named place and a dashed arrow pointing
+   the stated way. Fixed screen length: it does not show a distance. */
+.typhoon-area { position: relative; width: 0; height: 0; pointer-events: none; }
+.typhoon-area-dot { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: #dc2626; border: 2px solid #fff; box-shadow: var(--shadow-1); }
+.typhoon-area-arrow { position: absolute; left: 0; top: 0; width: 0; height: 0; transform: rotate(var(--bearing)); }
+.typhoon-area-arrow::before {
+  content: ""; position: absolute; left: -1.5px; bottom: 8px; height: 70px;
+  border-left: 3px dashed #dc2626;
+}
+.typhoon-area-arrow::after {
+  content: ""; position: absolute; left: -7px; bottom: 76px;
+  border: 7px solid transparent; border-bottom: 11px solid #dc2626; border-top: 0;
+}
+.typhoon-area .typhoon-label { left: 0; top: 0; transform: translate(-50%, 12px); width: max-content; max-width: 240px; white-space: normal; text-align: center; }
 @media (prefers-reduced-motion: reduce) {
   .typhoon-layer, .typhoon-core svg { animation: none !important; }
 }
