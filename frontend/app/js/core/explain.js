@@ -176,6 +176,44 @@ const TEXT = {
         ${sourceLink("Typhoon details from an article link", "typhoon-article")}`,
     }),
   },
+  factors: {
+    en: () => ({
+      title: "Flood factors",
+      body: `
+    <p>AGOS puts side by side what it can measure for the town: <strong>rain</strong> (the tested warning sign), <strong>wet ground</strong> (rain over the last 14 days), <strong>flood-prone ground</strong> (the official DENR–MGB map) and <strong>listed past floods</strong>.</p>
+    <p>"Rain is raised" comes only from the <strong>rain warning sign</strong>: the 3-day rain is in the top 5% of the town's own record. No weights or probabilities were invented. When rain is raised, the flood-prone ground in the town <em>could</em> flood; depth and extent are not shown.</p>
+    <p><strong>Wet ground</strong> is context only. It has not been tested on past floods yet, so it is not part of the sign.</p>
+    <p><strong>Not included:</strong> tide (the only tide model found starts in 2023, too short to test), storms (AGOS has no live storm feed) and rivers, dikes and drainage.</p>
+    <p>Rain is Open-Meteo model forecast, not a rain gauge. This is not an official warning and not a flood probability. Follow PAGASA and your MDRRMO.</p>
+        ${sourceLink("DENR–MGB flood susceptibility", "mgb")}`,
+    }),
+    fil: () => ({
+      title: "Mga salik ng baha",
+      body: `
+    <p>Pinagsasama ng AGOS dito ang mga bagay na kaya nitong sukatin para sa bayan: <strong>ulan</strong> (ang tinestang babalang tanda), <strong>basang lupa</strong> (ulan sa nakaraang 14 araw), <strong>lupang madaling bahain</strong> (opisyal na mapa ng DENR–MGB) at <strong>mga nakalistang nakaraang baha</strong>.</p>
+    <p>Ang "Mataas ang ulan" ay galing lang sa <strong>babalang tanda mula sa ulan</strong>: kung ang 3-araw na ulan ay nasa nangungunang 5% ng sariling talaan ng bayan. Walang ginawang timbang o porsiyento ng posibilidad. Kapag mataas ang ulan, ang lupang madaling bahain sa bayan ang <em>maaaring</em> bahain; hindi ipinapakita ang lalim o lawak.</p>
+    <p>Ang <strong>basang lupa</strong> ay konteksto lamang. Hindi pa ito nasusubok sa mga nakaraang baha, kaya hindi ito bahagi ng tanda.</p>
+    <p><strong>Hindi kasama:</strong> tide (ang tanging modelong nakita ay mula 2023 lamang, masyadong maikli para masubok), bagyo (walang live na datos ng bagyo ang AGOS), at mga ilog, dike at drainage.</p>
+    <p>Ang ulan ay galing sa Open-Meteo model forecast, hindi rain gauge. Hindi ito opisyal na babala at hindi ito posibilidad ng baha. Sundin ang PAGASA at ang inyong MDRRMO.</p>
+        ${sourceLink("DENR–MGB flood susceptibility", "mgb")}`,
+    }),
+  },
+  outlook: {
+    en: () => ({
+      title: "Flood outlook",
+      body: `
+    <p>This layer shows the <strong>DENR–MGB flood-prone ground</strong> at full strength only in towns where <strong>rain is raised</strong> (warning sign Watch or higher). Other towns and everything outside Bataan are faded.</p>
+    <p><strong>Replay</strong> uses recorded rain (ERA5) as if it had been the forecast. It shows what the rule would say with the rain that actually fell, not what the forecast said then. Floods listed around that day are shown beside it so the two can be compared.</p>
+    <p>It shows where flooding is <strong>possible</strong>, not depth or extent. It is not an official warning and not a flood probability.</p>`,
+    }),
+    fil: () => ({
+      title: "Tanaw sa baha",
+      body: `
+    <p>Ipinapakita ng layer na ito ang <strong>lupang madaling bahain ayon sa DENR–MGB</strong> nang buong kulay lamang sa mga bayang <strong>mataas ang ulan</strong> (babalang tanda: Bantayan o mas mataas). Naka-fade ang ibang bayan at ang labas ng Bataan.</p>
+    <p>Ang <strong>Replay</strong> ay gumagamit ng ulang naitala (ERA5) na parang ito ang forecast. Ipinapakita nito kung ano ang sasabihin ng patakaran sa ulang talagang bumagsak, hindi ang sinabi ng forecast noon. Katabi nito ang mga bahang nakalista sa paligid ng araw na iyon para maikumpara.</p>
+    <p>Ipinapakita nito kung saan <strong>posibleng</strong> bahain, hindi ang lalim o lawak. Hindi ito opisyal na babala at hindi posibilidad ng baha.</p>`,
+    }),
+  },
 };
 
 export function explain(id) {

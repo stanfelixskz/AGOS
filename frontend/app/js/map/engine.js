@@ -10,6 +10,7 @@ import { loadMapLibre } from "./loader.js";
 import { escapeHTML } from "../core/format.js";
 import { levelColor } from "../core/levels.js";
 import { createRainFx } from "./rainfx.js";
+import { outsideMask } from "./outlook.js";
 import { addPinImages, PIN_ID, PIN_SELECTED_ID } from "./pins.js";
 import { circlePolygon, destination, intensityLevel, kmToPixels, typhoonLayers, unscaledSize } from "./typhoon.js";
 
@@ -113,6 +114,9 @@ export async function createAgosMap(container, options = {}) {
     available: { boundaries: null, rain: null, rainfx: null, windfx: false, cloudfx: false, evacuation: null, reports: null, mgb: true, precip: true },
     messages: {},
     boundaries: null,
+    outside: null,      // everything outside Bataan, for the flood outlook fade
+    outlook: null,      // Map(town -> raised) while the flood outlook is on
+    theme: options.theme === "dark" ? "dark" : "light",
     centers: [],
     reports: [],
     rainRows: [],
@@ -164,12 +168,50 @@ export async function createAgosMap(container, options = {}) {
     if (!map.getLayer("agos-mgb")) {
       map.addLayer({ id: "agos-mgb", type: "raster", source: "agos-mgb", layout: { visibility: vis(state.visible.mgb) }, paint: { "raster-opacity": 0.62 } }, firstOverlayLayerId());
     }
+    addOutlookLayers();
     if (!map.getSource("agos-precip")) {
       map.addSource("agos-precip", { type: "raster", tiles: [state.precip.url], tileSize: 256, attribution: 'Precipitation © <a href="https://www.weatherapi.com/">WeatherAPI.com</a>' });
     }
     if (!map.getLayer("agos-precip")) {
       map.addLayer({ id: "agos-precip", type: "raster", source: "agos-precip", layout: { visibility: vis(state.visible.precip) }, paint: { "raster-opacity": state.precipOpacity } }, firstOverlayLayerId());
     }
+  }
+
+  // Flood outlook: the MGB raster cannot be clipped, so it is faded where rain is ordinary
+  // (one fill per not-raised town via feature-state "dim") and outside Bataan (one fill).
+  const dimColor = () => (state.theme === "dark" ? "#0b1220" : "#ffffff");
+  const DIM_OPACITY = 0.74;
+
+  function addOutlookLayers() {
+    if (!state.boundaries || !map.getSource("agos-boundaries")) return;
+    const layout = { visibility: vis(Boolean(state.outlook) && state.visible.mgb) };
+    const before = firstOverlayLayerId();
+    if (state.outside && !map.getSource("agos-outside")) map.addSource("agos-outside", { type: "geojson", data: state.outside });
+    if (state.outside && !map.getLayer("agos-outside-dim")) {
+      map.addLayer({ id: "agos-outside-dim", type: "fill", source: "agos-outside", layout, paint: { "fill-color": dimColor(), "fill-opacity": DIM_OPACITY } }, before);
+    }
+    if (!map.getLayer("agos-town-dim")) {
+      map.addLayer({
+        id: "agos-town-dim", type: "fill", source: "agos-boundaries", layout,
+        paint: { "fill-color": dimColor(), "fill-opacity": ["case", ["boolean", ["feature-state", "dim"], false], DIM_OPACITY, 0] },
+      }, before);
+    }
+  }
+
+  function applyOutlookVisibility() {
+    const on = vis(Boolean(state.outlook) && state.visible.mgb);
+    for (const id of ["agos-outside-dim", "agos-town-dim"]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on);
+    }
+  }
+
+  function applyOutlook() {
+    if (!state.boundaries || !map.getSource("agos-boundaries")) return;
+    for (const f of state.boundaries.features) {
+      const raised = state.outlook?.get(normName(featureName(f)));
+      map.setFeatureState({ source: "agos-boundaries", id: f.id }, { dim: Boolean(state.outlook) && raised === false });
+    }
+    applyOutlookVisibility();
   }
 
   function addBoundaryLayers() {
@@ -305,6 +347,7 @@ export async function createAgosMap(container, options = {}) {
     addPointLayers();
     addTyphoonLayers();
     applyTint();
+    applyOutlook();
   }
 
   // ---------------- town shape tint, hover ----------------
@@ -382,6 +425,7 @@ export async function createAgosMap(container, options = {}) {
         if (data?.type === "FeatureCollection" && Array.isArray(data.features)) {
           data.features.forEach((f, i) => { f.id = i; });
           state.boundaries = data;
+          state.outside = outsideMask(data.features);
           state.boundaryAttribution = file.includes("psgc2023")
             ? 'Boundaries: PSA PSGC 2023 via <a href="https://github.com/faeldon/philippines-json-maps" target="_blank" rel="noopener noreferrer">philippines-json-maps</a> (MIT)'
             : "";
@@ -562,6 +606,7 @@ export async function createAgosMap(container, options = {}) {
       }
       if (id === "precip" && visible) probePrecip(state.precip.url);
       if (id === "rainfx") rainfx?.setEnabled(visible);
+      if (id === "mgb") applyOutlookVisibility();
       if (id === "rain" || id === "boundaries") updateFillVisibility();
       if (id === "rain") {
         applyTint();
@@ -569,6 +614,20 @@ export async function createAgosMap(container, options = {}) {
         if (!visible) clearHover();
       }
       emit();
+    },
+
+    /** True when there are separate town shapes to fade (a province-only outline cannot do it). */
+    outlookAvailable() {
+      return Boolean(state.boundaries && state.boundaries.features.length > 1);
+    },
+
+    /**
+     * Flood outlook: rows [{ name, raised }] fade the MGB layer in every town that is not raised
+     * and outside Bataan; null switches the fade off. Needs the MGB layer to be visible.
+     */
+    setFloodOutlook(rows) {
+      state.outlook = rows && rows.length ? new Map(rows.map((r) => [normName(r.name), Boolean(r.raised)])) : null;
+      applyOutlook();
     },
 
     /** Streaks per town right now (for tests). */
@@ -705,6 +764,7 @@ export async function createAgosMap(container, options = {}) {
 
     async setTheme(theme) {
       rainfx?.setTheme(theme);
+      state.theme = theme === "dark" ? "dark" : "light";
       const next = await resolveStyle(theme);
       if (next.name === controller.basemap.name) return;
       controller.basemap = next;

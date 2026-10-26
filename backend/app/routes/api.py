@@ -10,7 +10,7 @@ from app.data.municipalities import MUNICIPALITIES
 from app.services import overview_service as overview
 from app.services.climate_service import climate_report
 from app.services.history_service import history_report
-from app.services import evidence_service, flood_events_service, flood_model_service, flood_watch_service
+from app.services import evidence_service, flood_events_service, flood_factors_service, flood_model_service, flood_watch_service
 from app.services import susceptibility_service
 from app.services import typhoon_service
 from app.services.weather_service import (
@@ -100,6 +100,21 @@ def flood_watch():
     try:
         return flood_watch_service.watch_report()
     except (RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.get("/flood-factors")
+def flood_factors(date: str | None = Query(None, max_length=10)):
+    """
+    Per town: warning sign, wet ground, MGB flood-prone ground and past floods, for today (forecast)
+    or, with ?date=YYYY-MM-DD, replayed for a past day from the stored rain record.
+    Not an official warning and not a flood probability.
+    """
+    try:
+        return flood_factors_service.factors_report(on=date)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
 
 

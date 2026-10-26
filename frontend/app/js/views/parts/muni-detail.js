@@ -11,6 +11,7 @@ import { levelLabel, levelColor, THRESHOLDS } from "../../core/levels.js";
 import { barChart, lineChart, mountChart } from "../../core/charts.js";
 import { EXPLAIN } from "../../core/explain.js";
 import { buildHash } from "../../core/router.js";
+import { renderFactorsBanner, renderFactorsBody } from "./factors.js";
 
 const LEVEL_KEYS = new Set(["nodata", "little", "rain", "yellow", "orange", "red"]);
 
@@ -109,8 +110,10 @@ function dischargeSection(section) {
     <p class="source-line">${icon("clock", { size: 14 })} GloFAS (modeled) · ${escapeHTML(formatTime(d.generated_at))}</p>`, false);
 }
 
-function susceptibilitySection() {
-  return wrap(t("detail.susceptibility"), "mgb", `<div class="notice">${icon("info", { size: 18 })}<div>${escapeHTML(t("detail.susceptibilityNA"))}</div></div>`, false);
+/** Rain, wet ground, MGB flood-prone ground and past floods side by side (see parts/factors.js). */
+function factorsSection(factors, name) {
+  if (!factors) return "";
+  return wrap(t("factors.title"), "factors", renderFactorsBody(factors, name));
 }
 
 function centersSection(section) {
@@ -145,22 +148,23 @@ function reportsSection(reports) {
 }
 
 /** Return HTML for the full detail. */
-export function renderDetail(data, { reports = null, showOpenPage = true, collapsible = false, banner = false } = {}) {
+export function renderDetail(data, { reports = null, showOpenPage = true, collapsible = false, banner = false, factors = null } = {}) {
   FOLD = collapsible;
   try {
-    return renderParts(data, reports, showOpenPage, banner);
+    return renderParts(data, reports, showOpenPage, banner, factors);
   } finally {
     FOLD = false;
   }
 }
 
-function renderParts(data, reports, showOpenPage, banner) {
+function renderParts(data, reports, showOpenPage, banner, factors) {
   return `
+    ${renderFactorsBanner(factors, data.name)}
     ${banner ? bannerSection(data.rain) : ""}
+    ${factorsSection(factors, data.name)}
     ${rainSection(data.rain)}
     ${weatherSection(data.current_weather)}
     ${dischargeSection(data.river_discharge)}
-    ${susceptibilitySection(data.susceptibility)}
     ${centersSection(data.evacuation_centers)}
     ${reportsSection(reports)}
     ${showOpenPage ? `<div class="detail-foot"><a class="btn btn-block" href="${buildHash("municipality", [data.name])}">${escapeHTML(t("detail.openPage"))} ${icon("arrowRight", { size: 16 })}</a></div>` : ""}`;

@@ -37,6 +37,12 @@ export async function mount(container, route) {
     } catch (error) {
       reports = { status: "unavailable", detail: error.message };
     }
+    let factors;
+    try {
+      factors = { status: "ok", data: await getJSON("/api/flood-factors", { ttlMs: 10 * 60 * 1000, timeoutMs: 60000 }) };
+    } catch (error) {
+      factors = { status: "unavailable", detail: error.message };
+    }
     if (!alive) return;
 
     const level = data.rain?.status === "ok" ? data.rain.data.level_24h : "nodata";
@@ -54,7 +60,7 @@ export async function mount(container, route) {
           <button class="btn btn-ghost btn-icon" type="button" id="shareBtn" aria-label="${escapeHTML(t("muni.share"))}">${icon("share", { size: 18 })}</button>
         </div>
       </div>
-      <div class="card detail-page">${renderDetail(data, { reports, showOpenPage: false })}</div>
+      <div class="card detail-page">${renderDetail(data, { reports, factors, showOpenPage: false })}</div>
       <p class="subtle" style="margin-top:var(--space-3)">${escapeHTML(t("muni.generated", { time: formatTime(data.generated_at) }))}</p>`;
 
     cleanup = hydrateDetail(container, data);
