@@ -178,7 +178,8 @@ export function tideRow(town, data) {
   const tide = data?.tide;
   if (!tide?.days?.length) return row(t("factors.tide"), `<span class="subtle">${escapeHTML(t("factors.tideNA"))}</span>`, { off: true });
   const springDays = tide.days.filter((d) => d.spring);
-  const first = springDays[0];
+  // The day closest to the new/full moon, not just the first day of the window.
+  const first = springDays.reduce((best, d) => (!best || d.days_from_moon < best.days_from_moon ? d : best), null);
   const head = first
     ? t("factors.tideSpring", { moon: t(first.moon === "full" ? "factors.moonFull" : "factors.moonNew"), date: shortDay(first.date) })
     : t("factors.tideOrdinary");
