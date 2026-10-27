@@ -289,6 +289,21 @@ class PageTests(unittest.TestCase):
         self.assertTrue(result["found"])
         self.assertEqual(result["position"]["latitude"], 13.6)
         self.assertIn("Unverified", result["note"])
+        self.assertIsNone(result["article"]["day"])  # this page states no date
+
+    def test_article_day_is_the_philippine_calendar_day(self):
+        # 20:00 UTC on 24 July is already 25 July in the Philippines.
+        self.assertEqual(ts.article_day("2024-07-24T20:00:00Z")["date"], "2024-07-25")
+        self.assertEqual(ts.article_day("2022-09-25T10:30:00+08:00"), {"date": "2022-09-25", "basis": "published", "stated": "2022-09-25T10:30:00+08:00"})
+        self.assertEqual(ts.article_day("September 25, 2022")["date"], "2022-09-25")
+        self.assertIsNone(ts.article_day("yesterday"))
+        self.assertIsNone(ts.article_day(None))
+
+    def test_article_day_falls_back_to_structured_data_and_time_tags(self):
+        ld = '<script type="application/ld+json">{"@type":"NewsArticle","datePublished":"2023-07-26T08:15:00+08:00"}</script>'
+        self.assertEqual(ts.article_day(None, ld), {"date": "2023-07-26", "basis": "page_date", "stated": "2023-07-26T08:15:00+08:00"})
+        self.assertEqual(ts.article_day(None, '<time class="x" datetime="2021-07-24">July 24</time>')["date"], "2021-07-24")
+        self.assertIsNone(ts.article_day(None, "<p>no date here</p>"))
 
 
 try:

@@ -31,6 +31,11 @@ what the rule would have said with the rain that actually fell, not what the
 forecast said at the time). Listed floods reported around that day are returned
 next to it so the two can be compared by eye.
 
+Any day (day_report, used for a storm read from an article): the stored record
+when it covers the day, otherwise the Open-Meteo forecast API, which also keeps
+recent past days (model analysis) and forecasts today and the next 2 days. Days
+before the record and days past the forecast are refused with the reason.
+
 Not an official warning and not a flood probability.
 """
 
@@ -52,6 +57,7 @@ REPLAY_AHEAD_DAYS = fw.FORECAST_DAYS - 1  # a replay day needs rain up to two da
 TOP_BARANGAYS = 5
 CACHE_SECONDS = 600
 MAX_REPLAY_CACHE = 30
+RECENT_PAST_DAYS = 92  # past days the Open-Meteo forecast API keeps
 
 NOT_INCLUDED = (
     "tide",
@@ -170,6 +176,24 @@ def replay_range(records: Mapping[str, Any]) -> dict[str, Any] | None:
     return {"min": low.isoformat(), "max": high.isoformat()}
 
 
+def day_source(day: str, today: str, span: Mapping[str, str] | None) -> str:
+    """
+    Which rain AGOS can use for `day`:
+      replay         the stored record covers it (rain that actually fell)
+      forecast       the Open-Meteo forecast API covers it (recent model analysis, or forecast up to today + 2)
+      too_far_ahead  after the forecast AGOS uses
+      no_record      before the stored record and too old for the forecast API
+    """
+    d, t = date.fromisoformat(day), date.fromisoformat(today)
+    if span and span["min"] <= day <= span["max"]:
+        return "replay"
+    if d > t + timedelta(days=fw.FORECAST_DAYS - 1):
+        return "too_far_ahead"
+    if (t - d).days + WET_DAYS <= RECENT_PAST_DAYS:
+        return "forecast"
+    return "no_record"
+
+
 def replay_choices(events: list[Mapping[str, Any]], span: Mapping[str, str] | None) -> list[dict[str, Any]]:
     """Listed floods that fall inside the replayable days, newest first, to jump to."""
     if not span:
@@ -201,6 +225,7 @@ def build_factors(
     issued_at: str,
     replay: Mapping[str, Any] | None = None,
     rivers: Mapping[str, Mapping[str, Any]] | None = None,
+    with_events_near: bool = False,
 ) -> dict[str, Any]:
     """
     inputs[town] = {"daily": [(date, mm|None) x 5 days: day-2 .. day+2],
@@ -228,7 +253,7 @@ def build_factors(
         "towns": towns,
         "levels": [{"name": n, "min_percentile": m} for n, m in fw.LEVELS],
         "backing": fw.backing(model_report),
-        "events_near": events_near(events, day) if mode == "replay" else [],
+        "events_near": events_near(events, day) if mode == "replay" or with_events_near else [],
         "replay": {
             **(replay or {}),
             "choices": replay_choices(events, replay) if replay else [],
@@ -319,12 +344,38 @@ def _replay_inputs(records: Mapping[str, Any], day: str) -> dict[str, dict[str, 
     return out
 
 
+def _context() -> tuple[list[Mapping[str, Any]], Any, Any, Mapping[str, Any]]:
+    """Flood list, model backing, MGB shares and rivers (the last three optional)."""
+    from app.data.municipalities import MUNICIPALITIES
+    from app.services import evidence_service, flood_events_service, flood_model_service, susceptibility_service
+
+    events = flood_events_service.events_report(connect=evidence_service._default_connect, municipalities=MUNICIPALITIES)["events"]
+    try:
+        model = flood_model_service.model_report()
+    except Exception:  # noqa: BLE001 - the backing line is optional
+        model = None
+    try:
+        susc = susceptibility_service.susceptibility_report()
+    except Exception:  # noqa: BLE001 - the map data stands alone
+        susc = None
+    try:
+        rivers = rivers_service.towns_for_factors()
+    except Exception:  # noqa: BLE001 - rivers are context only
+        rivers = {}
+    return events, model, susc, rivers
+
+
+def _remember(key: str, value: dict[str, Any]) -> None:
+    if len(_result_cache) >= MAX_REPLAY_CACHE:
+        _result_cache.pop(next(iter(_result_cache)))
+    _result_cache[key] = (time.time(), value)
+
+
 def factors_report(on: str | None = None, use_cache: bool = True) -> dict[str, Any]:
     """Today (from the forecast) or, with `on`, a past day replayed from the stored rain record."""
     from zoneinfo import ZoneInfo
 
     from app.data.municipalities import MUNICIPALITIES
-    from app.services import evidence_service, flood_events_service, flood_model_service, susceptibility_service
 
     now = datetime.now(ZoneInfo("Asia/Manila"))
     key = on or "now"
@@ -339,19 +390,7 @@ def factors_report(on: str | None = None, use_cache: bool = True) -> dict[str, A
         raise ValueError(
             f"No rain record for {on}. Replay needs stored rain" + (f" between {span['min']} and {span['max']}." if span else ".")
         )
-    events = flood_events_service.events_report(connect=evidence_service._default_connect, municipalities=MUNICIPALITIES)["events"]
-    try:
-        model = flood_model_service.model_report()
-    except Exception:  # noqa: BLE001 - the backing line is optional
-        model = None
-    try:
-        susc = susceptibility_service.susceptibility_report()
-    except Exception:  # noqa: BLE001 - the map data stands alone
-        susc = None
-    try:
-        rivers = rivers_service.towns_for_factors()
-    except Exception:  # noqa: BLE001 - rivers are context only
-        rivers = {}
+    events, model, susc, rivers = _context()
 
     if on:
         inputs = _replay_inputs(records, on)
@@ -363,7 +402,44 @@ def factors_report(on: str | None = None, use_cache: bool = True) -> dict[str, A
         inputs = _forecast_inputs(forecasts, records, today)
         value = build_factors(inputs, mode="forecast", day=today, events=events, model_report=model, rain_record=records["record"],
                               susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers)
-    if len(_result_cache) >= MAX_REPLAY_CACHE:
-        _result_cache.pop(next(iter(_result_cache)))
-    _result_cache[key] = (time.time(), value)
+    _remember(key, value)
+    return value
+
+
+def day_report(day: str, use_cache: bool = True) -> dict[str, Any]:
+    """
+    The same answer for any day the data reach: the stored record (replay) when it covers the day,
+    otherwise the forecast API (recent past days or up to today + 2). Listed floods around the day are
+    always returned. Raises ValueError with the reason for days no source covers.
+    """
+    from zoneinfo import ZoneInfo
+
+    from app.data.municipalities import MUNICIPALITIES
+
+    parse_day(day)
+    now = datetime.now(ZoneInfo("Asia/Manila"))
+    today = now.date().isoformat()
+    records = load_records()
+    span = replay_range(records)
+    source = day_source(day, today, span)
+    if source == "replay":
+        return factors_report(on=day, use_cache=use_cache)
+    if source == "too_far_ahead":
+        last = (date.fromisoformat(today) + timedelta(days=fw.FORECAST_DAYS - 1)).isoformat()
+        raise ValueError(f"{day} is after the forecast AGOS uses (today to {last}). Check again closer to that day.")
+    if source == "no_record":
+        held = f" The stored rain record covers {span['min']} to {span['max']}." if span else " No rain record is stored yet."
+        raise ValueError(f"No rain data for {day}.{held} Load more years with tools/backfill_history.py.")
+
+    key = f"day:{day}"
+    if use_cache and key in _result_cache and time.time() - _result_cache[key][0] < CACHE_SECONDS:
+        return _result_cache[key][1]
+    events, model, susc, rivers = _context()
+    past_days = max(fw.PAST_DAYS, (date.fromisoformat(today) - date.fromisoformat(day)).days + WET_DAYS)
+    forecasts = fw.fetch_forecasts(MUNICIPALITIES, past_days=past_days)
+    inputs = _forecast_inputs(forecasts, records, day)
+    value = build_factors(inputs, mode="forecast", day=day, events=events, model_report=model, rain_record=records["record"],
+                          susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers,
+                          with_events_near=True)
+    _remember(key, value)
     return value

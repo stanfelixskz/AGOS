@@ -88,6 +88,21 @@ export function outlookRows(factors) {
   return (factors.data?.towns || []).map((town) => ({ name: town.name, raised: town.state === "raised" }));
 }
 
+/**
+ * Town colors for the flood warning sign (storm-day risk on the map). Their own scale, set apart from
+ * the rain-level colors: they rank rain against each town's record, not mm per hour.
+ */
+export const RISK_LEVELS = ["high_warning", "warning", "watch", "normal"];
+export const RISK_COLORS = { high_warning: "#9f1239", warning: "#e11d48", watch: "#f59e0b", normal: "#16a34a" };
+
+/** [{ name, level, color }] for every town with a sign (towns without data stay uncolored). */
+export function riskRows(factors) {
+  return (factors?.towns || [])
+    .map((town) => ({ name: town.name, level: town.rain?.level }))
+    .filter((row) => RISK_COLORS[row.level])
+    .map((row) => ({ ...row, color: RISK_COLORS[row.level] }));
+}
+
 /** Names of raised towns, in the order the answer lists them (strongest rain first). */
 export function raisedTowns(factors) {
   return factors?.status === "ok" ? factors.data?.raised || [] : [];

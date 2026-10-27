@@ -21,7 +21,7 @@ import ipaddress
 import math
 import re
 import socket
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from typing import Any, Callable
 from urllib.parse import urljoin, urlsplit
@@ -190,6 +190,51 @@ def html_to_text(html: str) -> dict[str, Any]:
         "site": meta.get("og:site_name") or None,
         "published": meta.get("article:published_time") or meta.get("date") or meta.get("pubdate") or None,
     }
+
+
+# Where pages put their publish date when it is not in a meta tag.
+_PAGE_DATES = (
+    re.compile(r'"datePublished"\s*:\s*"([^"]{8,40})"'),
+    re.compile(r'itemprop=["\']datePublished["\'][^>]*?(?:content|datetime)=["\']([^"\']{8,40})["\']', re.I),
+    re.compile(r'<time[^>]*?datetime=["\']([^"\']{8,40})["\']', re.I),
+)
+_DATE_FORMATS = ("%B %d, %Y", "%b %d, %Y", "%b. %d, %Y", "%d %B %Y", "%Y/%m/%d")
+
+
+def _manila_day(value: str | None) -> str | None:
+    """Calendar day in the Philippines (UTC+8) of a stated date or time, or None when it cannot be read."""
+    if not value:
+        return None
+    text = value.strip()
+    when = None
+    try:
+        when = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        for fmt in _DATE_FORMATS:
+            try:
+                when = datetime.strptime(text, fmt)
+                break
+            except ValueError:
+                continue
+    if when is None:
+        return None
+    if when.tzinfo is not None:
+        when = when.astimezone(timezone(timedelta(hours=8)))
+    if not 1950 <= when.year <= datetime.now(timezone.utc).year + 1:
+        return None
+    return when.date().isoformat()
+
+
+def article_day(published: str | None, html: str = "") -> dict[str, Any] | None:
+    """The article's publish day (Philippine time): from the meta tag, else structured data or a <time> tag."""
+    day = _manila_day(published)
+    if day:
+        return {"date": day, "basis": "published", "stated": published}
+    for pattern in _PAGE_DATES:
+        match = pattern.search(html or "")
+        if match and (day := _manila_day(match.group(1))):
+            return {"date": day, "basis": "page_date", "stated": match.group(1)}
+    return None
 
 
 # ---------------------------------------------------------------- extraction
@@ -654,7 +699,8 @@ def typhoon_from_url(
         "url": url,
         "final_url": final_url,
         "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "article": {"title": page["title"], "site": page["site"] or urlsplit(final_url).hostname, "published": page["published"]},
+        "article": {"title": page["title"], "site": page["site"] or urlsplit(final_url).hostname, "published": page["published"],
+                    "day": article_day(page["published"], html)},
         "found": found_any,
         **found,
         "note": SOURCE_NOTE,
