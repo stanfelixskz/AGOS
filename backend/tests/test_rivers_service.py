@@ -104,6 +104,24 @@ class TownTests(unittest.TestCase):
         self.assertEqual(out["stats"]["named"], 2)
         self.assertNotIn("Far Away River", [f["name"] for f in out["lines"]])
 
+    def test_culverts_are_left_out_and_counted(self):
+        pipe = {"name": "Pipe", "waterway": "stream", "tunnel": "culvert", "line": [(120.02, 14.02), (120.02, 14.04)]}
+        out = rs.summarize(FEATURES + [pipe], BOUNDARIES)
+        self.assertEqual(out["stats"]["underground_dropped"], 1)
+        self.assertEqual(out["stats"]["outside_bataan_dropped"], 1)
+        self.assertEqual(out["stats"]["features"], 3)
+        self.assertNotIn("Pipe", [f["name"] for f in out["lines"]])
+        self.assertNotIn("Pipe", {t["name"]: t for t in out["towns"]}["Alpha"]["rivers"])
+        self.assertFalse(rs.is_underground({"tunnel": "no"}))
+        self.assertFalse(rs.is_underground({}))
+
+    def test_tunnel_tag_survives_the_file_round_trip(self):
+        pipe = {"name": None, "waterway": "canal", "tunnel": "culvert", "line": [(120.02, 14.02), (120.02, 14.04)]}
+        with tempfile.TemporaryDirectory() as folder:
+            path = write_file(folder, [pipe])
+            back = rs.read_features(json.loads(path.read_text(encoding="utf-8")))
+        self.assertEqual(back[0]["tunnel"], "culvert")
+
     def test_a_straight_line_across_a_border_is_split_between_towns(self):
         out = rs.summarize([FEATURES[0]], BOUNDARIES)
         km = {t["name"]: t["length_km"] for t in out["towns"]}
