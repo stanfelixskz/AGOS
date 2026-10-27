@@ -11,7 +11,7 @@ from app.services import overview_service as overview
 from app.services.climate_service import climate_report
 from app.services.history_service import history_report
 from app.services import evidence_service, flood_events_service, flood_factors_service, flood_model_service, flood_watch_service
-from app.services import rivers_service, susceptibility_service
+from app.services import rivers_service, storm_risk_service, susceptibility_service
 from app.services import typhoon_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
@@ -150,4 +150,24 @@ def typhoon_from_url(url: str = Query(..., min_length=8, max_length=2048)):
     except typhoon_service.UrlRejected as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     except typhoon_service.FetchFailed as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.get("/typhoon/flood-risk")
+def typhoon_flood_risk(
+    date: str = Query(..., min_length=10, max_length=10),
+    lat: float | None = Query(None, ge=-90, le=90),
+    lon: float | None = Query(None, ge=-180, le=180),
+    radius_km: float | None = Query(None, gt=0, le=3000),
+):
+    """
+    Flood warning sign per town on the day of a storm (stored rain for past days, forecast for recent and
+    coming days), with the storm's distance to each town as context and listed floods around that day.
+    Not an official warning and not a flood probability.
+    """
+    try:
+        return storm_risk_service.storm_flood_risk(date, latitude=lat, longitude=lon, radius_km=radius_km)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error

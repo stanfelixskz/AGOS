@@ -83,6 +83,19 @@ class SmallPartsTests(unittest.TestCase):
         self.assertIsNone(ff.replay_range({"towns": {"A": {"first": None, "last": None}}}))
         self.assertIsNone(ff.replay_range({"towns": {"A": {"first": "2026-10-01", "last": "2026-10-10"}}}))
 
+    def test_day_source_picks_the_record_then_the_forecast_api(self):
+        span = {"min": "1990-01-18", "max": "2026-10-16"}
+        today = "2026-10-26"
+        self.assertEqual(ff.day_source("2022-09-25", today, span), "replay")
+        self.assertEqual(ff.day_source("2026-10-20", today, span), "forecast")  # after the record, recent past
+        self.assertEqual(ff.day_source("2026-10-26", today, span), "forecast")
+        self.assertEqual(ff.day_source("2026-10-28", today, span), "forecast")  # today + 2
+        self.assertEqual(ff.day_source("2026-10-29", today, span), "too_far_ahead")
+        self.assertEqual(ff.day_source("1980-01-01", today, span), "no_record")
+        # Without a stored record, only the forecast API's recent days are left (92 days, 14 for wet ground).
+        self.assertEqual(ff.day_source("2026-08-15", today, None), "forecast")
+        self.assertEqual(ff.day_source("2026-07-01", today, None), "no_record")
+
     def test_replay_choices_stay_inside_the_range_and_skip_undated(self):
         choices = ff.replay_choices(EVENTS, {"min": "2021-07-26", "max": "2030-01-01"})
         self.assertEqual([c["id"] for c in choices], ["e2"])
@@ -223,6 +236,49 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(fetch.call_args.kwargs["past_days"], 14)
         self.assertEqual((out["mode"], out["date"]), ("forecast", "2026-10-26"))
         self.assertEqual(out["towns"][0]["wet_ground"]["mm"], 140.0)
+
+    def clock(self, today="2026-10-26"):
+        fixed = mock.MagicMock()
+        fixed.date.return_value.isoformat.return_value = today
+        fixed.isoformat.return_value = f"{today}T10:00+08:00"
+        patcher = mock.patch("app.services.flood_factors_service.datetime")
+        clock = patcher.start()
+        self.addCleanup(patcher.stop)
+        clock.now.return_value = fixed
+
+    def test_day_report_replays_a_day_inside_the_record(self):
+        self.clock()
+        out = self.run_with(lambda: ff.day_report("2026-10-10"))
+        self.assertEqual((out["mode"], out["date"]), ("replay", "2026-10-10"))
+
+    def test_day_report_uses_the_forecast_api_for_a_recent_day_and_lists_floods_near_it(self):
+        self.clock()
+        series = [(d, 10.0) for d in sorted(long_daily(end="2026-10-28", length=40))]
+        events = EVENTS + [{"id": "e4", "start_date": "2026-10-22", "end_date": "2026-10-23", "confidence": "high",
+                            "towns": [{"municipality": "Hermosa", "evidence": "flooded", "barangays": []}], "sources": []}]
+        with mock.patch("app.services.flood_watch_service.fetch_forecasts", return_value={"Hermosa": series}) as fetch:
+            patches = self.patched()
+            patches[1] = mock.patch("app.services.flood_events_service.events_report", return_value={"events": events})
+            for p in patches:
+                p.start()
+            try:
+                out = ff.day_report("2026-10-22")
+            finally:
+                for p in reversed(patches):
+                    p.stop()
+        self.assertEqual(fetch.call_args.kwargs["past_days"], 4 + ff.WET_DAYS)
+        self.assertEqual((out["mode"], out["date"]), ("forecast", "2026-10-22"))
+        self.assertEqual([e["id"] for e in out["events_near"]], ["e4"])
+        self.assertEqual(out["towns"][0]["rain"]["peak"]["mm"], 30.0)
+
+    def test_day_report_refuses_days_no_source_covers(self):
+        self.clock()
+        with self.assertRaises(ValueError) as ahead:
+            self.run_with(lambda: ff.day_report("2026-11-05"))
+        self.assertIn("after the forecast AGOS uses (today to 2026-10-28)", str(ahead.exception))
+        with self.assertRaises(ValueError) as old:
+            self.run_with(lambda: ff.day_report("2010-01-01"))
+        self.assertIn("covers 2026-09-04 to 2026-10-18", str(old.exception))
 
 
 if __name__ == "__main__":

@@ -850,6 +850,19 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .typhoon-quotes { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .typhoon-quotes blockquote { margin: 2px 0 0; padding-left: var(--space-3); border-left: 3px solid var(--border-strong); color: var(--text-2); font-size: var(--text-sm); }
 
+/* Flood risk on the storm's day (typhoon drawer) */
+.storm-risk-form { display: flex; flex-direction: column; gap: 4px; margin-top: var(--space-2); }
+.storm-risk-form .input { flex: 1 1 auto; min-width: 0; }
+.storm-risk { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
+.storm-risk p { margin: 0; }
+.storm-risk .btn { align-self: flex-start; }
+.storm-risk-sub { margin: var(--space-2) 0 0; font-size: var(--text-sm); font-weight: 600; }
+.storm-events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); }
+.storm-compare dd { text-align: left; }
+.risk-legend { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.risk-legend-title { margin: 0; font-size: var(--text-sm); font-weight: 600; }
+.risk-legend .swatches { margin-left: 0; }
+
 /* MapLibre controls in the AGOS style */
 .maplibregl-ctrl-group { border-radius: var(--radius-sm) !important; box-shadow: var(--shadow-2) !important; }
 .maplibregl-ctrl-attrib { font-size: 11px; }

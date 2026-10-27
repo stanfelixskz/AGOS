@@ -119,6 +119,7 @@ export async function createAgosMap(container, options = {}) {
     outside: null,      // everything outside Bataan, for the flood outlook fade
     rivers: null,       // OpenStreetMap waterways (GeoJSON lines) from /api/rivers; context only
     outlook: null,      // Map(town -> raised) while the flood outlook is on
+    risk: null,         // Map(town -> { color, label }) while storm-day risk colors are on
     theme: options.theme === "dark" ? "dark" : "light",
     centers: [],
     reports: [],
@@ -129,6 +130,7 @@ export async function createAgosMap(container, options = {}) {
     userMarker: null,
     typhoon: null,
     typhoonMarker: null,
+    typhoonArea: null,  // direction-only storm: the named place it is measured from
     areaMarker: null,
     precip: precipTileUrl(),
     precipDate: null,       // null = the current hour
@@ -216,6 +218,35 @@ export async function createAgosMap(container, options = {}) {
       map.setFeatureState({ source: "agos-boundaries", id: f.id }, { dim: Boolean(state.outlook) && raised === false });
     }
     applyOutlookVisibility();
+  }
+
+  // Storm-day risk: each town filled with its flood warning sign color (feature-state "risk").
+  function addRiskLayers() {
+    if (!state.boundaries || !map.getSource("agos-boundaries") || map.getLayer("agos-town-risk")) return;
+    const before = map.getLayer("agos-boundary-selected") ? "agos-boundary-selected" : undefined;
+    const layout = { visibility: vis(Boolean(state.risk)) };
+    map.addLayer({
+      id: "agos-town-risk", type: "fill", source: "agos-boundaries", layout,
+      paint: {
+        "fill-color": ["coalesce", ["feature-state", "risk"], "#000000"],
+        "fill-opacity": ["case", ["!=", ["feature-state", "risk"], null], ["case", ["boolean", ["feature-state", "hover"], false], 0.68, 0.52], 0],
+      },
+    }, before);
+    map.addLayer({
+      id: "agos-town-risk-line", type: "line", source: "agos-boundaries", layout,
+      paint: { "line-color": ["coalesce", ["feature-state", "risk"], "#000000"], "line-width": 1.6, "line-opacity": ["case", ["!=", ["feature-state", "risk"], null], 0.95, 0] },
+    }, before);
+  }
+
+  function applyRisk() {
+    if (!state.boundaries || !map.getSource("agos-boundaries")) return;
+    for (const f of state.boundaries.features) {
+      const row = state.risk?.get(normName(featureName(f)));
+      map.setFeatureState({ source: "agos-boundaries", id: f.id }, { risk: row ? row.color : null });
+    }
+    for (const id of ["agos-town-risk", "agos-town-risk-line"]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis(Boolean(state.risk)));
+    }
   }
 
   function addBoundaryLayers() {
@@ -393,12 +424,14 @@ export async function createAgosMap(container, options = {}) {
 
   function addAllOverlays() {
     addBoundaryLayers();
+    addRiskLayers();
     addRiversLayers();
     addRasterLayers();
     addPointLayers();
     addTyphoonLayers();
     applyTint();
     applyOutlook();
+    applyRisk();
   }
 
   // ---------------- town shape tint, hover ----------------
@@ -455,7 +488,9 @@ export async function createAgosMap(container, options = {}) {
     const key = normName(featureName(feature));
     const row = state.rainRows.find((r) => normName(r.name) === key);
     if (!row) return clearHover();
-    hoverCard.innerHTML = `<strong>${escapeHTML(row.name)}</strong><span class="hc-level"><span class="hc-dot" style="background:${levelColor(row.level)}"></span>${escapeHTML(row.levelText || "")} · <span class="num">${escapeHTML(row.valueText)}</span></span><span class="hc-sub">${escapeHTML(row.modeText || "")}</span>`;
+    const risk = state.risk?.get(key);
+    const riskLine = risk ? `<span class="hc-level"><span class="hc-dot" style="background:${escapeHTML(risk.color)}"></span>${escapeHTML(risk.label || "")}</span>` : "";
+    hoverCard.innerHTML = `<strong>${escapeHTML(row.name)}</strong>${riskLine}<span class="hc-level"><span class="hc-dot" style="background:${levelColor(row.level)}"></span>${escapeHTML(row.levelText || "")} · <span class="num">${escapeHTML(row.valueText)}</span></span><span class="hc-sub">${escapeHTML(row.modeText || "")}</span>`;
     hoverCard.hidden = false;
     // Keep the card inside the map: flip to the left / above the pointer near the edges.
     const width = hoverCard.offsetWidth || 160;
@@ -689,6 +724,12 @@ export async function createAgosMap(container, options = {}) {
       applyOutlook();
     },
 
+    /** Storm-day risk colors: rows [{ name, color, label }] fill each town; null removes them. */
+    setRiskColors(rows) {
+      state.risk = rows && rows.length ? new Map(rows.map((r) => [normName(r.name), { color: r.color, label: r.label }])) : null;
+      applyRisk();
+    },
+
     /** Streaks per town right now (for tests). */
     rainfxCounts() {
       return rainfx?.counts() || {};
@@ -798,7 +839,13 @@ export async function createAgosMap(container, options = {}) {
       map.getSource("agos-typhoon")?.setData(typhoonGeoJSON());
       renderTyphoonMarker(label);
       renderAreaMarker(state.typhoon ? null : typhoon?.area, label);
-      const area = !state.typhoon && typhoon?.area?.geocode ? typhoon.area : null;
+      state.typhoonArea = !state.typhoon && typhoon?.area?.geocode ? typhoon.area : null;
+      controller.frameTyphoon();
+    },
+
+    /** Frame the storm (or its named place) together with Bataan. */
+    frameTyphoon() {
+      const area = state.typhoonArea;
       if (!state.typhoon && !area) return;
       map.setMaxBounds(null);
       const center = state.typhoon
@@ -817,6 +864,7 @@ export async function createAgosMap(container, options = {}) {
 
     clearTyphoon() {
       state.typhoon = null;
+      state.typhoonArea = null;
       map.getSource("agos-typhoon")?.setData(typhoonGeoJSON());
       renderTyphoonMarker("");
       renderAreaMarker(null, "");

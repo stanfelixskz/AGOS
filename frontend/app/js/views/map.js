@@ -7,7 +7,7 @@
 import { icon } from "../core/icons.js";
 import { t, getLang } from "../core/i18n.js";
 import { getJSON } from "../core/api.js";
-import { escapeHTML, num, formatTime, isNumber, distanceKm, relativeTime, parseTime, PH_TZ } from "../core/format.js";
+import { escapeHTML, num, formatTime, formatDate, isNumber, distanceKm, relativeTime, parseTime, PH_TZ } from "../core/format.js";
 import { LEVELS, LEVEL_IDS, levelLabel, levelRange } from "../core/levels.js";
 import { effectiveTheme } from "../core/theme.js";
 import { EXPLAIN } from "../core/explain.js";
@@ -15,8 +15,9 @@ import { buildHash } from "../core/router.js";
 import { createAgosMap } from "../map/engine.js";
 import { INTENSITY, intensityLevel } from "../map/typhoon.js";
 import { renderDetail, hydrateDetail } from "./parts/muni-detail.js";
-import { outlookRows, raisedTowns } from "../map/outlook.js";
+import { outlookRows, raisedTowns, riskRows, RISK_COLORS, RISK_LEVELS } from "../map/outlook.js";
 import { renderCenterDetail, hydrateCenterDetail } from "./parts/center-detail.js";
+import { renderStormRiskForm, renderStormRisk, todayPH } from "./parts/storm-risk.js";
 import { loadingState, errorState, onRetry } from "../core/ui.js";
 
 export const layout = "flush";
@@ -132,6 +133,16 @@ export async function mount(container, route) {
               <button class="btn btn-sm" type="button" id="typhoonDetails">${escapeHTML(t("typhoon.details"))}</button>
               <button class="btn btn-sm btn-ghost" type="button" id="typhoonRemove">${icon("close", { size: 14 })} ${escapeHTML(t("typhoon.remove"))}</button>
             </div>
+            <div id="riskLegend" class="risk-legend" hidden>
+              <p class="risk-legend-title" id="riskLegendTitle"></p>
+              <ul class="swatches">${RISK_LEVELS.map((level) => `<li><span class="swatch" style="background:${RISK_COLORS[level]}"></span>${escapeHTML(t(`watch.level.${level}`))}</li>`).join("")}</ul>
+              <label class="switch" style="margin-top:8px"><input type="checkbox" id="riskToggle" checked><span>${escapeHTML(t("stormRisk.colorToggle"))}</span></label>
+              <div class="row" style="gap:8px;margin-top:8px">
+                <button class="btn btn-sm" type="button" id="riskZoomBataan">${icon("map", { size: 14 })} ${escapeHTML(t("stormRisk.zoomBataan"))}</button>
+                <button class="btn btn-sm btn-ghost" type="button" id="riskZoomStorm">${escapeHTML(t("stormRisk.zoomStorm"))}</button>
+              </div>
+              <p class="subtle" style="margin-top:6px">${escapeHTML(t("stormRisk.colorNote"))}</p>
+            </div>
           </section>
 
           <section class="panel-section" aria-labelledby="layersHeading">
@@ -164,11 +175,13 @@ export async function mount(container, route) {
     olToggle: $("#outlookToggle"), olControls: $("#outlookControls"), olReplay: $("#replayControls"), olPick: $("#replayPick"),
     olDate: $("#replayDate"), olRange: $("#replayRange"), olStatus: $("#outlookStatus"), olSwatches: $("#outlookSwatches"),
     tyActions: $("#typhoonActions"), tyDetails: $("#typhoonDetails"), tyRemove: $("#typhoonRemove"),
+    riskLegend: $("#riskLegend"), riskTitle: $("#riskLegendTitle"), riskToggle: $("#riskToggle"),
   };
 
   const state = {
     alive: true, engine: null, here: null, overview: null, overviewError: null, centers: [], reports: [], typhoon: null,
     mode: "peak", hour: 0, playTimer: null, factors: null, factorsKey: null, outlookOn: false, omode: "now", replayDate: null, replay: null, outlookToken: 0, selected: null, drawerCleanup: null, refreshTimer: null, detailToken: 0,
+    stormRisk: null, stormToken: 0, riskRows: null,
   };
 
   // ------------------------------------------------------------ layers panel
@@ -585,6 +598,13 @@ export async function mount(container, route) {
       : String(value);
   }
 
+  /** Side-panel line saying what the map shows for this storm. */
+  function typhoonStatus(ty) {
+    if (ty.position) return t("typhoon.shown", { name: typhoonLabel(ty) });
+    if (ty.area?.geocode) return t("typhoon.areaShown", { dir: ty.area.direction, place: ty.area.place });
+    return t("typhoon.noPosition", { note: ty.position_note || "" });
+  }
+
   function kmh(field) {
     return field ? `${field.value} km/h` : t("common.notAvailable");
   }
@@ -648,6 +668,7 @@ export async function mount(container, route) {
         <h3>${escapeHTML(t("typhoon.evidence"))}</h3>
         <ul class="typhoon-quotes">${quotes.map(([label, field]) => `<li><span class="subtle">${escapeHTML(label)}</span><blockquote>${escapeHTML(field.evidence)}</blockquote></li>`).join("")}</ul>
       </section>` : ""}
+      ${renderStormRiskForm(ty, todayPH())}
       <section class="detail-section">
         <dl class="kv">
           <dt>${escapeHTML(t("typhoon.article"))}</dt><dd>${link ? `<a href="${escapeHTML(link)}" target="_blank" rel="noopener noreferrer">${escapeHTML(article.title || article.site || link)}</a>` : escapeHTML(article.title || "—")}</dd>
@@ -655,6 +676,120 @@ export async function mount(container, route) {
         </dl>
         <p class="source-line" style="margin-top:12px">${escapeHTML(t("typhoon.source", { time: formatTime(ty.fetched_at) }))} · <a href="#/sources?s=typhoon-article">${escapeHTML(t("explain.details"))}</a></p>
       </section>`);
+    hydrateStormRisk(ty);
+  }
+
+  // ------------------------------------------------------------ flood risk on the storm's day
+  function hydrateStormRisk(ty) {
+    const form = ui.drawerBody.querySelector("#stormRiskForm");
+    const input = ui.drawerBody.querySelector("#stormRiskDate");
+    if (!form || !input) return;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!input.value) {
+        showStormRisk(null, t("stormRisk.badDate"));
+        return;
+      }
+      checkStormRisk(input.value);
+    });
+    // Reopening the drawer shows the last answer for this storm; a new article checks its own day.
+    if (state.stormRisk && state.stormRisk.url === ty.url) {
+      input.value = state.stormRisk.data.date;
+      showStormRisk(state.stormRisk.data);
+    } else if (input.value) {
+      checkStormRisk(input.value);
+    }
+  }
+
+  function showStormRisk(data, message = "") {
+    const box = ui.drawerBody.querySelector("#stormRiskResult");
+    if (!box) return;
+    if (!data) {
+      box.innerHTML = message ? `<div class="notice notice-warning">${icon("alert", { size: 18 })}<div>${escapeHTML(message)}</div></div>` : "";
+      return;
+    }
+    box.innerHTML = renderStormRisk(data, todayPH());
+    box.querySelector("[data-storm-map]")?.addEventListener("click", () => showStormOnMap(data));
+  }
+
+  async function checkStormRisk(date) {
+    const ty = state.typhoon;
+    if (!ty) return;
+    const params = new URLSearchParams({ date });
+    if (ty.position) {
+      params.set("lat", String(ty.position.latitude));
+      params.set("lon", String(ty.position.longitude));
+    }
+    if (isNumber(ty.radius_km?.value)) params.set("radius_km", String(ty.radius_km.value));
+    const token = ++state.stormToken;
+    const box = ui.drawerBody.querySelector("#stormRiskResult");
+    if (box) box.innerHTML = `<p class="subtle">${escapeHTML(t("stormRisk.loading"))}</p>`;
+    try {
+      const data = await getJSON(`/api/typhoon/flood-risk?${params}`, { timeoutMs: 90000 });
+      if (!state.alive || token !== state.stormToken) return;
+      state.stormRisk = { url: ty.url, data };
+      showStormRisk(data);
+      // The answer goes on the map and in the side panel at once, so it is seen even with the drawer closed.
+      showStormOnMap(data, { scroll: false });
+      showRiskColors(data);
+      const all = data.factors?.towns?.length || 0;
+      const raised = data.factors?.raised || [];
+      const summary = raised.length
+        ? t("stormRisk.statusLine", { date: formatDate(data.date), n: raised.length, all })
+        : t("stormRisk.statusNone", { date: formatDate(data.date) });
+      ui.tyStatus.textContent = `${typhoonStatus(ty)} ${summary}`;
+    } catch (error) {
+      if (state.alive && token === state.stormToken) showStormRisk(null, error.message);
+    }
+  }
+
+  /** Fill every town with its flood warning sign color for the storm day. */
+  function showRiskColors(data) {
+    const rows = riskRows(data?.factors).map((row) => ({ ...row, label: `${t(`watch.level.${row.level}`)} · ${t("stormRisk.colorDay", { date: formatDate(data.date) })}` }));
+    if (!rows.length) {
+      clearRiskColors();
+      return;
+    }
+    state.riskRows = rows;
+    ui.riskTitle.textContent = t("stormRisk.colorTitle", { date: formatDate(data.date) });
+    ui.riskLegend.hidden = false;
+    ui.riskToggle.checked = true;
+    state.engine?.setRiskColors(rows);
+  }
+
+  function clearRiskColors() {
+    state.riskRows = null;
+    ui.riskLegend.hidden = true;
+    state.engine?.setRiskColors(null);
+  }
+
+  ui.riskToggle.addEventListener("change", () => {
+    state.engine?.setRiskColors(ui.riskToggle.checked ? state.riskRows : null);
+  });
+  container.querySelector("#riskZoomBataan").addEventListener("click", () => state.engine?.fitBataan());
+  container.querySelector("#riskZoomStorm").addEventListener("click", () => state.engine?.frameTyphoon());
+
+  /** Put the storm day's answer on the map through the flood outlook (MGB flood-prone ground in raised towns). */
+  function showStormOnMap(data, { scroll = true } = {}) {
+    const engine = state.engine;
+    if (!engine) return;
+    if (!engine.layerStates().mgb?.visible) engine.setLayer("mgb", true);
+    state.outlookOn = true;
+    ui.olToggle.checked = true;
+    ui.olControls.hidden = false;
+    ui.olReplay.hidden = true;
+    if (!engine.outlookAvailable()) {
+      ui.olStatus.textContent = t("outlook.error", { message: t("common.notAvailable") });
+      return;
+    }
+    const factors = { status: "ok", data: data.factors };
+    state.factors = factors;
+    state.factorsKey = `storm:${data.date}`;
+    engine.setFloodOutlook(outlookRows(factors));
+    ui.olSwatches.hidden = false;
+    const raised = raisedTowns(factors);
+    ui.olStatus.textContent = `${t("stormRisk.mapStatus", { date: formatDate(data.date) })} ${raised.length ? t("outlook.raisedIn", { towns: raised.join(", ") }) : t("outlook.none")}`;
+    if (scroll) ui.olStatus.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   ui.tyForm.addEventListener("submit", async (event) => {
@@ -677,11 +812,7 @@ export async function mount(container, route) {
       state.typhoon = data;
       ui.tyActions.hidden = false;
       state.engine?.setTyphoon(data.position || data.area ? data : null, typhoonLabel(data));
-      ui.tyStatus.textContent = data.position
-        ? t("typhoon.shown", { name: typhoonLabel(data) })
-        : data.area?.geocode
-          ? t("typhoon.areaShown", { dir: data.area.direction, place: data.area.place })
-          : t("typhoon.noPosition", { note: data.position_note || "" });
+      ui.tyStatus.textContent = typhoonStatus(data);
       selectTyphoon(data);
     } catch (error) {
       if (state.alive) ui.tyStatus.textContent = error.message;
@@ -692,6 +823,9 @@ export async function mount(container, route) {
   ui.tyDetails.addEventListener("click", () => selectTyphoon());
   ui.tyRemove.addEventListener("click", () => {
     state.typhoon = null;
+    state.stormRisk = null;
+    state.stormToken += 1;
+    clearRiskColors();
     state.engine?.clearTyphoon();
     ui.tyActions.hidden = true;
     ui.tyStatus.textContent = "";
