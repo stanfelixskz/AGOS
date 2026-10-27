@@ -133,6 +133,26 @@ function riversRow(town) {
     <span class="subtle">${escapeHTML(t("factors.riversNote"))}</span>`);
 }
 
+const CONF_REASONS = ["few_spells", "wide_range", "list_incomplete", "modeled_rain"];
+
+/** How often unusual rain of the town's sign level ended in a listed flood before (province-wide, past, not a forecast). */
+export function chanceRow(town, data) {
+  const table = data?.chance;
+  if (!table) return row(t("factors.chance"), `<span class="subtle">${escapeHTML(t("factors.chanceNA"))}</span>`);
+  const c = town.chance;
+  if (!c) return row(t("factors.chance"), `<span class="subtle">${escapeHTML(t("factors.chanceIdle"))}</span>`);
+  const level = t(`watch.level.${c.level}`);
+  const head = c.rate == null
+    ? t("factors.chanceFew", { level, n: c.spells })
+    : t("factors.chanceValue", { level, n: c.spells, k: c.floods, since: table.from.slice(0, 4), rate: pct(c.rate), lo: pct(c.range_95[0]), hi: pct(c.range_95[1]) });
+  const reasons = (c.reasons || []).filter((x) => CONF_REASONS.includes(x)).map((x) => t(`factors.why.${x}`)).join("; ");
+  const conf = c.rate == null ? "" : `${t("factors.confidence", { label: t(`factors.conf.${c.confidence}`) })} ${reasons}.`;
+  return row(t("factors.chance"), `${escapeHTML(head)}
+    ${conf ? `<span class="subtle">${escapeHTML(conf)}</span>` : ""}
+    ${table.includes_replayed_day ? `<span class="subtle">${escapeHTML(t("factors.chanceReplay"))}</span>` : ""}
+    <span class="subtle">${escapeHTML(t("factors.chanceNote", { since: table.from.slice(0, 4) }))}</span>`);
+}
+
 /** Spring tide from the moon (not a tide gauge). Context only; a precaution line when rain is raised too. */
 export function tideRow(town, data) {
   const tide = data?.tide;
@@ -179,6 +199,7 @@ export function renderFactorsBody(factors, name) {
       ${wetRow(town)}
       ${groundRow(town)}
       ${floodsRow(town)}
+      ${chanceRow(town, data)}
       ${riversRow(town)}
       ${tideRow(town, data)}
       ${row(t("factors.storm"), escapeHTML(t("factors.stormNA")), { off: true })}
