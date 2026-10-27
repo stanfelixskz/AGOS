@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { setLang } from "../js/core/i18n.js";
-import { factorsTown, topMonths, wetWords, renderFactorsBanner, renderFactorsBody } from "../js/views/parts/factors.js";
+import { factorsTown, topMonths, wetWords, renderFactorsBanner, renderFactorsBody, chanceRow } from "../js/views/parts/factors.js";
 import { outerRings, unionOutline, outsideMask, outlookRows, raisedTowns } from "../js/map/outlook.js";
 
 setLang("en");
@@ -82,4 +82,37 @@ test("tide row: spring tide, ordinary tide, overlap line and missing data", () =
   const none = renderFactorsBody(ok([town("A", "warning")]), "A");
   assert.match(none, /no tide gauge or official tide table/);
   assert.equal((none.match(/is-off/g) || []).length, 3);
+});
+
+const chanceTable = { from: "2011-01-01", to: "2026-10-19", not_a_forecast: true, includes_replayed_day: false, levels: [] };
+const chance = (extra = {}) => ({ level: "warning", spells: 40, floods: 9, rate: 0.225, range_95: [0.123, 0.378], confidence: "medium", reasons: ["list_incomplete", "modeled_rain"], ...extra });
+
+test("chance row: rate with range and confidence for a raised town", () => {
+  const html = chanceRow({ chance: chance() }, { chance: chanceTable });
+  assert.match(html, /9 ended in a listed flood/);
+  assert.match(html, /23%/);
+  assert.match(html, /12% to 38%/);
+  assert.match(html, /Confidence: medium/);
+  assert.match(html, /misses small floods/);
+  assert.match(html, /Not a forecast/);
+  assert.doesNotMatch(html, /Confidence: high/);
+});
+
+test("chance row: too few spells gives no rate; ordinary town and missing table say so", () => {
+  const few = chanceRow({ chance: chance({ spells: 4, floods: 2, rate: null, range_95: null, confidence: "none" }) }, { chance: chanceTable });
+  assert.match(few, /only 4 past spells/);
+  assert.doesNotMatch(few, /95% range/);
+  assert.match(chanceRow({ chance: null }, { chance: chanceTable }), /Shown when the sign is raised/);
+  const none = chanceRow({ chance: null }, { chance: null });
+  assert.match(none, /Not available/);
+});
+
+test("chance row: replay says the day is part of the history", () => {
+  const html = chanceRow({ chance: chance() }, { chance: { ...chanceTable, includes_replayed_day: true } });
+  assert.match(html, /part of the history/);
+});
+
+test("body includes the chance row", () => {
+  const html = renderFactorsBody(ok([town("A", "warning", { chance: chance() })], { chance: chanceTable }), "A");
+  assert.match(html, /Past frequency/);
 });

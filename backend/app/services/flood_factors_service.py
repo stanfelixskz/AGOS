@@ -50,6 +50,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Mapping
 
 from app.services import flood_watch_service as fw
+from app.services import flood_chance_service
 from app.services import rivers_service
 from app.services import tide_service
 
@@ -230,6 +231,7 @@ def build_factors(
     replay: Mapping[str, Any] | None = None,
     rivers: Mapping[str, Mapping[str, Any]] | None = None,
     with_events_near: bool = False,
+    chance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     inputs[town] = {"daily": [(date, mm|None) x 5 days: day-2 .. day+2],
@@ -246,6 +248,8 @@ def build_factors(
             "susceptibility": susceptibility_for(susceptibility, name),
             "floods": flood_history(events, name),
             "rivers": (rivers or {}).get(name),
+            # Past frequency for the sign level this town is at now (province-wide, context for the sign; not a forecast).
+            "chance": flood_chance_service.for_level(chance, watch["level"]) if town_state(watch["level"]) == "raised" else None,
         })
     tide = tide_service.build_tide(day, events)
     for t in towns:
@@ -268,6 +272,7 @@ def build_factors(
         } if replay else None,
         "rain_record": rain_record,
         "tide": tide,
+        "chance": ({**chance, "includes_replayed_day": mode == "replay"} if chance else None),
         "not_included": list(NOT_INCLUDED),
         "sources": {
             "rain": ("ERA5 reanalysis stored by AGOS (recorded rain, used here as if it had been the forecast)"
@@ -374,6 +379,21 @@ def _context() -> tuple[list[Mapping[str, Any]], Any, Any, Mapping[str, Any]]:
     return events, model, susc, rivers
 
 
+_chance_cache: dict[str, Any] = {"key": None, "value": None}
+
+
+def _chance(records: Mapping[str, Any], events: list[Mapping[str, Any]]) -> dict[str, Any] | None:
+    """The past-frequency table; cached while the stored record and the flood list are the same objects."""
+    key = (id(records), len(events))
+    if _chance_cache["key"] != key:
+        try:
+            value = flood_chance_service.chance_from_records(records, events)
+        except Exception:  # noqa: BLE001 - optional; the sign stands alone
+            value = None
+        _chance_cache.update(key=key, value=value)
+    return _chance_cache["value"]
+
+
 def _remember(key: str, value: dict[str, Any]) -> None:
     if len(_result_cache) >= MAX_REPLAY_CACHE:
         _result_cache.pop(next(iter(_result_cache)))
@@ -404,13 +424,15 @@ def factors_report(on: str | None = None, use_cache: bool = True) -> dict[str, A
     if on:
         inputs = _replay_inputs(records, on)
         value = build_factors(inputs, mode="replay", day=on, events=events, model_report=model, rain_record=records["record"],
-                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers)
+                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers,
+                              chance=_chance(records, events))
     else:
         forecasts = fw.fetch_forecasts(MUNICIPALITIES, past_days=WET_DAYS)
         today = now.date().isoformat()
         inputs = _forecast_inputs(forecasts, records, today)
         value = build_factors(inputs, mode="forecast", day=today, events=events, model_report=model, rain_record=records["record"],
-                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers)
+                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers,
+                              chance=_chance(records, events))
     _remember(key, value)
     return value
 
@@ -449,6 +471,6 @@ def day_report(day: str, use_cache: bool = True) -> dict[str, Any]:
     inputs = _forecast_inputs(forecasts, records, day)
     value = build_factors(inputs, mode="forecast", day=day, events=events, model_report=model, rain_record=records["record"],
                           susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers,
-                          with_events_near=True)
+                          chance=_chance(records, events), with_events_near=True)
     _remember(key, value)
     return value

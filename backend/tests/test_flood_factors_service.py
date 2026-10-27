@@ -142,6 +142,26 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(by_name["Wet"]["tide_overlap"], out["tide"]["spring_in_window"])
         self.assertIs(by_name["Hermosa"]["tide_overlap"], False)
 
+    def test_chance_is_given_only_to_raised_towns_and_never_changes_the_sign(self):
+        table = {"levels": [{"level": "watch", "spells": 80, "floods": 12, "rate": 0.15},
+                            {"level": "warning", "spells": 40, "floods": 9, "rate": 0.225},
+                            {"level": "high_warning", "spells": 20, "floods": 6, "rate": 0.3}],
+                 "not_a_forecast": True}
+        plain = self.build()
+        with_chance = self.build(chance=table)
+        by_name = {t["name"]: t for t in with_chance["towns"]}
+        self.assertIsNone(by_name["Calm"]["chance"])
+        self.assertIsNone(by_name["Hermosa"]["chance"])
+        self.assertEqual(by_name["Wet"]["chance"]["level"], by_name["Wet"]["rain"]["level"])
+        self.assertTrue(with_chance["chance"]["not_a_forecast"])
+        self.assertIs(with_chance["chance"]["includes_replayed_day"], False)
+        self.assertIsNone(plain["chance"])
+        for a, b in zip(plain["towns"], with_chance["towns"]):
+            self.assertEqual({k: v for k, v in a.items() if k != "chance"}, {k: v for k, v in b.items() if k != "chance"})
+        self.assertEqual(plain["raised"], with_chance["raised"])
+        replay = self.build(mode="replay", day="2021-07-27", replay={"min": "2000-01-01", "max": "2026-10-01"}, chance=table)
+        self.assertIs(replay["chance"]["includes_replayed_day"], True)
+
     def test_rivers_are_context_only_and_do_not_change_the_sign(self):
         plain = self.build()
         with_rivers = self.build(rivers={"Calm": {"names": ["Test River"], "length_km": 12.3}})
