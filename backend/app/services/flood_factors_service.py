@@ -50,6 +50,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Mapping
 
 from app.services import flood_watch_service as fw
+from app.services import flood_chance_model_service
 from app.services import flood_chance_service
 from app.services import rivers_service
 from app.services import tide_service
@@ -218,6 +219,17 @@ def replay_choices(events: list[Mapping[str, Any]], span: Mapping[str, str] | No
 # One answer for all towns
 # --------------------------------------------------------------------------
 
+def chance_model_summary(model: Mapping[str, Any] | None, mode: str) -> dict[str, Any]:
+    if not model:
+        return {"available": False, "reason": "not_built"}
+    return {
+        "available": True, "built_at": model.get("built_at"), "from": model.get("from"), "to": model.get("to"),
+        "flood_cases": model.get("flood_cases"), "rows": model.get("rows"), "horizon_days": model.get("horizon_days"),
+        "entry_percentile": model.get("entry_percentile"), "factors": model.get("factors"), "bands": model.get("bands"),
+        "source": model.get("source"), "includes_replayed_day": mode == "replay",
+    }
+
+
 def build_factors(
     inputs: Mapping[str, Mapping[str, Any]],
     *,
@@ -232,6 +244,7 @@ def build_factors(
     rivers: Mapping[str, Mapping[str, Any]] | None = None,
     with_events_near: bool = False,
     chance: Mapping[str, Any] | None = None,
+    chance_model: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     inputs[town] = {"daily": [(date, mm|None) x 5 days: day-2 .. day+2],
@@ -251,6 +264,12 @@ def build_factors(
             # Past frequency for the sign level this town is at now (province-wide, context for the sign; not a forecast).
             "chance": flood_chance_service.for_level(chance, watch["level"]) if town_state(watch["level"]) == "raised" else None,
         })
+        # Chance for this town in the next 3 days (rain + wet ground + flood-prone ground), by held-out score band.
+        peak = (watch.get("peak") or {}).get("percentile")
+        wet_before = (item.get("wet_before") or {}).get("percentile")
+        susc = towns[-1]["susceptibility"]
+        towns[-1]["chance_today"] = flood_chance_model_service.score(
+            chance_model, peak, wet_before, susc["high_share"] if susc else None)
     tide = tide_service.build_tide(day, events)
     for t in towns:
         # Rain is unusual AND a spring tide falls in the same days: a precaution line only, never part of the sign.
@@ -273,6 +292,7 @@ def build_factors(
         "rain_record": rain_record,
         "tide": tide,
         "chance": ({**chance, "includes_replayed_day": mode == "replay"} if chance else None),
+        "chance_model": chance_model_summary(chance_model, mode),
         "not_included": list(NOT_INCLUDED),
         "sources": {
             "rain": ("ERA5 reanalysis stored by AGOS (recorded rain, used here as if it had been the forecast)"
@@ -339,6 +359,7 @@ def _forecast_inputs(forecasts: Mapping[str, list[tuple[str, float | None]]], re
         out[name] = {
             "daily": [(d, v) for d, v in series if d in keep],
             "wet": wet_ground(by_day, today, rec.get("sorted14", [])),
+            "wet_before": wet_ground(by_day, (date.fromisoformat(today) - timedelta(days=1)).isoformat(), rec.get("sorted14", [])),
             "sorted3": rec.get("sorted3", []),
         }
     return out
@@ -353,6 +374,7 @@ def _replay_inputs(records: Mapping[str, Any], day: str) -> dict[str, dict[str, 
         out[name] = {
             "daily": [(d, daily.get(d)) for d in days],
             "wet": wet_ground(daily, day, rec["sorted14"]),
+            "wet_before": wet_ground(daily, (start - timedelta(days=1)).isoformat(), rec["sorted14"]),
             "sorted3": rec["sorted3"],
         }
     return out
@@ -425,14 +447,14 @@ def factors_report(on: str | None = None, use_cache: bool = True) -> dict[str, A
         inputs = _replay_inputs(records, on)
         value = build_factors(inputs, mode="replay", day=on, events=events, model_report=model, rain_record=records["record"],
                               susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers,
-                              chance=_chance(records, events))
+                              chance=_chance(records, events), chance_model=flood_chance_model_service.load())
     else:
         forecasts = fw.fetch_forecasts(MUNICIPALITIES, past_days=WET_DAYS)
         today = now.date().isoformat()
         inputs = _forecast_inputs(forecasts, records, today)
         value = build_factors(inputs, mode="forecast", day=today, events=events, model_report=model, rain_record=records["record"],
                               susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers,
-                              chance=_chance(records, events))
+                              chance=_chance(records, events), chance_model=flood_chance_model_service.load())
     _remember(key, value)
     return value
 
@@ -471,6 +493,6 @@ def day_report(day: str, use_cache: bool = True) -> dict[str, Any]:
     inputs = _forecast_inputs(forecasts, records, day)
     value = build_factors(inputs, mode="forecast", day=day, events=events, model_report=model, rain_record=records["record"],
                           susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers,
-                          chance=_chance(records, events), with_events_near=True)
+                          chance=_chance(records, events), chance_model=flood_chance_model_service.load(), with_events_near=True)
     _remember(key, value)
     return value

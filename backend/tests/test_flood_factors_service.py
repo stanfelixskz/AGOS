@@ -162,6 +162,31 @@ class BuildTests(unittest.TestCase):
         replay = self.build(mode="replay", day="2021-07-27", replay={"min": "2000-01-01", "max": "2026-10-01"}, chance=table)
         self.assertIs(replay["chance"]["includes_replayed_day"], True)
 
+    def test_chance_today_comes_from_the_model_and_never_changes_the_sign(self):
+        model = {"weights": [-3.0, 0.5, 0.5, 0.5], "scale": {"rain": [3.5, 1.0], "wet": [3.0, 1.0], "ground": [0.2, 0.1]}, "cuts": [0.02, 0.06],
+                 "bands": [{"band": "lower", "rows": 100, "rate": 0.01, "range_95": [0.0, 0.03]}, {"band": "usual", "rows": 50, "rate": 0.04, "range_95": [0.0, 0.1]},
+                           {"band": "higher", "rows": 30, "rate": 0.09, "range_95": [0.0, 0.2]}],
+                 "entry_percentile": 90.0, "factors": ["wet", "ground"], "horizon_days": 3, "flood_cases": 109, "rows": 180}
+        susc = {"available": True, "towns": [{"name": "Wet", "shares": {"high": 0.2, "very_high": 0.1, "moderate": 0.1, "low": 0.1, "not_rated": 0.5}, "top_barangays": []}]}
+        inputs = self.inputs()
+        inputs["Wet"]["wet_before"] = {"mm": 300, "days": 14, "end": "2026-10-25", "percentile": 97.0}
+        plain = ff.build_factors(inputs, mode="forecast", day="2026-10-26", events=EVENTS, model_report=None, rain_record=None, susceptibility=susc,
+                                 issued_at="x")
+        with_model = ff.build_factors(inputs, mode="forecast", day="2026-10-26", events=EVENTS, model_report=None, rain_record=None, susceptibility=susc,
+                                      issued_at="x", chance_model=model)
+        by = {t["name"]: t for t in with_model["towns"]}
+        self.assertIn(by["Wet"]["chance_today"]["band"], ("lower", "usual", "higher"))
+        self.assertEqual(by["Wet"]["chance_today"]["inputs"]["ground_share"], 0.3)
+        self.assertIsNone(by["Calm"]["chance_today"]["band"])  # ordinary rain: below the tested range
+        self.assertEqual(by["Hermosa"]["chance_today"]["reason"], "missing_input")
+        self.assertTrue(with_model["chance_model"]["available"])
+        self.assertEqual(with_model["chance_model"]["flood_cases"], 109)
+        self.assertEqual(plain["chance_model"], {"available": False, "reason": "not_built"})
+        self.assertTrue(all(t["chance_today"] is None for t in plain["towns"]))
+        for a, b in zip(plain["towns"], with_model["towns"]):
+            self.assertEqual({k: v for k, v in a.items() if k != "chance_today"}, {k: v for k, v in b.items() if k != "chance_today"})
+        self.assertEqual(plain["raised"], with_model["raised"])
+
     def test_rivers_are_context_only_and_do_not_change_the_sign(self):
         plain = self.build()
         with_rivers = self.build(rivers={"Calm": {"names": ["Test River"], "length_km": 12.3}})
