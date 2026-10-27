@@ -133,7 +133,7 @@ function riversRow(town) {
     <span class="subtle">${escapeHTML(t("factors.riversNote"))}</span>`);
 }
 
-const CONF_REASONS = ["few_spells", "wide_range", "list_incomplete", "modeled_rain"];
+const CONF_REASONS = ["few_spells", "wide_range", "few_cases", "list_incomplete", "modeled_rain"];
 
 /** How often unusual rain of the town's sign level ended in a listed flood before (province-wide, past, not a forecast). */
 export function chanceRow(town, data) {
@@ -151,6 +151,26 @@ export function chanceRow(town, data) {
     ${conf ? `<span class="subtle">${escapeHTML(conf)}</span>` : ""}
     ${table.includes_replayed_day ? `<span class="subtle">${escapeHTML(t("factors.chanceReplay"))}</span>` : ""}
     <span class="subtle">${escapeHTML(t("factors.chanceNote", { since: table.from.slice(0, 4) }))}</span>`);
+}
+
+/** Chance that a listed flood hits this town within 3 days, as a band measured on past days (not a forecast). */
+export function chanceTodayRow(town, data) {
+  const model = data?.chance_model;
+  if (!model?.available) return row(t("factors.chanceToday"), `<span class="subtle">${escapeHTML(t("factors.chanceTodayNotBuilt"))}</span>`);
+  const c = town.chance_today;
+  if (!c) return row(t("factors.chanceToday"), `<span class="subtle">${escapeHTML(t("factors.chanceTodayNotBuilt"))}</span>`);
+  if (!c.band) {
+    return row(t("factors.chanceToday"), `<span class="subtle">${escapeHTML(t(c.reason === "below_range" ? "factors.chanceTodayBelow" : "factors.chanceTodayMissing"))}</span>`);
+  }
+  const inp = c.inputs || {};
+  const based = t("factors.chanceTodayBased", { rain: topShare(inp.rain_percentile), wet: wetWords(inp.wet_percentile), ground: pct(inp.ground_share) });
+  const reasons = (c.reasons || []).filter((x) => CONF_REASONS.includes(x)).map((x) => t(`factors.why.${x}`)).join("; ");
+  return row(t("factors.chanceToday"), `<strong>${escapeHTML(t(`factors.chanceBand.${c.band}`))}</strong>
+    ${escapeHTML(t("factors.chanceTodayValue", { n: num(c.rows, 0), h: c.horizon_days, rate: pct(c.rate), lo: pct(c.range_95[0]), hi: pct(c.range_95[1]) }))}
+    <span class="subtle">${escapeHTML(based)}</span>
+    <span class="subtle">${escapeHTML(`${t("factors.confidence", { label: t("factors.conf.low") })} ${reasons}.`)}</span>
+    ${model.includes_replayed_day ? `<span class="subtle">${escapeHTML(t("factors.chanceReplay"))}</span>` : ""}
+    <span class="subtle">${escapeHTML(t("factors.chanceTodayNote", { n: model.flood_cases, since: String(model.from).slice(0, 4) }))}</span>`);
 }
 
 /** Spring tide from the moon (not a tide gauge). Context only; a precaution line when rain is raised too. */
@@ -199,6 +219,7 @@ export function renderFactorsBody(factors, name) {
       ${wetRow(town)}
       ${groundRow(town)}
       ${floodsRow(town)}
+      ${chanceTodayRow(town, data)}
       ${chanceRow(town, data)}
       ${riversRow(town)}
       ${tideRow(town, data)}

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { setLang } from "../js/core/i18n.js";
-import { factorsTown, topMonths, wetWords, renderFactorsBanner, renderFactorsBody, chanceRow } from "../js/views/parts/factors.js";
+import { factorsTown, topMonths, wetWords, renderFactorsBanner, renderFactorsBody, chanceRow, chanceTodayRow } from "../js/views/parts/factors.js";
 import { outerRings, unionOutline, outsideMask, outlookRows, raisedTowns } from "../js/map/outlook.js";
 
 setLang("en");
@@ -115,4 +115,30 @@ test("chance row: replay says the day is part of the history", () => {
 test("body includes the chance row", () => {
   const html = renderFactorsBody(ok([town("A", "warning", { chance: chance() })], { chance: chanceTable }), "A");
   assert.match(html, /Past frequency/);
+});
+
+const model = { available: true, flood_cases: 109, from: "2011-01-01", includes_replayed_day: false };
+const today = (extra = {}) => ({ band: "higher", rate: 0.079, range_95: [0.06, 0.1], rows: 2249, horizon_days: 3, confidence: "low",
+  reasons: ["few_cases", "list_incomplete", "modeled_rain"], inputs: { rain_percentile: 99, wet_percentile: 96, ground_share: 0.3 }, ...extra });
+
+test("chance today row: band, rate with range, inputs and low confidence", () => {
+  const html = chanceTodayRow({ chance_today: today() }, { chance_model: model });
+  assert.match(html, /Higher than usual/);
+  assert.match(html, /8%/);
+  assert.match(html, /6% to 10%/);
+  assert.match(html, /within 3 days/);
+  assert.match(html, /Confidence: low/);
+  assert.match(html, /109 past town floods/);
+  assert.match(html, /did not help/);
+  assert.doesNotMatch(html, /Confidence: (high|medium)/);
+});
+
+test("chance today row: other bands, below range, missing input, model not built, replay", () => {
+  assert.match(chanceTodayRow({ chance_today: today({ band: "lower" }) }, { chance_model: model }), /Lower than usual/);
+  assert.match(chanceTodayRow({ chance_today: today({ band: "usual" }) }, { chance_model: model }), /About usual/);
+  assert.match(chanceTodayRow({ chance_today: { band: null, reason: "below_range" } }, { chance_model: model }), /below the range tested/);
+  assert.match(chanceTodayRow({ chance_today: { band: null, reason: "missing_input" } }, { chance_model: model }), /Not enough data/);
+  const off = chanceTodayRow({ chance_today: null }, { chance_model: { available: false } });
+  assert.match(off, /tools\/build_chance_model\.py/);
+  assert.match(chanceTodayRow({ chance_today: today() }, { chance_model: { ...model, includes_replayed_day: true } }), /part of the history/);
 });
