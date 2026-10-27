@@ -1,15 +1,114 @@
 {
  "name": "AGOS Bataan past flood events",
- "version": 2,
- "compiled": "2026-10-25",
+ "version": 3,
+ "compiled": "2026-10-26",
  "method": "Built only from pages opened by AGOS's assistant; every place, number and date is copied from those pages. Dates: 'stated' = calendar date in the source; 'inferred' = weekday or 'yesterday' matched to the article date; 'article_date' = only the publication date is known; 'not_stated' = no date. Town evidence: 'flooded' = the source says the town or its barangays flooded; 'road' = roads impassable; 'evacuation', 'death', 'affected' = only that is stated. Depths and counts are as reported by reporters and officials, not measurements.",
  "limits": [
   "News covers big floods; small local floods are missing, so 'no event' does not mean 'no flood'.",
   "Many dates are inferred from weekdays.",
   "Figures from different sources often differ (different times and definitions); both are kept in 'impact'.",
-  "Several sources were opened in an earlier session and are marked so."
+  "Several sources were opened in an earlier session and are marked so.",
+  "Some 2026 sources are videos or a social-media post known only by title, description or search-result text; they are marked in the source note.",
+  "Rainfall warnings (PAGASA) and 'affected' counts are not flood reports and are not used as flood cases."
  ],
  "events": [
+  {
+   "id": "2006-07-27-glenda",
+   "start_date": "2006-07-27",
+   "end_date": "2006-07-27",
+   "date_basis": "article_date",
+   "date_note": "Philstar article dated 2006-07-27; the flood day is not separately stated.",
+   "kind": "flood",
+   "cause": "Rain from Typhoon Glenda and dike breaches (Caulaman River and nearby rivers)",
+   "storm": "Glenda",
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "note": "24 barangays submerged after dikes in Pentor, Daang Bago and Sta. Isabel broke; not all 24 named"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "note": "six barangays; waist-deep"
+    },
+    {
+     "municipality": "Orani",
+     "evidence": "affected",
+     "note": "several barangays affected; the article does not say they flooded"
+    }
+   ],
+   "impact": "24 barangays of Dinalupihan submerged after dikes broke; six barangays of Hermosa flooded, waist-deep. Depth for Dinalupihan not given.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "The Philippine Star",
+     "title": "2 bayan sa Bataan lubog sa tubig-baha",
+     "url": "https://www.philstar.com/probinsiya/2006/07/27/349589/2-bayan-sa-bataan-lubog-sa-tubig-baha",
+     "published": "2006-07-27"
+    }
+   ],
+   "period": "2006-07"
+  },
+  {
+   "id": "2007-08-10-chedeng-dodong",
+   "start_date": "2007-08-10",
+   "end_date": "2007-08-10",
+   "date_basis": "article_date",
+   "date_note": "Philstar article dated 2007-08-10; the flood day is not separately stated.",
+   "kind": "flood",
+   "cause": "Typhoons Chedeng and Dodong (as written by the source)",
+   "storm": "Chedeng, Dodong",
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Dinalupihan",
+     "evidence": "flooded",
+     "barangays": [
+      "Layac",
+      "Sta. Isabel",
+      "Luakan",
+      "Pentor",
+      "Daang Bago"
+     ],
+     "note": "about 20 barangays; the article writes 'Luacan'"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen",
+      "Culis",
+      "A. Rivera",
+      "Saba",
+      "Balsik",
+      "Daungan",
+      "Cataning",
+      "Mabuco",
+      "Mandama",
+      "Burgos",
+      "San Pedro",
+      "Sto. Cristo",
+      "Pulo"
+     ],
+     "note": "INFERRED: the article says 35 barangays in two towns but does not name the second; these barangay names are Hermosa barangays elsewhere in this file. Almacen about 8 ft and Culis about 7 ft; A. Rivera, Saba, Balsik about 4 ft (article writes 'Almacin', 'Culo')"
+    }
+   ],
+   "impact": "35 barangays in two towns flooded, about 5,250 families (as reported).",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "The Philippine Star",
+     "title": "35 barangay sa Bataan binaha",
+     "url": "https://www.philstar.com/probinsiya/2007/08/10/11788/35-barangay-sa-bataan-binaha",
+     "published": "2007-08-10"
+    }
+   ],
+   "period": "2007-08"
+  },
   {
    "id": "2011-06-09-dodong",
    "start_date": "2011-06-09",
@@ -419,6 +518,13 @@
      "title": "3 Bataan towns remain flooded amid intermittent heavy rains",
      "url": "https://www.gmanetwork.com/news/topstories/regions/573088/3-bataan-towns-remain-flooded-amid-intermittent-heavy-rains/story/",
      "published": "2016-07-10"
+    },
+    {
+     "publisher": "Radyo Inquirer",
+     "title": "Ilang bayan sa Bataan, binaha dahil sa pabugso-bugsong buhos ng malakas na ulan",
+     "url": "https://radyo.inquirer.net/34239/ilang-bayan-sa-bataan-binaha-dahil-sa-pabugso-bugsong-buhos-ng-malakas-na-ulan",
+     "published": "2016-07-10",
+     "note": "names Typhoon Butchoy for the intermittent rain; Orani Mulawin and Tugatog about 6 ft"
     }
    ],
    "period": "2016-07"
@@ -593,6 +699,13 @@
      "title": "Heavy rains flood Dinalupihan and Hermosa towns in Bataan",
      "url": "https://newsinfo.inquirer.net/1001397/dinalupihan-hermosa-bataan-flooding",
      "published": "2018-06-16"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "Floods hit several areas in Bataan -PDRRMO",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/657101/floods-hit-several-areas-in-bataan-pdrrmo/story/",
+     "published": "2018-06-16",
+     "note": "PDRRMO depths: Almacen 4-4.5 ft, Daungan 3-3.5, Pulo 3, Mabini Extension 3-3.5, Sta. Isabel 1-2.5, Sitio Maligaya 2; high tide with enhanced habagat"
     }
    ],
    "period": "2018-06"
@@ -1061,6 +1174,48 @@
    "period": "2019-09"
   },
   {
+   "id": "2021-07-25-rain",
+   "start_date": "2021-07-25",
+   "end_date": "2021-07-25",
+   "date_basis": "stated",
+   "date_note": "Manila Bulletin: flooded 'Sunday, July 25'; the PDRRMO report came 'on Monday'. The page shows no date; the publication date comes from the URL path (2021/07/26).",
+   "kind": "flood",
+   "cause": "Intermittent moderate to heavy rains; Sunshine Village (Samal) is near a creek and floods with high tide and heavy rain",
+   "storm": null,
+   "habagat": false,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Samal",
+     "evidence": "flooded",
+     "barangays": [
+      "San Juan"
+     ],
+     "note": "5 to 6 ft; 45 families (more than 85 people) rescued from Sunshine Village"
+    },
+    {
+     "municipality": "Hermosa",
+     "evidence": "flooded",
+     "barangays": [
+      "Almacen"
+     ],
+     "note": "more than 4 ft; no evacuation, residents used to floods and travel by boat"
+    }
+   ],
+   "impact": "Deep floods in Samal and Hermosa; 45 families sheltered in classrooms at Samal North Elementary School.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Manila Bulletin",
+     "title": "45 families evacuate in Bataan as deep floods hit villages",
+     "url": "https://mb.com.ph/2021/07/26/45-families-evacuate-in-bataan-as-deep-floods-hit-villages/",
+     "published": "2021-07-26",
+     "note": "publication date taken from the URL path"
+    }
+   ],
+   "period": "2021-07"
+  },
+  {
    "id": "2021-07-29-habagat",
    "start_date": "2021-07-29",
    "end_date": "2021-07-30",
@@ -1130,7 +1285,8 @@
     },
     {
      "municipality": "Abucay",
-     "evidence": "evacuation"
+     "evidence": "flooded",
+     "note": "some barangays still flooded later that day, 1-4 ft (Punto)"
     },
     {
      "municipality": "Morong",
@@ -1142,6 +1298,16 @@
     {
      "municipality": "Mariveles",
      "evidence": "evacuation"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "flooded",
+     "note": "knee-deep at most (Punto)"
+    },
+    {
+     "municipality": "Limay",
+     "evidence": "flooded",
+     "note": "knee-deep at most (Punto)"
     }
    ],
    "impact": "About 12,227 families brought to evacuation centers (Manila Bulletin, PDRRMO); GMA reported 1,599 families (6,613 people) in centers across 47 barangays; figures differ by source and time. Crop damage about P86 million (MB). No deaths reported.",
@@ -1185,6 +1351,13 @@
      "url": "https://www.rappler.com/?p=1178942",
      "published": null,
      "note": "page text was an AI-generated summary; check the full article"
+    },
+    {
+     "publisher": "Punto! Central Luzon",
+     "title": "Flash floods hit Bataan",
+     "url": "https://punto.com.ph/flash-floods-hit-bataan/",
+     "published": "2021-07-29",
+     "note": "lists flash floods in 11 towns and Balanga; Mariveles, Morong and Bagac have no depth stated, so they are not upgraded"
     }
    ],
    "period": "2021-07"
@@ -1302,6 +1475,13 @@
      "title": "Bataan under state of calamity",
      "url": "https://www.dzrh.com.ph/post/bataan-under-state-of-calamity",
      "published": "2023-07-30"
+    },
+    {
+     "publisher": "GMA News",
+     "title": "Luzon areas still flooded after days of rains from Egay, Falcon, Habagat",
+     "url": "https://www.gmanetwork.com/news/topstories/regions/877403/luzon-areas-still-flooded-after-days-of-rains-from-egay-falcon-habagat/story/",
+     "published": "2023-07-31",
+     "note": "says five Bataan towns flooded, 10 Hermosa barangays still affected; only Hermosa is named, so no town was added"
     }
    ],
    "period": "2023-07"
@@ -1545,6 +1725,14 @@
     {
      "municipality": "Orion",
      "evidence": "flooded"
+    },
+    {
+     "municipality": "Samal",
+     "evidence": "flooded",
+     "barangays": [
+      "San Juan"
+     ],
+     "note": "about 4 ft; 22 families (78 persons) evacuated"
     }
    ],
    "impact": "Floods in six towns; Hermosa kept its San Pedro evacuation center open; red rainfall warning.",
@@ -1562,6 +1750,45 @@
      "title": "Floods, bridge damage hit CL",
      "url": "https://tribune.net.ph/2026/08/09/floods-bridge-damage-hit-cl",
      "published": "2026-08-10"
+    },
+    {
+     "publisher": "Philippine Daily Inquirer",
+     "title": "22 families evacuated in flood-hit Samal, Bataan",
+     "url": "https://newsinfo.inquirer.net/2280288/22-families-evacuated-in-flood-hit-samal-bataan",
+     "published": "2026-08-08"
+    }
+   ],
+   "period": "2026-08"
+  },
+  {
+   "id": "2026-08-14-orion",
+   "start_date": "2026-08-14",
+   "end_date": "2026-08-14",
+   "date_basis": "stated",
+   "date_note": "Daily Tribune: operation 'on 14 August 2026', published the same day.",
+   "kind": "flood",
+   "cause": "Continuous heavy rain tied to the southwest monsoon (habagat); PAGASA orange rainfall warning over Bataan",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Orion",
+     "evidence": "flooded",
+     "barangays": [
+      "San Vicente"
+     ],
+     "note": "Sitio Araro; police and BPATs responded"
+    }
+   ],
+   "impact": "Rising floodwater in Sitio Araro, Barangay San Vicente, Orion. The headline says residents were forced to evacuate; the number is not given.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "Daily Tribune",
+     "title": "Rising floodwaters force Bataan residents to evacuate",
+     "url": "https://tribune.net.ph/2026/08/14/rising-floodwaters-force-bataan-residents-to-evacuate",
+     "published": "2026-08-14"
     }
    ],
    "period": "2026-08"
@@ -1684,14 +1911,59 @@
    "period": "2026-08"
   },
   {
-   "id": "2026-09-pita-debris",
-   "start_date": null,
-   "end_date": null,
+   "id": "2026-08-29-balanga",
+   "start_date": "2026-08-29",
+   "end_date": "2026-08-29",
+   "date_basis": "stated",
+   "date_note": "GMA News post: 'ngayong Sabado, August 29, 2026'; GMA and ABS-CBN videos uploaded 2026-08-29. Follows the 2026-08-28 Dinalupihan flood by one night.",
+   "kind": "flood",
+   "cause": "Heavy habagat rain overnight with high tide",
+   "storm": null,
+   "habagat": true,
+   "province_calamity": false,
+   "towns": [
+    {
+     "municipality": "Balanga",
+     "evidence": "flooded",
+     "note": "floodwater rushed through part of the city; residents evacuated"
+    }
+   ],
+   "impact": "GMA News post (text seen in a search result, post not opened): at least 1,400 people evacuated province-wide and 60 barangays affected. ABS-CBN TV Patrol (video description): seven towns and Balanga flooded; the seven towns are not named, so only Balanga is listed.",
+   "deaths": null,
+   "sources": [
+    {
+     "publisher": "GMA News",
+     "title": "Ilang bayan sa Bataan, lubog sa baha na sinabayan ng high tide | 24 Oras Weekend",
+     "url": "https://www.youtube.com/watch?v=zFkibkEe5B0",
+     "published": "2026-08-29",
+     "note": "video; title and description only"
+    },
+    {
+     "publisher": "GMA News (X)",
+     "title": "BAHA SA BALANGA, BATAAN: Rumaragasa ang baha sa isang bahagi ng Balanga, Bataan ngayong Sabado, August 29, 2026",
+     "url": "https://x.com/gmanews/status/2093650228805046510",
+     "published": "2026-08-29",
+     "note": "social-media post; text seen in a search result only"
+    },
+    {
+     "publisher": "ABS-CBN News",
+     "title": "7 bayan at Balanga City sa Bataan lubog sa baha | TV Patrol",
+     "url": "https://www.youtube.com/watch?v=mSv48g9C9dY",
+     "published": "2026-08-29",
+     "note": "video; title and description only"
+    }
+   ],
+   "period": "2026-08"
+  },
+  {
+   "id": "2026-09-02-pita-debris",
+   "start_date": "2026-09-02",
+   "end_date": "2026-09-02",
    "period": "2026-09",
-   "date_basis": "not_stated",
-   "date_note": "Reported 2026-09-05 (GMA); flood date not stated.",
+   "date_basis": "stated",
+   "date_note": "Daily Tribune (published 2026-09-04): 'on the night of 2 September'. GMA (2026-09-05) and 1Bataan (2026-09-14) do not give the date.",
    "kind": "debris_flow",
-   "cause": "Rock- and log-laden flow traced to landslides in three mountain ranges (DPWH and provincial engineers); clogged waterways",
+   "cause": "Rock- and log-laden flow traced to landslides in three mountain ranges (DPWH and provincial engineers); clogged waterways; Daily Tribune: heavy rainfall made water from the Pita River surge into the community",
    "storm": null,
    "habagat": true,
    "province_calamity": false,
@@ -1708,6 +1980,12 @@
    "impact": "Nine houses wrecked in Barangay Pita; debris flowed into the Pita, Dalai and Pagalanggang rivers.",
    "deaths": null,
    "sources": [
+    {
+     "publisher": "Daily Tribune",
+     "title": "Flash flood destroys 9 houses in Dinalupihan, Bataan",
+     "url": "https://tribune.net.ph/2026/09/04/flash-flood-destroys-9-houses-in-dinalupihan-bataan",
+     "published": "2026-09-04"
+    },
     {
      "publisher": "GMA News",
      "title": "Rock-laden floodwaters wreck 9 houses in Bataan",
@@ -1814,11 +2092,6 @@
    "why_not_used": "no date on the page; no Bataan town named as flooded"
   },
   {
-   "what": "Daily Tribune 2026-08-14 'Rising floodwaters force Bataan residents to evacuate'",
-   "url": "https://tribune.net.ph/2026/08/14/rising-floodwaters-force-bataan-residents-to-evacuate",
-   "why_not_used": "only the headline could be read"
-  },
-  {
    "what": "PNA articles 1148155 ('Fabian', habagat submerge Bataan towns), 1148814 (48K displaced), 1148257 (45 families evacuate), 1042556 (habagat affects 39K families), 1038444 (3 Bataan towns flooded), 1044593 (15 villages, heavy rain and high tide), 1045057, 1076909",
    "url": "https://www.pna.gov.ph/",
    "why_not_used": "PNA refused automated fetches in this session; headlines only"
@@ -1837,6 +2110,31 @@
    "what": "Manila Bulletin 2018-07-17 'Villages in Bataan, Bulacan submerged in floods'",
    "url": "https://mb.com.ph/2018/07/17/villages-in-bataan-bulacan-submerged-in-floods/",
    "why_not_used": "not opened (event already covered by PNA)"
+  },
+  {
+   "what": "PNA 'Flash floods affect nearly 8K residents in Bataan'",
+   "url": "https://www.pna.gov.ph/articles/1076909",
+   "why_not_used": "PNA refused automated fetches; headline only"
+  },
+  {
+   "what": "Rappler 'Bataan under state of calamity' and 'Flashfloods hit provinces in Luzon'",
+   "url": "https://www.rappler.com/philippines/weather/36857-bataan-state-of-calamity/",
+   "why_not_used": "page could not be loaded (second Rappler page: https://www.rappler.com/philippines/9963-flood-hits-provinces-in-luzon/)"
+  },
+  {
+   "what": "Manila Times 'Hermosa: 11 villages in Bataan town remain flooded' (2023-07-31)",
+   "url": "https://www.manilatimes.net/2023/07/31/regions/11-villages-in-bataan-town-remain-flooded/1903200",
+   "why_not_used": "fetch was rate limited twice; would support 2023-07-29-egay"
+  },
+  {
+   "what": "Punto '7 barangay sa 2 bayan ng Bataan binaha ni Ondoy' (2009)",
+   "url": "https://punto.com.ph/7-barangay-sa-2-bayan-ng-bataan-binaha-ni-ondoy/",
+   "why_not_used": "page could not be loaded; undated in the search result"
+  },
+  {
+   "what": "DSWD DROMIC Report 20 on Severe Tropical Storm Paeng (2022-11-04): Bataan 63 barangays, 11,621 families affected",
+   "url": "https://dromic.dswd.gov.ph/wp-content/uploads/2022/11/DSWD-DROMIC-Report-20-on-Severe-Tropical-Storm-Paeng-as-of-04-November-2022-6PM.pdf",
+   "why_not_used": "reports affected and evacuated counts only; does not say the areas flooded"
   }
  ],
  "checked_no_bataan_flood": [
@@ -1869,6 +2167,26 @@
    "what": "Red rainfall warning, 2026-09-08",
    "url": "https://www.gmanetwork.com/news/weather/content/1001660/rainfall-alert-red-in-parts-of-bataan-yellow-in-metro-manila-san-simon-tuesday-8-p-m/story/",
    "finding": "alert only; flooding that day is in 2026-09-07-habagat"
+  },
+  {
+   "what": "Typhoon Lando (Pedring is separate), October 2015, Philstar 2015-10-21",
+   "url": "https://www.philstar.com/headlines/2015/10/21/1513240/ndrrmc-100000-families-affected-lando/amp/",
+   "finding": "no Bataan town mentioned"
+  },
+  {
+   "what": "Typhoon Pedring, September 2011, Inquirer 'Widespread flooding in Central Luzon'",
+   "url": "https://newsinfo.inquirer.net/67955/widespread-flooding-in-central-luzon/amp",
+   "finding": "covers Pampanga, Bulacan, Tarlac; Bataan not mentioned"
+  },
+  {
+   "what": "NDRRMC Sitrep 16 on Typhoon Ulysses (2020)",
+   "url": "https://reliefweb.int/report/philippines/ndrrmc-update-sitrep-no-16-re-preparedness-measures-and-effects-typhoon-ulysses",
+   "finding": "excerpt gives national and regional totals only; no Bataan flood"
+  },
+  {
+   "what": "PAGASA rainfall warnings for Bataan on 2026-08-17 (red, Mariveles), 2026-08-30 (red/orange), 2026-09-04 (red, Dinalupihan), 2026-09-10 (yellow)",
+   "url": "https://newsinfo.inquirer.net/2298895/red-rainfall-warning-up-over-parts-of-zambales-bataan",
+   "finding": "warnings only; no flooding reported in those articles"
   }
  ],
  "not_reached": [

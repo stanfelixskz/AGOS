@@ -31,9 +31,16 @@ def fake_resolve(address):
     return resolve
 
 
+PLACES = {
+    "Virac": (13.58, 124.23), "Morong": (14.68, 120.27), "Casiguran": (16.28, 122.12), "Aurora": (15.9, 121.6),
+}
+
+
 def fake_geocode(place):
-    if place.startswith("Virac"):
-        return {"query": place, "name": "Virac", "admin1": "Bicol", "country": "Philippines", "latitude": 13.58, "longitude": 124.23, "source": "test"}
+    key = place.split(",")[0].strip()
+    if key in PLACES:
+        lat, lon = PLACES[key]
+        return {"query": place, "name": key, "admin1": "Test", "country": "Philippines", "latitude": lat, "longitude": lon, "source": "test"}
     return None
 
 
@@ -165,6 +172,84 @@ class ExtractionTests(unittest.TestCase):
 
         ts.extract_typhoon("Tropical Storm Testg was 180 km North Northeast of Virac, Catanduanes.\nSignal No. 2 is raised.", geocode=geocode)
         self.assertEqual(seen, ["Virac, Catanduanes"])
+
+    def test_headline_storm_wins_over_sidebar_mentions(self):
+        text = "Related: Severe Tropical Storm Testy left PAR. Typhoon Testz is 300 km east of Virac, Catanduanes."
+        r = ts.extract_typhoon(text, geocode=fake_geocode, title="Testz rapidly intensifies")
+        self.assertEqual(r["storm"]["name"], "Testz")
+        self.assertEqual(ts.extract_typhoon(text, geocode=fake_geocode)["storm"]["name"], "Testy")
+
+    def test_headline_name_without_category_is_used_and_category_not_guessed(self):
+        text = ("Testv could make landfall tonight. Testv was 465 km east of Virac, Catanduanes. "
+                "Testv has winds of 150 km/h. Earlier, Severe Tropical Storm Testu left the country.")
+        r = ts.extract_typhoon(text, geocode=fake_geocode, title="Testv rapidly intensifies into typhoon")
+        self.assertEqual(r["storm"]["name"], "Testv")
+        self.assertIsNone(r["storm"]["category"])
+        # A headline that starts with a generic word does not become a storm name.
+        r2 = ts.extract_typhoon("Signal Signal Signal. Typhoon Testz nears.", geocode=fake_geocode, title="Signal No. 3 raised")
+        self.assertEqual(r2["storm"]["name"], "Testz")
+
+    def test_month_is_not_a_storm_name_and_hashtags_are_read(self):
+        self.assertIsNone(ts.extract_typhoon("Tropical Storm Nov. 9 update: no storm.", geocode=fake_geocode)["storm"])
+        r = ts.extract_typhoon("Super Typhoon #TestwPH nears land.", geocode=fake_geocode)
+        self.assertEqual(r["storm"]["name"], "Testw")
+
+    def test_city_suffix_is_retried_without_city(self):
+        self.assertEqual(ts._name_variants("Borongan City"), ["Borongan City", "Borongan"])
+        self.assertEqual(ts._name_variants("City of Borongan"), ["City of Borongan", "Borongan"])
+        self.assertEqual(ts._name_variants("Virac"), ["Virac"])
+
+    def test_nautical_miles_are_converted(self):
+        r = ts.extract_typhoon("Typhoon Testa was 100 nautical miles east of Virac, Catanduanes.", geocode=fake_geocode)
+        rel = r["position"]["relative"]
+        self.assertEqual(rel["distance_km"], 185.2)
+        self.assertEqual(rel["distance_stated"], "100 nautical miles")
+        self.assertAlmostEqual(r["position"]["longitude"], 124.23 + 185.2 / 108, delta=0.05)
+
+    def test_filipino_distance_phrase(self):
+        r = ts.extract_typhoon("Ang bagyong Testa ay nasa 120 km silangan ng Virac, Catanduanes.", geocode=fake_geocode)
+        self.assertEqual(r["position"]["method"], "relative")
+        self.assertEqual(r["position"]["relative"]["bearing_deg"], 90)
+        self.assertEqual(r["position"]["relative"]["distance_km"], 120)
+
+    def test_over_coastal_waters_of_a_place(self):
+        r = ts.extract_typhoon("Tropical Storm Testa was over the coastal waters of Morong, Bataan at 2 AM.", geocode=fake_geocode)
+        p = r["position"]
+        self.assertEqual(p["method"], "place")
+        self.assertTrue(p["approximate"])
+        self.assertEqual((p["latitude"], p["longitude"]), (14.68, 120.27))
+        self.assertEqual(p["near"]["place"], "Morong, Bataan")
+
+    def test_landfall_and_filipino_place_forms(self):
+        for text in ("Typhoon Testa made landfall in Casiguran, Aurora early today.",
+                     "Nag-landfall sa Casiguran, Aurora ang bagyong Testa."):
+            p = ts.extract_typhoon(text, geocode=fake_geocode)["position"]
+            self.assertEqual(p["method"], "place", text)
+            self.assertEqual(p["latitude"], 16.28)
+
+    def test_forecast_landfall_is_not_a_position(self):
+        for text in ("Typhoon Testa may make landfall over Casiguran, Aurora tonight.",
+                     "Typhoon Testa is expected to make landfall in Casiguran, Aurora.",
+                     "Maaaring mag-landfall sa Casiguran, Aurora ang bagyong Testa.",
+                     "Testa may exhibit a 'wobbling motion' while in the vicinity of Casiguran on Wednesday."):
+            self.assertIsNone(ts.extract_typhoon(text, geocode=fake_geocode)["position"], text)
+
+    def test_distance_beats_place_when_both_are_given(self):
+        text = "Typhoon Testa made landfall in Casiguran, Aurora. It is now 135 km north of Virac, Catanduanes."
+        self.assertEqual(ts.extract_typhoon(text, geocode=fake_geocode)["position"]["method"], "relative")
+
+    def test_direction_without_distance_gives_an_area_not_a_position(self):
+        r = ts.extract_typhoon("Tropical Storm Testa keeps strength over the Philippine Sea east of Aurora.", geocode=fake_geocode)
+        self.assertIsNone(r["position"])
+        self.assertEqual(r["area"]["bearing_deg"], 90)
+        self.assertEqual(r["area"]["place"], "Aurora")
+        self.assertEqual(r["area"]["geocode"]["latitude"], 15.9)
+        self.assertIn("without a distance", r["position_note"])
+
+    def test_open_sea_alone_is_not_a_place(self):
+        r = ts.extract_typhoon("Tropical Storm Testa is over the Philippine Sea.", geocode=fake_geocode)
+        self.assertIsNone(r["position"])
+        self.assertIsNone(r["area"])
 
     def test_text_without_storm_details(self):
         r = ts.extract_typhoon("The city council approved a new budget today.", geocode=fake_geocode)
