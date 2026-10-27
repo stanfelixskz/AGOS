@@ -65,7 +65,7 @@ test("outline stitches the real PSGC towns into one mask", () => {
 
 const tideData = (spring) => ({
   window_days: 2,
-  days: [{ date: "2026-10-25", spring: false, moon: "new" }, { date: "2026-10-26", spring, moon: "full" }],
+  days: [{ date: "2026-10-25", spring: false, moon: "new", days_from_moon: 3 }, { date: "2026-10-26", spring, moon: "full", days_from_moon: 0.4 }],
   spring_in_window: spring, part_of_sign: false,
   tested: { events: 28, near_spring: 10, share: 0.36, expected_share_if_no_link: 0.27 },
 });
@@ -141,4 +141,14 @@ test("chance today row: other bands, below range, missing input, model not built
   const off = chanceTodayRow({ chance_today: null }, { chance_model: { available: false } });
   assert.match(off, /tools\/build_chance_model\.py/);
   assert.match(chanceTodayRow({ chance_today: today() }, { chance_model: { ...model, includes_replayed_day: true } }), /part of the history/);
+});
+
+test("tide row names the day closest to the moon, not the first day of the window", () => {
+  const data = { tide: { days: [
+    { date: "2026-10-25", spring: true, moon: "full", days_from_moon: 1.6 },
+    { date: "2026-10-26", spring: true, moon: "full", days_from_moon: 0.6 },
+    { date: "2026-10-27", spring: true, moon: "full", days_from_moon: 0.4 },
+  ], tested: null } };
+  const html = renderFactorsBody(ok([town("A", "normal")], data), "A");
+  assert.match(html, /full moon \(Oct 27\)/);
 });
