@@ -133,6 +133,25 @@ function riversRow(town) {
     <span class="subtle">${escapeHTML(t("factors.riversNote"))}</span>`);
 }
 
+/** Spring tide from the moon (not a tide gauge). Context only; a precaution line when rain is raised too. */
+export function tideRow(town, data) {
+  const tide = data?.tide;
+  if (!tide?.days?.length) return row(t("factors.tide"), `<span class="subtle">${escapeHTML(t("factors.tideNA"))}</span>`, { off: true });
+  const springDays = tide.days.filter((d) => d.spring);
+  const first = springDays[0];
+  const head = first
+    ? t("factors.tideSpring", { moon: t(first.moon === "full" ? "factors.moonFull" : "factors.moonNew"), date: shortDay(first.date) })
+    : t("factors.tideOrdinary");
+  const k = tide.tested;
+  const test = k?.events
+    ? t("factors.tideTested", { k: k.near_spring, n: k.events, share: pct(k.share), expected: pct(k.expected_share_if_no_link) })
+    : "";
+  return row(t("factors.tide"), `${escapeHTML(head)}
+    ${town.tide_overlap ? `<span class="factor-precaution">${escapeHTML(t("factors.tideOverlap"))}</span>` : ""}
+    ${test ? `<span class="subtle">${escapeHTML(test)}</span>` : ""}
+    <span class="subtle">${escapeHTML(t("factors.tideNote"))}</span>`);
+}
+
 function reportedBlock(data) {
   if (data.mode !== "replay") return "";
   const list = data.events_near || [];
@@ -161,7 +180,7 @@ export function renderFactorsBody(factors, name) {
       ${groundRow(town)}
       ${floodsRow(town)}
       ${riversRow(town)}
-      ${row(t("factors.tide"), escapeHTML(t("factors.tideNA")), { off: true })}
+      ${tideRow(town, data)}
       ${row(t("factors.storm"), escapeHTML(t("factors.stormNA")), { off: true })}
       ${row(t("factors.dikes"), escapeHTML(t("factors.dikesNA")), { off: true })}
     </dl>

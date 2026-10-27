@@ -202,7 +202,8 @@ const TEXT = {
     <p>"Rain is raised" comes only from the <strong>rain warning sign</strong>: the 3-day rain is in the top 5% of the town's own record. No weights or probabilities were invented. When rain is raised, the flood-prone ground in the town <em>could</em> flood; depth and extent are not shown.</p>
     <p><strong>Wet ground</strong> is context only. It has not been tested on past floods yet, so it is not part of the sign.</p>
     <p><strong>Rivers</strong> (named OpenStreetMap waterways and their mapped length) are shown for context only and are not part of the sign.</p>
-    <p><strong>Not included:</strong> tide (the only tide model found starts in 2023, too short to test), storms (AGOS has no live storm feed) and dikes and drainage.</p>
+    <p><strong>Spring tide</strong> is worked out from the moon (new and full moon give the biggest tide range), not from a tide gauge. It is context only: on the 28 dated floods in the list the link is weak and could be chance, so it is not part of the sign. When unusual rain and a spring tide fall in the same days, a separate precaution line is shown.</p>
+    <p><strong>Not included:</strong> tide height and high-tide hours (no gauge or official table yet), storms (AGOS has no live storm feed) and dikes and drainage.</p>
     <p>Rain is Open-Meteo model forecast, not a rain gauge. This is not an official warning and not a flood probability. Follow PAGASA and your MDRRMO.</p>
         ${sourceLink("DENR–MGB flood susceptibility", "mgb")}`,
     }),
@@ -213,7 +214,8 @@ const TEXT = {
     <p>Ang "Mataas ang ulan" ay galing lang sa <strong>babalang tanda mula sa ulan</strong>: kung ang 3-araw na ulan ay nasa nangungunang 5% ng sariling talaan ng bayan. Walang ginawang timbang o porsiyento ng posibilidad. Kapag mataas ang ulan, ang lupang madaling bahain sa bayan ang <em>maaaring</em> bahain; hindi ipinapakita ang lalim o lawak.</p>
     <p>Ang <strong>basang lupa</strong> ay konteksto lamang. Hindi pa ito nasusubok sa mga nakaraang baha, kaya hindi ito bahagi ng tanda.</p>
     <p>Ang mga <strong>ilog</strong> (mga waterway ng OpenStreetMap na may pangalan at haba sa mapa) ay konteksto lamang at hindi bahagi ng tanda.</p>
-    <p><strong>Hindi kasama:</strong> tide (ang tanging modelong nakita ay mula 2023 lamang, masyadong maikli para masubok), bagyo (walang live na datos ng bagyo ang AGOS), at dike at drainage.</p>
+    <p><strong>Spring tide</strong> ay kinuwenta mula sa buwan (ang bagong buwan at kabilugan ng buwan ang may pinakamalaking agwat ng tide), hindi mula sa tide gauge. Konteksto lamang: sa 28 na may petsang baha sa listahan, mahina ang ugnayan at maaaring nagkataon lang, kaya hindi ito bahagi ng tanda. Kapag magkasabay ang di-karaniwang ulan at spring tide, may hiwalay na linya ng pag-iingat.</p>
+    <p><strong>Hindi kasama:</strong> taas ng tide at oras ng high tide (wala pang gauge o opisyal na talaan), bagyo (walang live na datos ng bagyo ang AGOS), at dike at drainage.</p>
     <p>Ang ulan ay galing sa Open-Meteo model forecast, hindi rain gauge. Hindi ito opisyal na babala at hindi ito posibilidad ng baha. Sundin ang PAGASA at ang inyong MDRRMO.</p>
         ${sourceLink("DENR–MGB flood susceptibility", "mgb")}`,
     }),

@@ -127,10 +127,20 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(out["not_included"], ["tide", "storm", "dikes_drainage"])
         self.assertIn("Not an official warning", out["notes"][0])
         self.assertIn("not part of the sign", out["notes"][2])
-        self.assertIn("Rivers are shown for context only", out["notes"][3])
+        self.assertIn("shown for context only", out["notes"][3])
         self.assertNotIn("rivers", out["not_included"])
         self.assertIsNone(out["replay"])
         self.assertEqual(out["events_near"], [])
+
+    def test_tide_is_context_only_and_overlap_needs_a_raised_town(self):
+        out = self.build()
+        self.assertFalse(out["tide"]["part_of_sign"])
+        self.assertEqual(len(out["tide"]["days"]), 5)
+        self.assertIn("tested", out["tide"])
+        by_name = {t["name"]: t for t in out["towns"]}
+        self.assertEqual(by_name["Calm"]["tide_overlap"], False)  # ordinary rain never gets the line
+        self.assertEqual(by_name["Wet"]["tide_overlap"], out["tide"]["spring_in_window"])
+        self.assertIs(by_name["Hermosa"]["tide_overlap"], False)
 
     def test_rivers_are_context_only_and_do_not_change_the_sign(self):
         plain = self.build()
