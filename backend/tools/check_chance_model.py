@@ -117,6 +117,7 @@ def build_rows(daily_by_town: dict[str, dict[date, float]], floods: dict[str, li
                         "ground": ground.get(town, 0.0),
                         "tide": 1.0 if tide_flag(d) else 0.0,
                         "storm": 1.0 if storm_flag(d) else 0.0,
+                        "flood": next((f for f in starts if d <= f <= d + timedelta(days=FLOOD_AFTER_DAYS)), None),
                         "y": 1 if any(d <= f <= d + timedelta(days=FLOOD_AFTER_DAYS) for f in starts) else 0,
                     })
             d += timedelta(days=1)
@@ -220,7 +221,7 @@ def cross_validate(rows: list[dict], factors: list[str]) -> dict:
     """Leave-one-year-out: fit on the other years, score the held-out year."""
     names = ["rain"] + factors
     scale = scale_of(rows, names)
-    preds, ys = [], []
+    preds, ys, used = [], [], []
     year_loss: dict[int, float] = {}
     for year in sorted({r["year"] for r in rows}):
         train = [r for r in rows if r["year"] != year]
@@ -231,13 +232,14 @@ def cross_validate(rows: list[dict], factors: list[str]) -> dict:
         p = [predict(w, line) for line in design(test, factors, scale)]
         preds += p
         ys += [r["y"] for r in test]
+        used += test
         year_loss[year] = sum(loss(pi, r["y"]) for pi, r in zip(p, test))
     n = len(ys)
     return {
         "rows": n, "positives": sum(ys),
         "log_loss": sum(loss(p, y) for p, y in zip(preds, ys)) / n if n else None,
         "brier": sum((p - y) ** 2 for p, y in zip(preds, ys)) / n if n else None,
-        "auc": auc(preds, ys), "year_loss": year_loss, "preds": preds, "ys": ys,
+        "auc": auc(preds, ys), "year_loss": year_loss, "preds": preds, "ys": ys, "used": used,
     }
 
 
@@ -270,6 +272,35 @@ def calibration(preds: list[float], ys: list[int], edges=(0.02, 0.05, 0.10, 0.20
         if idx:
             out.append({"from": lo, "to": min(hi, 1.0), "rows": len(idx), "predicted": sum(preds[i] for i in idx) / len(idx),
                         "observed": sum(ys[i] for i in idx) / len(idx)})
+    return out
+
+
+BAND_CUTS = (0.50, 0.80, 0.95)  # share of held-out rows below each cut: bottom half, next 30%, next 15%, top 5%
+
+
+def bands(res: dict, cuts=BAND_CUTS) -> list[dict]:
+    """Groups of held-out rows by the model's score, with the share actually followed by a flood.
+
+    Reports distinct flood town-cases per group because neighbouring days repeat the same flood.
+    """
+    order = sorted(range(len(res["preds"])), key=lambda i: res["preds"][i])
+    n = len(order)
+    edges = [0] + [int(n * c) for c in cuts] + [n]
+    out = []
+    for lo, hi in zip(edges, edges[1:]):
+        idx = order[lo:hi]
+        if not idx:
+            continue
+        cases = {(res["used"][i]["town"], res["used"][i]["flood"]) for i in idx if res["ys"][i]}
+        k = sum(res["ys"][i] for i in idx)
+        windows = max(1, len(idx) // 4)  # rough: about 4 neighbouring days repeat each case
+        low, high = cs.wilson(min(len(cases), windows), windows)
+        out.append({
+            "from_share": lo / n, "to_share": hi / n, "rows": len(idx),
+            "mean_predicted": sum(res["preds"][i] for i in idx) / len(idx),
+            "observed": k / len(idx), "flood_cases": len(cases),
+            "case_rate": min(len(cases), windows) / windows, "case_range_95": (low, high),
+        })
     return out
 
 
@@ -344,6 +375,16 @@ def main(argv: list[str]) -> int:
     print("\nCalibration of the rain-only model (held-out years): predicted vs observed share of rows followed by a flood")
     for b in calibration(base["preds"], base["ys"]):
         print(f"  predicted {b['from']:.0%}-{b['to']:.0%}: {b['rows']} rows, predicted {b['predicted']:.1%}, observed {b['observed']:.1%}")
+    for name in ("rain + wet ground", "rain + wet + ground"):
+        if name not in models:
+            continue
+        res = cross_validate(rows, models[name])
+        print(f"\nHeld-out score groups for '{name}' (lowest to highest score; flood cases = distinct town floods, "
+              "rate per about 4 neighbouring days is rough):")
+        for b in bands(res):
+            print(f"  rows {b['from_share']:.0%}-{b['to_share']:.0%} by score: {b['rows']} rows, predicted {b['mean_predicted']:.1%}, "
+                  f"observed {b['observed']:.1%}, flood cases {b['flood_cases']}, "
+                  f"cases per independent window {b['case_rate']:.1%} (95% range {b['case_range_95'][0]:.1%}-{b['case_range_95'][1]:.1%})")
     full_names = ["rain", "wet", "ground", "tide", "storm"]
     scale = scale_of(rows, full_names)
     print("\nCoefficients fitted on all years (per 1 standard deviation; positive = more floods):")

@@ -75,6 +75,27 @@ class CompareTests(unittest.TestCase):
             self.assertLessEqual(abs(b["predicted"] - b["observed"]), 0.1)
 
 
+class BandTests(unittest.TestCase):
+    def test_bands_split_held_out_rows_by_score_and_count_distinct_cases(self):
+        rows = synthetic_rows(True)
+        for i, r in enumerate(rows):
+            r["flood"] = date(r["year"], 8, 1 + (i % 20)) if r["y"] else None
+        res = t.cross_validate(rows, ["wet"])
+        out = t.bands(res)
+        self.assertEqual(sum(b["rows"] for b in out), len(res["ys"]))
+        self.assertEqual(len(out), 4)
+        self.assertLessEqual(out[0]["observed"], out[-1]["observed"])  # a real factor: higher score, more floods
+        self.assertLessEqual(sum(b["flood_cases"] for b in out), res["positives"] if "positives" in res else sum(res["ys"]))
+        for b in out:
+            self.assertLessEqual(b["flood_cases"], max(1, b["rows"]))
+            self.assertLessEqual(b["case_range_95"][0], b["case_range_95"][1])
+
+    def test_cross_validate_keeps_the_held_out_rows_in_order(self):
+        res = t.cross_validate(synthetic_rows(True, years=range(2011, 2016), per_year=50), [])
+        self.assertEqual(len(res["used"]), len(res["preds"]))
+        self.assertEqual([r["y"] for r in res["used"]], res["ys"])
+
+
 class RowTests(unittest.TestCase):
     def test_rows_keep_only_unusual_incoming_rain_and_mark_floods_in_the_window(self):
         daily = {}
@@ -91,6 +112,8 @@ class RowTests(unittest.TestCase):
         self.assertTrue(all(r["ground"] == 0.2 for r in rows))
         flooded = [r for r in rows if r["y"]]
         self.assertTrue(flooded)
+        self.assertTrue(all(r["flood"] == date(2013, 8, 11) for r in flooded))
+        self.assertTrue(all(r["flood"] is None for r in rows if not r["y"]))
         for r in flooded:
             self.assertTrue(r["day"] <= date(2013, 8, 11) <= r["day"] + timedelta(days=3))
 
