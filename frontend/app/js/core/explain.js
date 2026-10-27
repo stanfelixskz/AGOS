@@ -251,6 +251,3 @@ export function explain(id) {
 
 /** Backwards-compatible map: EXPLAIN.rainLevels() etc. */
 export const EXPLAIN = Object.fromEntries(Object.keys(TEXT).map((id) => [id, () => explain(id)]));
-
-export const EXPLAIN_IDS = Object.keys(TEXT);
-export const EXPLAIN_TEXT = TEXT;

@@ -39,8 +39,3 @@ export function levelRange(level, lang = "en") {
 export function levelColor(level) {
   return (LEVELS[level] || LEVELS.nodata).color;
 }
-
-/** True for the three PAGASA-equivalent warning colors. */
-export function isWarningLevel(level) {
-  return level === "yellow" || level === "orange" || level === "red";
-}

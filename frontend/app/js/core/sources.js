@@ -165,7 +165,3 @@ export const SOURCES = [
 export function sourceText(source, lang = "en") {
   return lang === "fil" && source.fil ? { ...source, ...source.fil } : source;
 }
-
-export function sourceById(id) {
-  return SOURCES.find((source) => source.id === id) || null;
-}
