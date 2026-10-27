@@ -19,6 +19,8 @@ const MAX_BOUNDS = [[119.6, 13.9], [121.3, 15.45]];
 
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles";
 const MGB_TILES = "https://controlmap.mgb.gov.ph/arcgis/rest/services/GeospatialDataInventory_Public/GDI_Detailed_Flood_Susceptibility_Public/MapServer/tile/{z}/{y}/{x}";
+const RIVER_COLOR = "#0284c7";
+const EMPTY_COLLECTION = { type: "FeatureCollection", features: [] };
 const PRECIP_TILES = "https://weathermaps.weatherapi.com/precip/tiles/{date}{hour}/{z}/{x}/{y}.png";
 // First: PSGC 2023 boundaries kept in the repo (see app/data/). Then local
 // files some machines have, so older setups keep working.
@@ -109,12 +111,13 @@ export async function createAgosMap(container, options = {}) {
   }
 
   const state = {
-    visible: { boundaries: true, rain: true, rainfx: false, windfx: false, cloudfx: false, evacuation: true, reports: true, mgb: false, precip: false },
+    visible: { boundaries: true, rain: true, rainfx: false, windfx: false, cloudfx: false, evacuation: true, reports: true, mgb: false, precip: false, rivers: false },
     // windfx and cloudfx are listed but not available: AGOS stores no wind direction, cloud cover or sun data yet.
-    available: { boundaries: null, rain: null, rainfx: null, windfx: false, cloudfx: false, evacuation: null, reports: null, mgb: true, precip: true },
+    available: { boundaries: null, rain: null, rainfx: null, windfx: false, cloudfx: false, evacuation: null, reports: null, mgb: true, precip: true, rivers: null },
     messages: {},
     boundaries: null,
     outside: null,      // everything outside Bataan, for the flood outlook fade
+    rivers: null,       // OpenStreetMap waterways (GeoJSON lines) from /api/rivers; context only
     outlook: null,      // Map(town -> raised) while the flood outlook is on
     theme: options.theme === "dark" ? "dark" : "light",
     centers: [],
@@ -239,6 +242,29 @@ export async function createAgosMap(container, options = {}) {
     }
     if (!map.getLayer("agos-boundary-line")) {
       map.addLayer({ id: "agos-boundary-line", type: "line", source: "agos-boundaries", layout: { visibility: vis(state.visible.boundaries) }, paint: { "line-color": "#0b63c4", "line-opacity": 0.55, "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 12, 1.8] } });
+    }
+  }
+
+  // Rivers sit above the town tint and the flood outlook fade (so they stay visible) and under the town outlines and markers.
+  function addRiversLayers() {
+    if (!map.getSource("agos-rivers")) {
+      map.addSource("agos-rivers", {
+        type: "geojson", data: state.rivers || EMPTY_COLLECTION,
+        attribution: 'Rivers © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (ODbL)',
+      });
+    }
+    if (!map.getLayer("agos-rivers")) {
+      map.addLayer({
+        id: "agos-rivers", type: "line", source: "agos-rivers",
+        layout: { visibility: vis(state.visible.rivers), "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": RIVER_COLOR,
+          "line-opacity": 0.9,
+          "line-width": ["interpolate", ["linear"], ["zoom"],
+            8, ["match", ["get", "waterway"], "river", 0.9, 0.4],
+            12, ["match", ["get", "waterway"], "river", 2.4, 1.1]],
+        },
+      }, map.getLayer("agos-boundary-line") ? "agos-boundary-line" : undefined);
     }
   }
 
@@ -367,6 +393,7 @@ export async function createAgosMap(container, options = {}) {
 
   function addAllOverlays() {
     addBoundaryLayers();
+    addRiversLayers();
     addRasterLayers();
     addPointLayers();
     addTyphoonLayers();
@@ -631,7 +658,7 @@ export async function createAgosMap(container, options = {}) {
       if (id === "precip" && visible) applyPrecipTime(); // point at the right hour before tiles start loading
       const layerIds = {
         boundaries: ["agos-boundary-line"],
-        mgb: ["agos-mgb"], precip: ["agos-precip"], evacuation: ["agos-centers"], reports: ["agos-reports"],
+        mgb: ["agos-mgb"], precip: ["agos-precip"], evacuation: ["agos-centers"], reports: ["agos-reports"], rivers: ["agos-rivers"],
       }[id] || [];
       for (const layerId of layerIds) {
         if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", vis(state.visible[id]));
@@ -715,6 +742,15 @@ export async function createAgosMap(container, options = {}) {
       state.available.evacuation = available;
       state.messages.evacuation = message;
       map.getSource("agos-centers")?.setData(centersGeoJSON());
+      emit();
+    },
+
+    /** Rivers from /api/rivers: GeoJSON lines, or null with available=false and the reason. */
+    setRivers(geojson, available = true, message = "") {
+      state.rivers = available ? geojson : null;
+      state.available.rivers = available;
+      state.messages.rivers = message;
+      map.getSource("agos-rivers")?.setData(state.rivers || EMPTY_COLLECTION);
       emit();
     },
 

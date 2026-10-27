@@ -13,6 +13,9 @@ For every town this puts the things AGOS can measure side by side:
 - Past floods: how many listed floods the town has, the months they came in and
   the barangays named most often (the AGOS flood list).
 
+- Rivers: the named OpenStreetMap waterways that touch the town and their mapped length
+  (rivers_service). Context only: not part of the sign.
+
 What is NOT included, and says so in the answer: tide (the only tide model found
 has data from 2023, too short to test), storms (AGOS has no live storm feed) and
 rivers, dikes and drainage.
@@ -39,6 +42,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Mapping
 
 from app.services import flood_watch_service as fw
+from app.services import rivers_service
 
 WET_DAYS = 14
 RAISED_LEVELS = ("watch", "warning", "high_warning")
@@ -196,6 +200,7 @@ def build_factors(
     susceptibility: Mapping[str, Any] | None,
     issued_at: str,
     replay: Mapping[str, Any] | None = None,
+    rivers: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     inputs[town] = {"daily": [(date, mm|None) x 5 days: day-2 .. day+2],
@@ -211,6 +216,7 @@ def build_factors(
             "wet_ground": item.get("wet"),
             "susceptibility": susceptibility_for(susceptibility, name),
             "floods": flood_history(events, name),
+            "rivers": (rivers or {}).get(name),
         })
     order = {"high_warning": 0, "warning": 1, "watch": 2, "normal": 3, "no_data": 4}
     towns.sort(key=lambda t: (order[t["rain"]["level"]], -(t["rain"].get("peak") or {}).get("mm", 0)))
@@ -236,6 +242,7 @@ def build_factors(
             "record": (rain_record or {}).get("label"),
             "susceptibility": (susceptibility or {}).get("sources", {}).get("susceptibility"),
             "floods": "AGOS flood events list (news and official reports)",
+            "rivers": rivers_service.SOURCE if rivers else None,
         },
         "notes": [
             "AGOS calculation from public data. Not an official warning and not a flood probability; follow PAGASA and your MDRRMO.",
@@ -341,17 +348,21 @@ def factors_report(on: str | None = None, use_cache: bool = True) -> dict[str, A
         susc = susceptibility_service.susceptibility_report()
     except Exception:  # noqa: BLE001 - the map data stands alone
         susc = None
+    try:
+        rivers = rivers_service.towns_for_factors()
+    except Exception:  # noqa: BLE001 - rivers are context only
+        rivers = {}
 
     if on:
         inputs = _replay_inputs(records, on)
         value = build_factors(inputs, mode="replay", day=on, events=events, model_report=model, rain_record=records["record"],
-                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span)
+                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers)
     else:
         forecasts = fw.fetch_forecasts(MUNICIPALITIES, past_days=WET_DAYS)
         today = now.date().isoformat()
         inputs = _forecast_inputs(forecasts, records, today)
         value = build_factors(inputs, mode="forecast", day=today, events=events, model_report=model, rain_record=records["record"],
-                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span)
+                              susceptibility=susc, issued_at=now.isoformat(timespec="minutes"), replay=span, rivers=rivers)
     if len(_result_cache) >= MAX_REPLAY_CACHE:
         _result_cache.pop(next(iter(_result_cache)))
     _result_cache[key] = (time.time(), value)

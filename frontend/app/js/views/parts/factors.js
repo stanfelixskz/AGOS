@@ -1,6 +1,6 @@
 /*
  * Flood factors for one town (/api/flood-factors): rain, wet ground, MGB flood-prone
- * ground and past floods side by side, with what is NOT included said out loud.
+ * ground, past floods and the mapped rivers side by side, with what is NOT included said out loud.
  * Used at the top of the Map drawer and of the municipality page. The input is
  * { status: "ok", data } or { status: "unavailable", detail }.
  * Not an official warning and not a flood probability.
@@ -13,6 +13,7 @@ import { watchBadge, topShare } from "./watch.js";
 import { stackedBar, pct, barLabel } from "./susceptibility.js";
 
 const RAISED = new Set(["watch", "warning", "high_warning"]);
+const RIVER_NAMES_SHOWN = 6;
 
 export function factorsTown(factors, name) {
   if (factors?.status !== "ok") return null;
@@ -37,6 +38,12 @@ export function wetWords(percentile) {
   if (!isNumber(percentile)) return "—";
   if (percentile < 90) return t("factors.wetOrdinary");
   return t("factors.wetRank", { p: num(percentile, 0) });
+}
+
+/** The first few river names for the panel and how many were left out. */
+export function riverNames(names, max = RIVER_NAMES_SHOWN) {
+  const list = Array.isArray(names) ? names.filter(Boolean) : [];
+  return { shown: list.slice(0, max), more: Math.max(0, list.length - max) };
 }
 
 function replayLine(data) {
@@ -113,6 +120,19 @@ function floodsRow(town) {
     ${names ? `<span class="subtle">${escapeHTML(t("factors.floodsBgys", { names }))}</span>` : ""}`);
 }
 
+/** Named OpenStreetMap waterways in the town and the mapped length. Context only: not part of the sign. */
+function riversRow(town) {
+  const r = town.rivers;
+  if (!r) return row(t("factors.rivers"), `<span class="subtle">${escapeHTML(t("factors.riversNA"))}</span>`);
+  const { shown, more } = riverNames(r.names);
+  const names = shown.length
+    ? `${escapeHTML(t("factors.riversNames", { names: shown.join(", ") }))}${more ? ` ${escapeHTML(t("factors.riversMore", { n: more }))}` : ""}`
+    : escapeHTML(t("factors.riversNone"));
+  return row(t("factors.rivers"), `${names}
+    <span class="subtle">${escapeHTML(t("factors.riversLength", { km: isNumber(r.length_km) ? num(r.length_km, 1) : "—" }))}</span>
+    <span class="subtle">${escapeHTML(t("factors.riversNote"))}</span>`);
+}
+
 function reportedBlock(data) {
   if (data.mode !== "replay") return "";
   const list = data.events_near || [];
@@ -140,9 +160,10 @@ export function renderFactorsBody(factors, name) {
       ${wetRow(town)}
       ${groundRow(town)}
       ${floodsRow(town)}
+      ${riversRow(town)}
       ${row(t("factors.tide"), escapeHTML(t("factors.tideNA")), { off: true })}
       ${row(t("factors.storm"), escapeHTML(t("factors.stormNA")), { off: true })}
-      ${row(t("factors.other"), escapeHTML(t("factors.otherNA")), { off: true })}
+      ${row(t("factors.dikes"), escapeHTML(t("factors.dikesNA")), { off: true })}
     </dl>
     ${reportedBlock(data)}
     <p class="source-line">${icon("clock", { size: 14 })} ${escapeHTML(t("factors.source", { when: formatTime(data.issued_at) }))} · ${escapeHTML(t("common.notOfficial"))}</p>`;

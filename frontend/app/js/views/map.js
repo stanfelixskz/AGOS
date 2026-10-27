@@ -34,6 +34,7 @@ const LAYERS = [
   { id: "cloudfx", group: "fx", why: "animPlanned", planned: true },
   { id: "evacuation", group: "places", why: "evacuation" },
   { id: "reports", group: "places", why: "reports" },
+  { id: "rivers", group: "places", why: "rivers" },
   { id: "boundaries", group: "places", why: "boundaries" },
 ];
 
@@ -46,6 +47,7 @@ const LAYER_SWATCHES = {
   precip: () => [],
   evacuation: () => [["#16a34a", t("map.swatch.center")]],
   reports: () => [["#7c3aed", t("map.swatch.report")]],
+  rivers: () => [["#0284c7", t("map.swatch.rivers")]],
   boundaries: () => [["#0b63c4", t("map.swatch.boundary")]],
 };
 
@@ -188,6 +190,7 @@ export async function mount(container, route) {
         ${s.visible && swatches.length && !unavailable ? `<ul class="swatches">${swatches.map(([color, label]) => `<li><span class="swatch" style="background:${color}"></span>${escapeHTML(label)}</li>`).join("")}</ul>` : ""}
         ${layer.id === "rainfx" && s.visible && !unavailable ? `<p class="subtle">${escapeHTML(t("map.rainfxNote"))}</p>` : ""}
         ${layer.id === "boundaries" && s.visible && state.engine?.boundarySource() === "psgc2023" ? `<p class="subtle">${escapeHTML(t("map.boundarySource"))} <a href="https://github.com/faeldon/philippines-json-maps" target="_blank" rel="noopener noreferrer">philippines-json-maps</a> (MIT) · <a href="#/sources?s=boundaries">${escapeHTML(t("explain.details"))}</a></p>` : ""}
+        ${layer.id === "rivers" && s.visible && !unavailable ? `<p class="subtle">${escapeHTML(t("map.riversSource"))} · <a href="#/sources?s=rivers">${escapeHTML(t("explain.details"))}</a></p>` : ""}
         ${layer.id === "precip" && s.visible && !unavailable ? precipControls() : ""}
         ${unavailable || s.message ? `<p class="subtle layer-msg">${icon(unavailable ? "alert" : "info", { size: 14 })} ${escapeHTML(layer.planned ? t(`map.${layer.id}NA`) : s.message || t("common.notAvailable"))}</p>` : ""}
       </div>`;
@@ -311,6 +314,18 @@ export async function mount(container, route) {
       state.engine?.setReports(state.reports, true, message);
     } catch (error) {
       state.engine?.setReports([], false, error.message);
+    }
+  }
+
+  // Rivers are context only and the map never waits for them: the layer stays off and disabled until they arrive.
+  async function loadRivers() {
+    try {
+      const data = await getJSON("/api/rivers", { ttlMs: OVERVIEW_TTL, timeoutMs: 60000 });
+      if (!state.alive) return;
+      if (data.available) state.engine?.setRivers(data.geojson, true, "");
+      else state.engine?.setRivers(null, false, data.reason || "");
+    } catch (error) {
+      if (state.alive) state.engine?.setRivers(null, false, error.message);
     }
   }
 
@@ -800,6 +815,7 @@ export async function mount(container, route) {
   updateRain();
   loadCenters();
   loadReports();
+  loadRivers();
 
   if (route.query.m) selectMunicipality(route.query.m);
   state.refreshTimer = setInterval(loadOverview, OVERVIEW_TTL);

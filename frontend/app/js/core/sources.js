@@ -94,6 +94,17 @@ export const SOURCES = [
     fil: {"kind":"Hangganan ng mga bayan","what":"Balangkas ng 12 bayan ng Bataan na may PSGC code ng PSA hanggang 31 Disyembre 2023, mula sa faeldon/philippines-json-maps (MIT licence), na binuo mula sa altcoder/philippines-psgc-shapefiles.","usedFor":"Ang layer ng hangganan ng mga bayan at pagpindot sa bayan sa mapa.","limits":"Pinasimple para sa display. Hindi opisyal na survey boundary; para sa legal o pagpaplano, gamitin ang datos ng NAMRIA/PSA.","refresh":"Hindi nagbabagong file sa repository ng AGOS (frontend/app/data/)."},
   },
   {
+    id: "rivers",
+    name: "OpenStreetMap waterways (rivers, streams, canals)",
+    url: "https://www.openstreetmap.org/copyright",
+    kind: "Volunteer-mapped geography",
+    what: "Lines for rivers, streams and canals that volunteers have mapped in OpenStreetMap, fetched once through the Overpass API with their names and types. © OpenStreetMap contributors, Open Database Licence (ODbL).",
+    usedFor: "The Rivers layer on the map and the list of named rivers and mapped length in each town's flood factors.",
+    limits: "Context only: not part of the warning sign, and it says nothing about water level, flow or flood depth. Mapped by volunteers, so rivers can be missing or unnamed (about 1 in 10 lines carries a name). Lines are simplified to about 30 m for display. Dikes and drainage are not included: no public dataset was found.",
+    refresh: "Fetched when someone runs tools/fetch_rivers.py; not updated automatically.",
+    fil: {"kind":"Heograpiyang minapa ng mga boluntaryo","what":"Mga linya ng ilog, sapa at kanal na minapa ng mga boluntaryo sa OpenStreetMap, kinuha nang minsan sa Overpass API kasama ang kanilang pangalan at uri. © mga contributor ng OpenStreetMap, Open Database Licence (ODbL).","usedFor":"Ang layer ng mga ilog sa mapa at ang listahan ng mga ilog na may pangalan at haba sa mapa sa mga salik ng baha ng bawat bayan.","limits":"Konteksto lamang: hindi bahagi ng babalang tanda, at wala itong sinasabi tungkol sa taas ng tubig, daloy o lalim ng baha. Minapa ng mga boluntaryo, kaya maaaring may kulang o walang pangalang ilog (mga 1 sa 10 linya ang may pangalan). Pinasimple ang mga linya sa mga 30 m para sa display. Hindi kasama ang dike at drainage: walang nahanap na pampublikong datos.","refresh":"Kinukuha kapag pinatakbo ang tools/fetch_rivers.py; hindi awtomatikong ina-update."},
+  },
+  {
     id: "community-reports",
     name: "AGOS community reports",
     url: null,
