@@ -117,6 +117,20 @@ class BuildTests(unittest.TestCase):
         self.assertIsNone(out["replay"])
         self.assertEqual(out["events_near"], [])
 
+    def test_rivers_are_context_only_and_do_not_change_the_sign(self):
+        plain = self.build()
+        with_rivers = self.build(rivers={"Calm": {"names": ["Test River"], "length_km": 12.3}})
+        self.assertEqual({t["name"]: t["rivers"] for t in plain["towns"]}, {"Wet": None, "Calm": None, "Hermosa": None})
+        by_name = {t["name"]: t for t in with_rivers["towns"]}
+        self.assertEqual(by_name["Calm"]["rivers"], {"names": ["Test River"], "length_km": 12.3})
+        self.assertIsNone(by_name["Wet"]["rivers"])
+        self.assertIsNone(plain["sources"]["rivers"])
+        self.assertIn("OpenStreetMap", with_rivers["sources"]["rivers"])
+        for a, b in zip(plain["towns"], with_rivers["towns"]):  # the sign and everything else are identical
+            self.assertEqual({k: v for k, v in a.items() if k != "rivers"}, {k: v for k, v in b.items() if k != "rivers"})
+        self.assertEqual(plain["raised"], with_rivers["raised"])
+        self.assertEqual(plain["not_included"], with_rivers["not_included"])
+
     def test_replay_returns_reported_floods_beside_the_rain(self):
         out = self.build(mode="replay", day="2021-07-27", replay={"min": "2000-01-01", "max": "2026-10-01"})
         self.assertEqual([e["id"] for e in out["events_near"]], ["e1", "e2"])
@@ -166,6 +180,7 @@ class ReportTests(unittest.TestCase):
             mock.patch("app.services.flood_events_service.events_report", return_value={"events": EVENTS}),
             mock.patch("app.services.flood_model_service.model_report", return_value={"summary": {"town_years": 1}, "rain": {"table": []}}),
             mock.patch("app.services.susceptibility_service.susceptibility_report", return_value={"available": False}),
+            mock.patch("app.services.rivers_service.towns_for_factors", return_value={"Hermosa": {"names": ["Test River"], "length_km": 5.0}}),
             mock.patch("app.data.municipalities.MUNICIPALITIES", {"Hermosa": {"latitude": 14.8, "longitude": 120.5}}),
         ]
 
@@ -194,6 +209,7 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(out["towns"][0]["rain"]["level"], "normal")
         self.assertEqual(out["towns"][0]["wet_ground"]["mm"], 140.0)
         self.assertEqual(out["replay"]["max"], "2026-10-18")
+        self.assertEqual(out["towns"][0]["rivers"], {"names": ["Test River"], "length_km": 5.0})
 
     def test_today_report_uses_the_forecast_and_the_record(self):
         series = [(d, 10.0) for d in sorted(long_daily(end="2026-10-28", length=17))]

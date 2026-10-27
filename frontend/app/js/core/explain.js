@@ -124,6 +124,24 @@ const TEXT = {
         ${sourceLink("Hangganan ng mga bayan (PSGC 2023)", "boundaries")}`,
     }),
   },
+  rivers: {
+    en: () => ({
+      title: "Rivers (OpenStreetMap)",
+      body: `<p>Lines for the rivers, streams and canals that volunteers have mapped in OpenStreetMap. Thicker lines are rivers; thinner lines are streams and canals.</p>
+        <p><strong>Context only.</strong> Rivers are not part of the warning sign. The map does not show water level, flow or flood depth, and it does not show which rivers are rising.</p>
+        <p>OpenStreetMap is mapped by volunteers, so it may be incomplete: about 1 in 10 lines has a name, and a river that exists may be missing. Lines are simplified to about 30 m. Dikes and drainage are not shown because AGOS found no public dataset.</p>
+        <p>© OpenStreetMap contributors, Open Database Licence (ODbL).</p>
+        ${sourceLink("OpenStreetMap waterways", "rivers")}`,
+    }),
+    fil: () => ({
+      title: "Mga ilog (OpenStreetMap)",
+      body: `<p>Mga linya ng ilog, sapa at kanal na minapa ng mga boluntaryo sa OpenStreetMap. Ang mas makapal na linya ay ilog; ang mas manipis ay sapa at kanal.</p>
+        <p><strong>Konteksto lamang.</strong> Hindi bahagi ng babalang tanda ang mga ilog. Hindi ipinapakita ng mapa ang taas ng tubig, daloy o lalim ng baha, at hindi nito sinasabi kung aling ilog ang tumataas.</p>
+        <p>Minapa ng mga boluntaryo ang OpenStreetMap kaya maaaring kulang: mga 1 sa 10 linya ang may pangalan, at maaaring wala sa mapa ang isang umiiral na ilog. Pinasimple ang mga linya sa mga 30 m. Hindi ipinapakita ang dike at drainage dahil walang nahanap na pampublikong datos ang AGOS.</p>
+        <p>© mga contributor ng OpenStreetMap, Open Database Licence (ODbL).</p>
+        ${sourceLink("OpenStreetMap waterways", "rivers")}`,
+    }),
+  },
   reports: {
     en: () => ({
       title: "Community reports",
@@ -183,7 +201,8 @@ const TEXT = {
     <p>AGOS puts side by side what it can measure for the town: <strong>rain</strong> (the tested warning sign), <strong>wet ground</strong> (rain over the last 14 days), <strong>flood-prone ground</strong> (the official DENR–MGB map) and <strong>listed past floods</strong>.</p>
     <p>"Rain is raised" comes only from the <strong>rain warning sign</strong>: the 3-day rain is in the top 5% of the town's own record. No weights or probabilities were invented. When rain is raised, the flood-prone ground in the town <em>could</em> flood; depth and extent are not shown.</p>
     <p><strong>Wet ground</strong> is context only. It has not been tested on past floods yet, so it is not part of the sign.</p>
-    <p><strong>Not included:</strong> tide (the only tide model found starts in 2023, too short to test), storms (AGOS has no live storm feed) and rivers, dikes and drainage.</p>
+    <p><strong>Rivers</strong> (named OpenStreetMap waterways and their mapped length) are shown for context only and are not part of the sign.</p>
+    <p><strong>Not included:</strong> tide (the only tide model found starts in 2023, too short to test), storms (AGOS has no live storm feed) and dikes and drainage.</p>
     <p>Rain is Open-Meteo model forecast, not a rain gauge. This is not an official warning and not a flood probability. Follow PAGASA and your MDRRMO.</p>
         ${sourceLink("DENR–MGB flood susceptibility", "mgb")}`,
     }),
@@ -193,7 +212,8 @@ const TEXT = {
     <p>Pinagsasama ng AGOS dito ang mga bagay na kaya nitong sukatin para sa bayan: <strong>ulan</strong> (ang tinestang babalang tanda), <strong>basang lupa</strong> (ulan sa nakaraang 14 araw), <strong>lupang madaling bahain</strong> (opisyal na mapa ng DENR–MGB) at <strong>mga nakalistang nakaraang baha</strong>.</p>
     <p>Ang "Mataas ang ulan" ay galing lang sa <strong>babalang tanda mula sa ulan</strong>: kung ang 3-araw na ulan ay nasa nangungunang 5% ng sariling talaan ng bayan. Walang ginawang timbang o porsiyento ng posibilidad. Kapag mataas ang ulan, ang lupang madaling bahain sa bayan ang <em>maaaring</em> bahain; hindi ipinapakita ang lalim o lawak.</p>
     <p>Ang <strong>basang lupa</strong> ay konteksto lamang. Hindi pa ito nasusubok sa mga nakaraang baha, kaya hindi ito bahagi ng tanda.</p>
-    <p><strong>Hindi kasama:</strong> tide (ang tanging modelong nakita ay mula 2023 lamang, masyadong maikli para masubok), bagyo (walang live na datos ng bagyo ang AGOS), at mga ilog, dike at drainage.</p>
+    <p>Ang mga <strong>ilog</strong> (mga waterway ng OpenStreetMap na may pangalan at haba sa mapa) ay konteksto lamang at hindi bahagi ng tanda.</p>
+    <p><strong>Hindi kasama:</strong> tide (ang tanging modelong nakita ay mula 2023 lamang, masyadong maikli para masubok), bagyo (walang live na datos ng bagyo ang AGOS), at dike at drainage.</p>
     <p>Ang ulan ay galing sa Open-Meteo model forecast, hindi rain gauge. Hindi ito opisyal na babala at hindi ito posibilidad ng baha. Sundin ang PAGASA at ang inyong MDRRMO.</p>
         ${sourceLink("DENR–MGB flood susceptibility", "mgb")}`,
     }),

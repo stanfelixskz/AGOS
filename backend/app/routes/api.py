@@ -11,7 +11,7 @@ from app.services import overview_service as overview
 from app.services.climate_service import climate_report
 from app.services.history_service import history_report
 from app.services import evidence_service, flood_events_service, flood_factors_service, flood_model_service, flood_watch_service
-from app.services import susceptibility_service
+from app.services import rivers_service, susceptibility_service
 from app.services import typhoon_service
 from app.services.weather_service import (
     get_bataan_flood_outlook,
@@ -116,6 +116,15 @@ def flood_factors(date: str | None = Query(None, max_length=10)):
         raise HTTPException(status_code=400, detail=str(error)) from error
     except RuntimeError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.get("/rivers")
+def rivers():
+    """
+    Rivers, streams and canals for the map (OpenStreetMap, simplified) and, per town, the named ones and the
+    mapped length. Context only; answers {"available": false, "reason": ...} when the data file is missing.
+    """
+    return rivers_service.rivers_report()
 
 
 @router.get("/flood-model")
