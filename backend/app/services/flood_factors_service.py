@@ -18,7 +18,7 @@ For every town this puts the things AGOS can measure side by side:
 
 What is NOT included, and says so in the answer: tide (the only tide model found
 has data from 2023, too short to test), storms (AGOS has no live storm feed) and
-rivers, dikes and drainage.
+dikes and drainage. Rivers are shown for context only and never change the sign.
 
 The town "state" comes from the warning sign alone, so no weights are invented:
   raised    the sign is Watch or higher: flood-prone ground in the town could flood
@@ -56,7 +56,7 @@ MAX_REPLAY_CACHE = 30
 NOT_INCLUDED = (
     "tide",
     "storm",
-    "rivers_dikes_drainage",
+    "dikes_drainage",
 )
 
 
@@ -248,7 +248,7 @@ def build_factors(
             "AGOS calculation from public data. Not an official warning and not a flood probability; follow PAGASA and your MDRRMO.",
             "'Raised' only means the rain is unusual for the town. Flood-prone ground (MGB) shows where flooding is possible; it does not show depth or extent.",
             "Wet ground is shown for context and is not part of the sign: it has not been tested on past floods yet.",
-            "Tide, storms, rivers, dikes and drainage are not included.",
+            "Tide, storms, dikes and drainage are not included. Rivers are shown for context only and are not part of the sign.",
         ],
     }
 

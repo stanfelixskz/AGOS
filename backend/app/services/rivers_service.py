@@ -116,6 +116,12 @@ def features_to_geojson(features: Sequence[Mapping[str, Any]], metadata: Mapping
     return {"type": "FeatureCollection", "metadata": dict(metadata), "features": items}
 
 
+def is_underground(feature: Mapping[str, Any]) -> bool:
+    """OpenStreetMap tunnel=culvert (or yes, etc.) means the water runs in a pipe: left off the map and the counts."""
+    tunnel = feature.get("tunnel")
+    return bool(tunnel) and str(tunnel).lower() != "no"
+
+
 def read_features(data: Mapping[str, Any]) -> list[dict[str, Any]]:
     out = []
     for feature in data.get("features", []):
@@ -125,7 +131,8 @@ def read_features(data: Mapping[str, Any]) -> list[dict[str, Any]]:
             continue
         line = [(float(x), float(y)) for x, y in geometry["coordinates"]]
         if len(line) >= 2:
-            out.append({"name": props.get("name") or None, "waterway": props["waterway"], "line": line})
+            out.append({"name": props.get("name") or None, "waterway": props["waterway"],
+                        "tunnel": props.get("tunnel") or None, "line": line})
     return out
 
 
@@ -156,8 +163,11 @@ def summarize(
     locator = TownLocator(boundaries)
     names: dict[str, set[str]] = {town: set() for town in boundaries}
     metres: dict[str, float] = {town: 0.0 for town in boundaries}
-    kept, before, after = [], 0, 0
+    kept, before, after, underground = [], 0, 0, 0
     for f in features:
+        if is_underground(f):
+            underground += 1  # a culvert or tunnel is a pipe under a road or building, not a river you can see
+            continue
         line = simplify_line(f["line"], tolerance_m)
         before += len(f["line"])
         touched: set[str] = set()
@@ -193,7 +203,8 @@ def summarize(
         "stats": {
             "features": len(kept), "named": named, "named_share": round(named / len(kept), 3) if kept else 0.0,
             "by_type": by_type, "points_before": before, "points_after": after, "tolerance_m": tolerance_m,
-            "outside_bataan_dropped": len(features) - len(kept),
+            "outside_bataan_dropped": len(features) - len(kept) - underground,
+            "underground_dropped": underground,
         },
     }
 
@@ -236,6 +247,7 @@ def build_report(path: Path | str = DATA_FILE, boundaries: Mapping[str, list[ts.
             "Context only: rivers are not part of the warning sign and say nothing about water level or flood depth.",
             "OpenStreetMap is mapped by volunteers and may be incomplete; only the share of lines that carry a name is listed by name.",
             f"Lines are simplified to about {int(TOLERANCE_M)} m for display; lengths are measured on the simplified lines.",
+            "Culverts and tunnels (water in a pipe under a road or building) are left out, so the lines shown are open waterways only.",
             "Lines that never touch a Bataan municipality are left out; a line that crosses the border is shown whole.",
         ],
     }

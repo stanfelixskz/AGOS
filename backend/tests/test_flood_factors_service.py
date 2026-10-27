@@ -111,9 +111,11 @@ class BuildTests(unittest.TestCase):
 
     def test_every_answer_says_what_is_left_out(self):
         out = self.build()
-        self.assertEqual(out["not_included"], ["tide", "storm", "rivers_dikes_drainage"])
+        self.assertEqual(out["not_included"], ["tide", "storm", "dikes_drainage"])
         self.assertIn("Not an official warning", out["notes"][0])
         self.assertIn("not part of the sign", out["notes"][2])
+        self.assertIn("Rivers are shown for context only", out["notes"][3])
+        self.assertNotIn("rivers", out["not_included"])
         self.assertIsNone(out["replay"])
         self.assertEqual(out["events_near"], [])
 
