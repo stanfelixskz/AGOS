@@ -62,3 +62,24 @@ test("outline stitches the real PSGC towns into one mask", () => {
   assert.equal(rings.length, 1 + unionOutline(file.features).length);
   assert.equal(outsideMask([]), null);
 });
+
+const tideData = (spring) => ({
+  window_days: 2,
+  days: [{ date: "2026-10-25", spring: false, moon: "new" }, { date: "2026-10-26", spring, moon: "full" }],
+  spring_in_window: spring, part_of_sign: false,
+  tested: { events: 28, near_spring: 10, share: 0.36, expected_share_if_no_link: 0.27 },
+});
+
+test("tide row: spring tide, ordinary tide, overlap line and missing data", () => {
+  const spring = renderFactorsBody(ok([town("A", "warning", { tide_overlap: true })], { tide: tideData(true) }), "A");
+  assert.match(spring, /Spring tide around the full moon/);
+  assert.match(spring, /factor-precaution/);
+  assert.match(spring, /10 of 28/);
+  assert.match(spring, /not a tide gauge/i);
+  const calm = renderFactorsBody(ok([town("A", "normal", { tide_overlap: false })], { tide: tideData(false) }), "A");
+  assert.match(calm, /ordinary tide range/);
+  assert.doesNotMatch(calm, /factor-precaution/);
+  const none = renderFactorsBody(ok([town("A", "warning")]), "A");
+  assert.match(none, /no tide gauge or official tide table/);
+  assert.equal((none.match(/is-off/g) || []).length, 3);
+});

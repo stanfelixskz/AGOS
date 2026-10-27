@@ -16,8 +16,11 @@ For every town this puts the things AGOS can measure side by side:
 - Rivers: the named OpenStreetMap waterways that touch the town and their mapped length
   (rivers_service). Context only: not part of the sign.
 
-What is NOT included, and says so in the answer: tide (the only tide model found
-has data from 2023, too short to test), storms (AGOS has no live storm feed) and
+- Tide: spring tide computed from the moon (tide_service). Context only, untested, and a
+  precaution line when the rain is raised and a spring tide falls in the same days.
+
+What is NOT included in the sign, and says so in the answer: tide height and high-tide hours
+(no gauge or official table yet), storms (AGOS has no live storm feed) and
 dikes and drainage. Rivers are shown for context only and never change the sign.
 
 The town "state" comes from the warning sign alone, so no weights are invented:
@@ -43,6 +46,7 @@ from typing import Any, Mapping
 
 from app.services import flood_watch_service as fw
 from app.services import rivers_service
+from app.services import tide_service
 
 WET_DAYS = 14
 RAISED_LEVELS = ("watch", "warning", "high_warning")
@@ -218,6 +222,10 @@ def build_factors(
             "floods": flood_history(events, name),
             "rivers": (rivers or {}).get(name),
         })
+    tide = tide_service.build_tide(day, events)
+    for t in towns:
+        # Rain is unusual AND a spring tide falls in the same days: a precaution line only, never part of the sign.
+        t["tide_overlap"] = t["state"] == "raised" and tide["spring_in_window"]
     order = {"high_warning": 0, "warning": 1, "watch": 2, "normal": 3, "no_data": 4}
     towns.sort(key=lambda t: (order[t["rain"]["level"]], -(t["rain"].get("peak") or {}).get("mm", 0)))
     return {
@@ -234,6 +242,7 @@ def build_factors(
             "choices": replay_choices(events, replay) if replay else [],
         } if replay else None,
         "rain_record": rain_record,
+        "tide": tide,
         "not_included": list(NOT_INCLUDED),
         "sources": {
             "rain": ("ERA5 reanalysis stored by AGOS (recorded rain, used here as if it had been the forecast)"
@@ -248,7 +257,7 @@ def build_factors(
             "AGOS calculation from public data. Not an official warning and not a flood probability; follow PAGASA and your MDRRMO.",
             "'Raised' only means the rain is unusual for the town. Flood-prone ground (MGB) shows where flooding is possible; it does not show depth or extent.",
             "Wet ground is shown for context and is not part of the sign: it has not been tested on past floods yet.",
-            "Tide, storms, dikes and drainage are not included. Rivers are shown for context only and are not part of the sign.",
+            "Tide, storms, dikes and drainage are not part of the sign. Rivers and spring tide (from the moon, not a tide gauge) are shown for context only.",
         ],
     }
 
