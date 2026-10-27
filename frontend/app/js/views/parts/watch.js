@@ -9,7 +9,6 @@ import { t } from "../../core/i18n.js";
 import { escapeHTML, num, isNumber, formatDate } from "../../core/format.js";
 import { dateRange } from "./evidence.js";
 
-export const WATCH_LEVELS = ["high_warning", "warning", "watch", "normal", "no_data"];
 const BADGE = { high_warning: "danger", warning: "danger", watch: "warning", normal: "success", no_data: "" };
 
 export function watchBadge(level) {

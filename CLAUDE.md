@@ -91,7 +91,9 @@ Windows PowerShell: activate the venv with `.\.venv\Scripts\Activate.ps1`
 - Evacuation centers: 12 records in `backend/app/data/evacuation_centers.json`;
   capacity and status are not provided by any source.
 - Community reports have no review/admin screen yet (all show "unverified").
-- Flood susceptibility by area is not computed; the UI shows a labelled slot.
+- Flood chance (`flood_chance_model_service`) is a count of past cases, low confidence; it needs
+  `backend/data/chance_model.json`, built offline with `backend/tools/build_chance_model.py`.
+  Tide and storms were tested and do not improve it (see project doc `claude/agos-tide-storm-plan.md`).
 - CORS allows all origins; restrict before public deployment.
 - Repo default branch on GitHub is `main` (nearly empty); real code is on `master`.
 

@@ -54,7 +54,6 @@ export const STRINGS = {
     "common.notOfficial": "Not an official warning",
     "common.municipality": "Municipality",
     "common.allMunicipalities": "All municipalities",
-    "common.comingSoon": "Coming soon",
 
 
     "sources.intro": "AGOS combines public data sources. Each one has limits. This page lists them, shows how fresh the data is, and explains what AGOS does and does not claim.",
@@ -358,7 +357,6 @@ export const STRINGS = {
     "watch.colSign": "Sign",
     "watch.col3day": "Wettest 3 days",
     "watch.colRank": "For that town",
-    "watch.colListed": "Past floods listed",
     "susc.title": "Flood susceptibility by area",
     "susc.sub": "Share of each town's land in each official DENR-MGB flood susceptibility class. Tap a town for its barangays.",
     "susc.class.very_high": "Very high",
@@ -505,7 +503,7 @@ export const STRINGS = {
     "factors.tideTested": "Check on past floods: {k} of {n} listed floods began near a new or full moon ({share}); chance alone gives about {expected}. Too few floods to tell.",
     "factors.chanceToday": "Chance, next 3 days",
     "factors.chanceTodayNotBuilt": "Not built yet. Run tools/build_chance_model.py to fit it from the AGOS database.",
-    "factors.chanceTodayBelow": "Incoming rain is below the range tested (top 10% of this town's record), so no chance is given.",
+    "factors.chanceTodayBelow": "Rain is ordinary, so AGOS gives no flood chance for this town. That does not mean flooding is impossible: some listed floods came without unusual rain, and tide, dikes and small local floods are not covered.",
     "factors.chanceTodayMissing": "Not enough data for this town (missing rain or flood-prone ground map).",
     "factors.chanceBand.lower": "Lower than usual",
     "factors.chanceBand.usual": "About usual",
@@ -738,7 +736,6 @@ export const STRINGS = {
     "common.notOfficial": "Hindi opisyal na babala",
     "common.municipality": "Bayan",
     "common.allMunicipalities": "Lahat ng bayan",
-    "common.comingSoon": "Malapit na",
 
 
     "sources.intro": "Pinagsasama ng AGOS ang mga pampublikong pinagmulan ng datos. May limitasyon ang bawat isa. Nakalista rito ang mga ito, kung gaano kasariwa ang datos, at kung ano ang sinasabi at hindi sinasabi ng AGOS.",
@@ -1042,7 +1039,6 @@ export const STRINGS = {
     "watch.colSign": "Tanda",
     "watch.col3day": "Pinakamaulang 3 araw",
     "watch.colRank": "Para sa bayang iyon",
-    "watch.colListed": "Nakalistang baha",
     "susc.title": "Pagiging bahain bawat lugar",
     "susc.sub": "Bahagi ng lupa ng bawat bayan sa bawat opisyal na klase ng flood susceptibility ng DENR-MGB. Pindutin ang bayan para sa mga barangay nito.",
     "susc.class.very_high": "Napakataas",
@@ -1189,7 +1185,7 @@ export const STRINGS = {
     "factors.tideTested": "Pagsusuri sa mga nakaraang baha: {k} sa {n} na nakalistang baha ay nagsimula malapit sa bagong buwan o kabilugan ng buwan ({share}); mga {expected} kung nagkataon lang. Kulang ang bilang ng baha para masabi.",
     "factors.chanceToday": "Tsansa, susunod na 3 araw",
     "factors.chanceTodayNotBuilt": "Hindi pa nabuo. Patakbuhin ang tools/build_chance_model.py para buuin ito mula sa database ng AGOS.",
-    "factors.chanceTodayBelow": "Mas mababa ang paparating na ulan sa saklaw na sinubukan (nangungunang 10% ng talaan ng bayan), kaya walang tsansang ibinibigay.",
+    "factors.chanceTodayBelow": "Karaniwan ang ulan, kaya walang tsansa ng baha na ibinibigay ang AGOS para sa bayang ito. Hindi ibig sabihin na imposible ang baha: may mga nakalistang baha na walang di-karaniwang ulan, at hindi saklaw ang tide, dike at maliliit na lokal na baha.",
     "factors.chanceTodayMissing": "Kulang ang datos para sa bayang ito (kulang ang ulan o ang mapa ng lupang madaling bahain).",
     "factors.chanceBand.lower": "Mas mababa kaysa karaniwan",
     "factors.chanceBand.usual": "Halos karaniwan",

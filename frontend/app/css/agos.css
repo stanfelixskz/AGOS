@@ -935,7 +935,6 @@ dialog.dialog::backdrop { background: rgba(8, 15, 28, .45); backdrop-filter: blu
 .town-table th[scope="row"] { background: transparent; font-size: var(--text-sm); }
 .town-table td, .town-table th { vertical-align: middle; }
 .spark { display: block; }
-.susceptibility-slot { border-style: dashed; box-shadow: none; }
 
 /* Municipality page: sections as a two-column grid on wide screens. */
 .detail-page { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); padding-top: 0; padding-bottom: 0; }

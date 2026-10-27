@@ -212,7 +212,3 @@ export function hydrateDetail(root, data) {
 
   return () => cleanups.forEach((fn) => fn());
 }
-
-export function sortByTime(rows) {
-  return [...rows].sort((a, b) => (parseTime(b.reported_at)?.getTime() || 0) - (parseTime(a.reported_at)?.getTime() || 0));
-}

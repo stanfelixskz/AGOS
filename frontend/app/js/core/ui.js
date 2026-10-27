@@ -56,10 +56,6 @@ export function errorState(error, { retry = true } = {}) {
     </div>`;
 }
 
-export function emptyState(title, body = "", iconName = "info") {
-  return `<div class="state">${icon(iconName, { size: 28 })}<strong>${escapeHTML(title)}</strong>${body ? `<span>${escapeHTML(body)}</span>` : ""}</div>`;
-}
-
 /** Wire [data-retry] buttons inside root to a callback. */
 export function onRetry(root, callback) {
   root.querySelectorAll("[data-retry]").forEach((button) => button.addEventListener("click", callback, { once: true }));
